@@ -14,6 +14,7 @@ private struct DriveLibraryCache: Sendable {
 }
 
 public struct ContentView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     @State private var drives: [WalkmanDrive] = []
     @State private var devices: [WalkmanDevice] = []
     @State private var activeDevice: WalkmanDevice? = nil
@@ -203,9 +204,9 @@ public struct ContentView: View {
 
     private func selectCustomStorageFolder() {
         let panel = NSOpenPanel()
-        panel.title = "Select Walkman Storage Folder"
-        panel.message = "Select the mounted storage volume or Music folder of your Sony Walkman."
-        panel.prompt = "Connect Storage"
+        panel.title = L10n.tr("Select Walkman Storage Folder")
+        panel.message = L10n.tr("Select the mounted storage volume or Music folder of your Sony Walkman.")
+        panel.prompt = L10n.tr("Connect Storage")
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
@@ -724,11 +725,11 @@ public struct ContentView: View {
             }
             
             VStack(spacing: 8) {
-                Text("Connect Sony Walkman")
+                Text(L10n.tr("Connect Sony Walkman"))
                     .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(.white)
                 
-                Text("Plug in your Sony Walkman via USB cable or insert your MicroSD card. Both Sony OS and Android-based Walkmans are supported.")
+                Text(L10n.tr("Plug in your Sony Walkman via USB cable or insert your MicroSD card. Both Sony OS and Android-based Walkmans are supported."))
                     .font(.system(size: 13))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -749,7 +750,7 @@ public struct ContentView: View {
                                 Circle()
                                     .fill(Color.green)
                                     .frame(width: 7, height: 7)
-                                Text("Connected via USB (MTP File Transfer Mode)")
+                                Text(L10n.tr("Connected via USB (MTP File Transfer Mode)"))
                                     .font(.system(size: 11, weight: .medium))
                                     .foregroundStyle(Color.green.opacity(0.95))
                             }
@@ -758,7 +759,7 @@ public struct ContentView: View {
                         Spacer()
                     }
                     
-                    Text("macOS requires an MTP bridge (e.g. MacDroid, OpenMTP) to mount Android internal storage to Finder, or you can select your Walkman Music folder directly.")
+                    Text(L10n.tr("macOS requires an MTP bridge (e.g. MacDroid, OpenMTP) to mount Android internal storage to Finder, or you can select your Walkman Music folder directly."))
                         .font(.system(size: 11.5))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -768,7 +769,7 @@ public struct ContentView: View {
                         Button(action: selectCustomStorageFolder) {
                             HStack(spacing: 6) {
                                 Image(systemName: "folder.badge.plus")
-                                Text("Select Storage Folder")
+                                Text(L10n.tr("Select Storage Folder"))
                             }
                             .font(.system(size: 12, weight: .semibold))
                             .padding(.horizontal, 14)
@@ -782,7 +783,7 @@ public struct ContentView: View {
                         Button(action: { showingMtpHelpSheet = true }) {
                             HStack(spacing: 5) {
                                 Image(systemName: "questionmark.circle")
-                                Text("Mac Transfer Guide")
+                                Text(L10n.tr("Mac Transfer Guide"))
                             }
                             .font(.system(size: 12, weight: .medium))
                             .padding(.horizontal, 12)
@@ -813,11 +814,11 @@ public struct ContentView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundStyle(WalkmanTheme.hiResGold)
-                        Text("Unrecognized Device: \(unsupported)")
+                        Text(L10n.tr("Unrecognized Device: \(unsupported)"))
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(.white)
                     }
-                    Text("Ensure your Sony Walkman or MicroSD card is properly formatted with a /Music/ or /MUSIC/ directory.")
+                    Text(L10n.tr("Ensure your Sony Walkman or MicroSD card is properly formatted with a /Music/ or /MUSIC/ directory."))
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -833,7 +834,7 @@ public struct ContentView: View {
                 Button(action: refreshDrives) {
                     HStack(spacing: 6) {
                         Image(systemName: "arrow.clockwise")
-                        Text("Detect Drives")
+                        Text(L10n.tr("Detect Drives"))
                     }
                     .font(.system(size: 12.5, weight: .semibold))
                     .padding(.horizontal, 16)
@@ -847,7 +848,7 @@ public struct ContentView: View {
                 Button(action: selectCustomStorageFolder) {
                     HStack(spacing: 5) {
                         Image(systemName: "folder")
-                        Text("Select Storage Folder...")
+                        Text(L10n.tr("Select Storage Folder..."))
                     }
                     .font(.system(size: 12, weight: .medium))
                     .padding(.horizontal, 14)
@@ -878,11 +879,11 @@ public struct ContentView: View {
             )
             
             VStack(spacing: 8) {
-                Text("Reading Walkman Library")
+                Text(L10n.tr("Reading Walkman Library"))
                     .font(WalkmanFont.title1)
                     .foregroundStyle(.white)
                 
-                Text("Caching music index & album metadata from \(activeDrive?.name ?? "Walkman")...")
+                Text(L10n.tr("Caching music index & album metadata from \(activeDrive?.name ?? "Walkman")..."))
                     .font(WalkmanFont.callout)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -895,7 +896,7 @@ public struct ContentView: View {
                     .tint(WalkmanTheme.silver)
                     .scaleEffect(1.2)
                 
-                Text("Optimizing library view...")
+                Text(L10n.tr("Optimizing library view..."))
                     .font(WalkmanFont.callout)
                     .foregroundStyle(WalkmanTheme.silverMuted)
             }
@@ -1289,9 +1290,9 @@ public struct ContentView: View {
                             
                             // Rescan
                             Button(action: { refreshDrives() }) {
-                                Label("Refresh", systemImage: "arrow.clockwise")
+                                Label(L10n.tr("Refresh"), systemImage: "arrow.clockwise")
                             }
-                            .help("Refresh connected drives and reload library")
+                            .help(L10n.tr("Refresh connected drives and reload library"))
                             
                             // Safe Eject (only shown if a device is connected)
                             if !drives.isEmpty {
@@ -1300,11 +1301,11 @@ public struct ContentView: View {
                                         ProgressView()
                                             .controlSize(.small)
                                     } else {
-                                        Label("Eject", systemImage: "eject.circle")
+                                        Label(L10n.tr("Eject"), systemImage: "eject.circle")
                                     }
                                 }
                                 .disabled(isEjecting)
-                                .help("Clean macOS junk files and safely unmount Walkman")
+                                .help(L10n.tr("Clean macOS junk files and safely unmount Walkman"))
                             }
                             
                             // Inspector Toggle
@@ -1314,9 +1315,9 @@ public struct ContentView: View {
                                 }
                                 showInspector.toggle()
                             }) {
-                                Label("Inspector", systemImage: "sidebar.trailing")
+                                Label(L10n.tr("Inspector"), systemImage: "sidebar.trailing")
                             }
-                            .help("Toggle Metadata & Artwork Inspector (Cmd+I)")
+                            .help(L10n.tr("Toggle Metadata & Artwork Inspector (Cmd+I)"))
                             .keyboardShortcut("i", modifiers: [.command])
                         }
                     }

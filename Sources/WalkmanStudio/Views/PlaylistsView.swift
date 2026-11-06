@@ -8,6 +8,7 @@ private enum RenameLocation {
 }
 
 public struct PlaylistsView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let activeDrive: WalkmanDrive?
     let libraryTracks: [Track]
     var onEditTrack: ((Track) -> Void)? = nil
@@ -291,13 +292,13 @@ public struct PlaylistsView: View {
                     }
                     withAnimation {
                         if isManualSave {
-                            self.messageBanner = "✓ Saved '\(filenameToSave)' to Walkman (\(newTracks.count) \(newTracks.count == 1 ? "track" : "tracks"))"
+                            self.messageBanner = L10n.tr("✓ Saved '\(filenameToSave)' to Walkman (\(newTracks.count) \(newTracks.count == 1 ? L10n.tr("track") : L10n.tr("tracks")))")
                         } else {
-                            self.messageBanner = "Saved to Walkman (\(newTracks.count) \(newTracks.count == 1 ? "track" : "tracks"))"
+                            self.messageBanner = L10n.tr("Saved to Walkman (\(newTracks.count) \(newTracks.count == 1 ? L10n.tr("track") : L10n.tr("tracks")))")
                         }
                     }
                     DispatchQueue.main.asyncAfter(deadline: .now() + (isManualSave ? 4 : 3)) {
-                        if self.messageBanner?.contains("Saved") == true {
+                        if self.messageBanner?.contains(L10n.tr("Saved")) == true {
                             withAnimation { self.messageBanner = nil }
                         }
                     }
@@ -305,7 +306,7 @@ public struct PlaylistsView: View {
             } catch {
                 DispatchQueue.main.async {
                     withAnimation {
-                        self.messageBanner = "Save error: \(error.localizedDescription)"
+                        self.messageBanner = L10n.tr("Save error: \(error.localizedDescription)")
                     }
                 }
             }
@@ -566,7 +567,7 @@ public struct PlaylistsView: View {
     private func addTrackToPlaylist(_ rawTrackPath: String, playlist: Playlist) {
         guard let drive = activeDrive else {
             withAnimation {
-                messageBanner = "No active Walkman drive detected."
+                messageBanner = L10n.tr("No active Walkman drive detected.")
             }
             return
         }
@@ -591,13 +592,13 @@ public struct PlaylistsView: View {
             persistPlaylistChanges(newTracks: updatedTracks)
             withAnimation {
                 if isDuplicate {
-                    messageBanner = "✓ Added another copy of '\(trackTitle)' to '\(playlist.name)' (\(updatedTracks.count) tracks)"
+                    messageBanner = L10n.tr("✓ Added another copy of '\(trackTitle)' to '\(playlist.name)' (\(updatedTracks.count) tracks)")
                 } else {
-                    messageBanner = "✓ Added '\(trackTitle)' to '\(playlist.name)' (\(updatedTracks.count) tracks)"
+                    messageBanner = L10n.tr("✓ Added '\(trackTitle)' to '\(playlist.name)' (\(updatedTracks.count) tracks)")
                 }
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
-                if self.messageBanner?.contains("Added") == true {
+                if self.messageBanner?.contains(L10n.tr("Added")) == true {
                     withAnimation { self.messageBanner = nil }
                 }
             }
@@ -626,13 +627,13 @@ public struct PlaylistsView: View {
         
         withAnimation {
             if isDuplicate {
-                messageBanner = "✓ Added another copy of '\(trackTitle)' to '\(playlist.name)' (\(updatedTracks.count) tracks)"
+                messageBanner = L10n.tr("✓ Added another copy of '\(trackTitle)' to '\(playlist.name)' (\(updatedTracks.count) tracks)")
             } else {
-                messageBanner = "✓ Added '\(trackTitle)' to '\(playlist.name)' (\(updatedTracks.count) tracks)"
+                messageBanner = L10n.tr("✓ Added '\(trackTitle)' to '\(playlist.name)' (\(updatedTracks.count) tracks)")
             }
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
-            if self.messageBanner?.contains("Added") == true {
+            if self.messageBanner?.contains(L10n.tr("Added")) == true {
                 withAnimation { self.messageBanner = nil }
             }
         }
@@ -658,7 +659,7 @@ public struct PlaylistsView: View {
             } catch {
                 DispatchQueue.main.async {
                     withAnimation {
-                        self.messageBanner = "Failed to add to '\(playlist.name)': \(error.localizedDescription)"
+                        self.messageBanner = L10n.tr("Failed to add to '\(playlist.name)': \(error.localizedDescription)")
                     }
                 }
             }
@@ -668,7 +669,7 @@ public struct PlaylistsView: View {
     private func createNewPlaylist() {
         guard let drive = activeDrive else {
             withAnimation {
-                messageBanner = "No active Walkman drive detected."
+                messageBanner = L10n.tr("No active Walkman drive detected.")
             }
             return
         }
@@ -682,10 +683,10 @@ public struct PlaylistsView: View {
         try? FileManager.default.createDirectory(at: musicURL, withIntermediateDirectories: true)
         
         // Find next unique default name: "New Playlist", "New Playlist 2", etc.
-        var candidate = "New Playlist"
+        var candidate = L10n.tr("New Playlist")
         var counter = 2
         while playlists.contains(where: { $0.name.localizedCaseInsensitiveCompare(candidate) == .orderedSame }) {
-            candidate = "New Playlist \(counter)"
+            candidate = L10n.tr("New Playlist \(counter)")
             counter += 1
         }
         
@@ -714,16 +715,16 @@ public struct PlaylistsView: View {
             startRenaming(newPl, location: .row)
             
             withAnimation {
-                messageBanner = "Added to Walkman: enter playlist name and press Return."
+                messageBanner = L10n.tr("Added to Walkman: enter playlist name and press Return.")
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
-                if self.messageBanner?.contains("enter playlist name") == true {
+                if self.messageBanner?.contains(L10n.tr("enter playlist name")) == true {
                     withAnimation { self.messageBanner = nil }
                 }
             }
         } catch {
             withAnimation {
-                messageBanner = "Failed to create: \(error.localizedDescription)"
+                messageBanner = L10n.tr("Failed to create: \(error.localizedDescription)")
             }
         }
     }
@@ -775,7 +776,7 @@ public struct PlaylistsView: View {
         // Check if another playlist already has this name
         if playlists.contains(where: { $0.id != playlist.id && $0.name.localizedCaseInsensitiveCompare(clean) == .orderedSame }) {
             withAnimation {
-                messageBanner = "A playlist named '\(clean)' already exists."
+                messageBanner = L10n.tr("A playlist named '\(clean)' already exists.")
             }
             cancelRename()
             return
@@ -804,17 +805,17 @@ public struct PlaylistsView: View {
             cancelRename()
             
             withAnimation {
-                messageBanner = "Renamed playlist to '\(clean)' on Walkman"
+                messageBanner = L10n.tr("Renamed playlist to '\(clean)' on Walkman")
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                if self.messageBanner?.hasPrefix("Renamed playlist") == true {
+                if self.messageBanner?.hasPrefix(L10n.tr("Renamed playlist")) == true {
                     withAnimation { self.messageBanner = nil }
                 }
             }
         } catch {
             cancelRename()
             withAnimation {
-                messageBanner = "Rename error: \(error.localizedDescription)"
+                messageBanner = L10n.tr("Rename error: \(error.localizedDescription)")
             }
         }
     }
@@ -884,7 +885,7 @@ public struct PlaylistsView: View {
                     // Left Column: Playlist List
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
-                            Text("PLAYLISTS (\(playlists.count))")
+                            Text(L10n.tr("PLAYLISTS (\(playlists.count))"))
                                 .font(WalkmanFont.sectionHeader)
                                 .foregroundStyle(WalkmanTheme.silverMuted)
                                 .lineLimit(1)
@@ -898,10 +899,10 @@ public struct PlaylistsView: View {
                                 Image(systemName: "music.note.list")
                                     .font(.system(size: 28))
                                     .foregroundStyle(WalkmanTheme.silverMuted)
-                                Text("No Playlists Found")
+                                Text(L10n.tr("No Playlists Found"))
                                     .font(WalkmanFont.calloutMedium)
                                     .foregroundStyle(WalkmanTheme.silverLight)
-                                Text("Create one to organize your tracks")
+                                Text(L10n.tr("Create one to organize your tracks"))
                                     .font(WalkmanFont.subheadline)
                                     .foregroundStyle(WalkmanTheme.silverMuted)
                                 
@@ -909,7 +910,7 @@ public struct PlaylistsView: View {
                                     HStack(spacing: 5) {
                                         Image(systemName: "plus")
                                             .font(.system(size: 11, weight: .bold))
-                                        Text("New Playlist")
+                                        Text(L10n.tr("New Playlist"))
                                             .font(.system(size: 12.5, weight: .semibold))
                                     }
                                     .padding(.horizontal, 14)
@@ -1018,10 +1019,10 @@ public struct PlaylistsView: View {
                                     Image(systemName: "tray")
                                         .font(.system(size: 32))
                                         .foregroundStyle(WalkmanTheme.silverMuted)
-                                    Text("This playlist is empty")
+                                    Text(L10n.tr("This playlist is empty"))
                                         .font(WalkmanFont.bodyMedium)
                                         .foregroundStyle(WalkmanTheme.silverLight)
-                                    Text("Click 'Add From Library' to populate this playlist")
+                                    Text(L10n.tr("Click 'Add From Library' to populate this playlist"))
                                         .font(WalkmanFont.callout)
                                         .foregroundStyle(WalkmanTheme.silverMuted)
                                     
@@ -1029,7 +1030,7 @@ public struct PlaylistsView: View {
                                         HStack(spacing: 5) {
                                             Image(systemName: "plus.circle")
                                                 .font(.system(size: 11, weight: .bold))
-                                            Text("Add From Library")
+                                            Text(L10n.tr("Add From Library"))
                                                 .font(.system(size: 12.5, weight: .semibold))
                                         }
                                         .padding(.horizontal, 14)
@@ -1187,7 +1188,7 @@ public struct PlaylistsView: View {
                                 Image(systemName: "arrow.left")
                                     .font(.system(size: 20))
                                     .foregroundStyle(WalkmanTheme.silverMuted)
-                                Text("Select or create a playlist from the left")
+                                Text(L10n.tr("Select or create a playlist from the left"))
                                     .font(WalkmanFont.callout)
                                     .foregroundStyle(WalkmanTheme.silverMuted)
                                 Spacer()
@@ -1227,7 +1228,7 @@ public struct PlaylistsView: View {
         }
         .sheet(isPresented: $showAddTrackSheet) {
             AddTracksModal(
-                playlistName: selectedPlaylist?.name ?? "Playlist",
+                playlistName: selectedPlaylist?.name ?? L10n.tr("Playlist"),
                 tracks: libraryTracks,
                 existingPlaylistPaths: Set(playlistTracks),
                 onAddTracks: { addedRelativePaths, shouldDismiss in
@@ -1245,7 +1246,7 @@ public struct PlaylistsView: View {
                 allTracks: currentPlaylistTracks,
                 selectedTracks: currentSelectedPlaylistTracks,
                 tabContext: .playlist(
-                    playlistName: selectedPlaylist?.name ?? "Playlist",
+                    playlistName: selectedPlaylist?.name ?? L10n.tr("Playlist"),
                     playlistTrackCount: currentPlaylistTracks.count
                 ),
                 onDismiss: {
@@ -1359,7 +1360,7 @@ public struct PlaylistsView: View {
                 storedSidebarWidth = Double(clamped)
             }
         }
-        .help("Drag to resize playlist and content views. Double-click to reset.")
+        .help(L10n.tr("Drag to resize playlist and content views. Double-click to reset."))
     }
     
     // MARK: - Top Navigation Header
@@ -1373,7 +1374,7 @@ public struct PlaylistsView: View {
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(WalkmanTheme.silverLight)
                 
-                Text("Playlists")
+                Text(L10n.tr("Playlists"))
                     .font(WalkmanFont.title3)
                     .foregroundStyle(.white)
             }
@@ -1381,12 +1382,12 @@ public struct PlaylistsView: View {
             // Middle: Status Message Banner if present
             if let banner = messageBanner {
                 HStack(spacing: 5) {
-                    Image(systemName: banner.contains("error") || banner.contains("Failed") ? "exclamationmark.triangle.fill" : "info.circle.fill")
+                    Image(systemName: banner.contains(L10n.tr("error")) || banner.contains(L10n.tr("Failed")) ? "exclamationmark.triangle.fill" : "info.circle.fill")
                         .font(.system(size: 11))
-                        .foregroundStyle(banner.contains("error") || banner.contains("Failed") ? Color.red : WalkmanTheme.silverLight)
+                        .foregroundStyle(banner.contains(L10n.tr("error")) || banner.contains(L10n.tr("Failed")) ? Color.red : WalkmanTheme.silverLight)
                     Text(banner)
                         .font(WalkmanFont.subheadlineMedium)
-                        .foregroundStyle(banner.contains("error") || banner.contains("Failed") ? Color.red : WalkmanTheme.silverLight)
+                        .foregroundStyle(banner.contains(L10n.tr("error")) || banner.contains(L10n.tr("Failed")) ? Color.red : WalkmanTheme.silverLight)
                         .lineLimit(1)
                 }
                 .padding(.horizontal, 12)
@@ -1407,7 +1408,7 @@ public struct PlaylistsView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "plus")
                         .font(.system(size: 11, weight: .bold))
-                    Text(isNarrow ? "New" : "New Playlist")
+                    Text(isNarrow ? L10n.tr("New") : L10n.tr("New Playlist"))
                         .font(.system(size: 12.5, weight: .semibold))
                         .lineLimit(1)
                 }
@@ -1419,7 +1420,7 @@ public struct PlaylistsView: View {
             .buttonStyle(LiquidGlassButtonStyle(variant: .prominent, cornerRadius: 19))
             .disabled(activeDrive == nil)
             .opacity(activeDrive == nil ? 0.5 : 1.0)
-            .help("Create new .m3u8 playlist on Walkman")
+            .help(L10n.tr("Create new .m3u8 playlist on Walkman"))
         }
         .padding(.horizontal, 4)
         .background(Color.clear)
@@ -1430,7 +1431,7 @@ public struct PlaylistsView: View {
             Image(systemName: "music.note.list")
                 .font(.system(size: 11.5, weight: .bold))
                 .foregroundStyle(Color.white.opacity(0.55))
-            Text(playlists.count == 1 ? "1 Playlist" : "\(playlists.count.formatted()) Playlists")
+            Text(playlists.count == 1 ? L10n.tr("1 Playlist") : L10n.tr("\(playlists.count.formatted()) Playlists"))
                 .font(.system(size: 12.5, weight: .medium, design: .monospaced))
                 .foregroundStyle(WalkmanTheme.silverLight)
                 .lineLimit(1)
@@ -1479,7 +1480,7 @@ public struct PlaylistsView: View {
             Image(systemName: "music.note")
                 .font(.system(size: 11.5, weight: .bold))
                 .foregroundStyle(Color.white.opacity(0.55))
-            Text(playlistTracks.count == 1 ? "1 Track" : "\(playlistTracks.count.formatted()) Tracks")
+            Text(playlistTracks.count == 1 ? L10n.tr("1 Track") : L10n.tr("\(playlistTracks.count.formatted()) Tracks"))
                 .font(.system(size: 12.5, weight: .medium, design: .monospaced))
                 .foregroundStyle(WalkmanTheme.silverLight)
                 .lineLimit(1)
@@ -1556,7 +1557,7 @@ public struct PlaylistsView: View {
         }
         .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 19))
         .disabled(isPreparingLyricsSheet)
-        .help("LRC Fetcher: Fetch and sync .LRC lyrics for this playlist")
+        .help(L10n.tr("LRC Fetcher: Fetch and sync .LRC lyrics for this playlist"))
     }
 
     // MARK: - Responsive Detail Header Subviews
@@ -1619,7 +1620,7 @@ public struct PlaylistsView: View {
                                     .foregroundStyle(WalkmanTheme.silverLight)
                             }
                             .buttonStyle(.plain)
-                            .help("Rename Playlist on Walkman")
+                            .help(L10n.tr("Rename Playlist on Walkman"))
                         }
                     }
                     
@@ -1682,7 +1683,7 @@ public struct PlaylistsView: View {
     @ViewBuilder
     private func headerRenameView(pl: Playlist) -> some View {
         HStack(spacing: 8) {
-            TextField("Playlist Name", text: $editingPlaylistName)
+            TextField(L10n.tr("Playlist Name"), text: $editingPlaylistName)
                 .textFieldStyle(.plain)
                 .font(WalkmanFont.title3)
                 .foregroundStyle(.white)
@@ -1703,7 +1704,7 @@ public struct PlaylistsView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "checkmark")
                         .font(.system(size: 11, weight: .bold))
-                    Text("Save")
+                    Text(L10n.tr("Save"))
                         .font(.system(size: 12, weight: .semibold))
                         .lineLimit(1)
                 }
@@ -1716,7 +1717,7 @@ public struct PlaylistsView: View {
             .fixedSize(horizontal: true, vertical: false)
             
             Button(action: cancelRename) {
-                Text("Cancel")
+                Text(L10n.tr("Cancel"))
                     .font(WalkmanFont.callout)
                     .foregroundStyle(WalkmanTheme.silverMuted)
                     .padding(.horizontal, 12)
@@ -1744,11 +1745,11 @@ public struct PlaylistsView: View {
                         .foregroundStyle(WalkmanTheme.silverLight)
                 }
                 .buttonStyle(.plain)
-                .help("Rename Playlist on Walkman")
+                .help(L10n.tr("Rename Playlist on Walkman"))
             }
             
             if showSubtitle {
-                Text("\(playlistTracks.count) \(playlistTracks.count == 1 ? "track" : "tracks") in sequence")
+                Text(L10n.tr("\(playlistTracks.count) \(playlistTracks.count == 1 ? L10n.tr("track") : L10n.tr("tracks")) in sequence"))
                     .font(WalkmanFont.callout)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -1778,7 +1779,7 @@ public struct PlaylistsView: View {
             HStack(spacing: 5.5) {
                 Image(systemName: "plus.circle.fill")
                     .font(.system(size: 11, weight: .semibold))
-                Text(compact ? "Add" : "Add From Library")
+                Text(compact ? L10n.tr("Add") : L10n.tr("Add From Library"))
                     .font(.system(size: 12.5, weight: .semibold))
                     .lineLimit(1)
             }
@@ -1798,7 +1799,7 @@ public struct PlaylistsView: View {
                 HStack(spacing: 4.5) {
                     Image(systemName: selectedPlaylistIndices.isEmpty ? "checklist" : (selectedPlaylistIndices.count == playlistTracks.count ? "checkmark.circle.fill" : "minus.circle.fill"))
                         .font(.system(size: 11.5, weight: .semibold))
-                    Text(selectedPlaylistIndices.isEmpty ? "Select" : "\(selectedPlaylistIndices.count)")
+                    Text(selectedPlaylistIndices.isEmpty ? L10n.tr("Select") : "\(selectedPlaylistIndices.count)")
                         .font(.system(size: 12, weight: .medium))
                 }
                 .padding(.horizontal, 10)
@@ -1806,7 +1807,7 @@ public struct PlaylistsView: View {
                 .foregroundStyle(selectedPlaylistIndices.isEmpty ? WalkmanTheme.silverLight : WalkmanTheme.gold)
             }
             .buttonStyle(LiquidGlassButtonStyle(variant: selectedPlaylistIndices.isEmpty ? .glass : .prominent, cornerRadius: 19))
-            .help(selectedPlaylistIndices.isEmpty ? "Select All Tracks for Batch Reorganization" : "Toggle Track Selection")
+            .help(selectedPlaylistIndices.isEmpty ? L10n.tr("Select All Tracks for Batch Reorganization") : L10n.tr("Toggle Track Selection"))
         }
     }
     
@@ -1818,7 +1819,7 @@ public struct PlaylistsView: View {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 12, weight: .bold))
                     .foregroundStyle(WalkmanTheme.gold)
-                Text("\(selectedPlaylistIndices.count) Selected")
+                Text(L10n.tr("\(selectedPlaylistIndices.count) Selected"))
                     .font(WalkmanFont.calloutBold)
                     .foregroundStyle(.white)
             }
@@ -1832,7 +1833,7 @@ public struct PlaylistsView: View {
             )
             
             Button(action: selectAllTracks) {
-                Text(selectedPlaylistIndices.count == playlistTracks.count ? "Deselect All" : "Select All")
+                Text(selectedPlaylistIndices.count == playlistTracks.count ? L10n.tr("Deselect All") : L10n.tr("Select All"))
                     .font(WalkmanFont.caption)
                     .foregroundStyle(WalkmanTheme.silverLight)
             }
@@ -1849,7 +1850,7 @@ public struct PlaylistsView: View {
                 HStack(spacing: 5) {
                     Image(systemName: "arrow.up.to.line")
                         .font(.system(size: 11, weight: .bold))
-                    Text("Move to Top")
+                    Text(L10n.tr("Move to Top"))
                         .font(.system(size: 12, weight: .semibold))
                 }
                 .padding(.horizontal, 12)
@@ -1858,14 +1859,14 @@ public struct PlaylistsView: View {
             }
             .buttonStyle(LiquidGlassButtonStyle(variant: .prominent, cornerRadius: 16))
             .disabled(!canMoveUp)
-            .help("Move selected tracks to the very top of the playlist")
+            .help(L10n.tr("Move selected tracks to the very top of the playlist"))
             
             // Up Button
             Button(action: moveSelectedTracksUp) {
                 HStack(spacing: 4) {
                     Image(systemName: "chevron.up")
                         .font(.system(size: 10, weight: .bold))
-                    Text("Up")
+                    Text(L10n.tr("Up"))
                         .font(.system(size: 11.5, weight: .medium))
                 }
                 .padding(.horizontal, 9)
@@ -1874,14 +1875,14 @@ public struct PlaylistsView: View {
             }
             .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 16))
             .disabled(!canMoveUp)
-            .help("Shift selected tracks up by 1 position")
+            .help(L10n.tr("Shift selected tracks up by 1 position"))
             
             // Down Button
             Button(action: moveSelectedTracksDown) {
                 HStack(spacing: 4) {
                     Image(systemName: "chevron.down")
                         .font(.system(size: 10, weight: .bold))
-                    Text("Down")
+                    Text(L10n.tr("Down"))
                         .font(.system(size: 11.5, weight: .medium))
                 }
                 .padding(.horizontal, 9)
@@ -1890,14 +1891,14 @@ public struct PlaylistsView: View {
             }
             .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 16))
             .disabled(!canMoveDown)
-            .help("Shift selected tracks down by 1 position")
+            .help(L10n.tr("Shift selected tracks down by 1 position"))
             
             // To Bottom Button
             Button(action: moveSelectedTracksToBottom) {
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.down.to.line")
                         .font(.system(size: 10, weight: .bold))
-                    Text("To Bottom")
+                    Text(L10n.tr("To Bottom"))
                         .font(.system(size: 11.5, weight: .medium))
                 }
                 .padding(.horizontal, 9)
@@ -1906,7 +1907,7 @@ public struct PlaylistsView: View {
             }
             .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 16))
             .disabled(!canMoveDown)
-            .help("Move selected tracks to the bottom of the playlist")
+            .help(L10n.tr("Move selected tracks to the bottom of the playlist"))
             
             Rectangle()
                 .fill(Color.white.opacity(0.12))
@@ -1921,7 +1922,7 @@ public struct PlaylistsView: View {
                     .frame(width: 28, height: 28)
             }
             .buttonStyle(.plain)
-            .help("Remove selected tracks from this playlist")
+            .help(L10n.tr("Remove selected tracks from this playlist"))
             
             // Dismiss Selection Button
             Button(action: {
@@ -1936,7 +1937,7 @@ public struct PlaylistsView: View {
                     .frame(width: 28, height: 28)
             }
             .buttonStyle(.plain)
-            .help("Dismiss selection")
+            .help(L10n.tr("Dismiss selection"))
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
@@ -1967,6 +1968,7 @@ public struct PlaylistsView: View {
 // PLAYLIST LIST ROW VIEW (TACTILE HOVER & LIQUID GLASS SELECTION + DROP TARGET)
 // -----------------------------------------------------------------------------
 private struct PlaylistListRowView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let playlist: Playlist
     let isSelected: Bool
     let isEditingRow: Bool
@@ -1995,7 +1997,7 @@ private struct PlaylistListRowView: View {
                     .frame(width: 16)
                 
                 if isEditingRow {
-                    TextField("Playlist Name", text: $editingPlaylistName)
+                    TextField(L10n.tr("Playlist Name"), text: $editingPlaylistName)
                         .textFieldStyle(.plain)
                         .font(WalkmanFont.calloutMedium)
                         .foregroundStyle(.white)
@@ -2042,7 +2044,7 @@ private struct PlaylistListRowView: View {
                     Spacer(minLength: 8)
                     
                     if isDropTargeted {
-                        Text("+ Add")
+                        Text(L10n.tr("+ Add"))
                             .font(.system(size: 10.5, weight: .bold, design: .monospaced))
                             .foregroundStyle(Color(red: 20/255, green: 20/255, blue: 24/255))
                             .padding(.horizontal, 7)
@@ -2136,12 +2138,12 @@ private struct PlaylistListRowView: View {
         }
         .animation(.spring(response: 0.22, dampingFraction: 0.72), value: isHovered)
         .contextMenu {
-            Button("Rename Playlist") {
+            Button(L10n.tr("Rename Playlist")) {
                 onStartRename()
             }
             Divider()
             Button(role: .destructive, action: onDelete) {
-                Label("Delete Playlist", systemImage: "trash")
+                Label(L10n.tr("Delete Playlist"), systemImage: "trash")
             }
         }
     }
@@ -2166,6 +2168,7 @@ private enum AddBrowsingMode: String, CaseIterable, Identifiable {
 }
 
 private struct PlaylistTrackRow: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let index: Int
     let totalCount: Int
     let trackPath: String
@@ -2219,7 +2222,7 @@ private struct PlaylistTrackRow: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help(isSelected ? "Deselect Track (Shift-click to select range)" : "Select Track for Batch Reorganization (Shift-click to select range)")
+            .help(isSelected ? L10n.tr("Deselect Track (Shift-click to select range)") : L10n.tr("Select Track for Batch Reorganization (Shift-click to select range)"))
             
             // Play / Note button
             Button(action: onPlay) {
@@ -2303,7 +2306,7 @@ private struct PlaylistTrackRow: View {
                         .padding(4)
                 }
                 .buttonStyle(.plain)
-                .help("Remove from Playlist")
+                .help(L10n.tr("Remove from Playlist"))
             }
             .padding(.trailing, 2)
             .opacity(isHovered || isPlayingThis || isDragSource ? 1.0 : 0.5)
@@ -2394,18 +2397,18 @@ private struct PlaylistTrackRow: View {
         }
         .contextMenu {
             if isSelected && selectedCount > 1 {
-                Section("Batch Actions (\(selectedCount) Selected)") {
+                Section(L10n.tr("Batch Actions (\(selectedCount) Selected)")) {
                     Button(action: onMoveSelectedToTop) {
-                        Label("Move \(selectedCount) Tracks to Top", systemImage: "arrow.up.to.line")
+                        Label(L10n.tr("Move \(selectedCount) Tracks to Top"), systemImage: "arrow.up.to.line")
                     }
                     Button(action: onMoveSelectedUp) {
-                        Label("Move \(selectedCount) Tracks Up", systemImage: "chevron.up")
+                        Label(L10n.tr("Move \(selectedCount) Tracks Up"), systemImage: "chevron.up")
                     }
                     Button(action: onMoveSelectedDown) {
-                        Label("Move \(selectedCount) Tracks Down", systemImage: "chevron.down")
+                        Label(L10n.tr("Move \(selectedCount) Tracks Down"), systemImage: "chevron.down")
                     }
                     Button(action: onMoveSelectedToBottom) {
-                        Label("Move \(selectedCount) Tracks to Bottom", systemImage: "arrow.down.to.line")
+                        Label(L10n.tr("Move \(selectedCount) Tracks to Bottom"), systemImage: "arrow.down.to.line")
                     }
                 }
                 
@@ -2415,23 +2418,23 @@ private struct PlaylistTrackRow: View {
                     Button {
                         onEditTrack?()
                     } label: {
-                        Label("Edit Song Metadata...", systemImage: "square.and.pencil")
+                        Label(L10n.tr("Edit Song Metadata..."), systemImage: "square.and.pencil")
                     }
                     
                     Divider()
                 }
                 
                 Button(action: onToggleSelect) {
-                    Label("Deselect This Track", systemImage: "circle")
+                    Label(L10n.tr("Deselect This Track"), systemImage: "circle")
                 }
                 
                 Button(role: .destructive, action: onRemoveSelected) {
-                    Label("Remove \(selectedCount) Tracks from Playlist", systemImage: "trash")
+                    Label(L10n.tr("Remove \(selectedCount) Tracks from Playlist"), systemImage: "trash")
                 }
             } else {
                 if matchedTrack != nil {
                     Button(action: onPlay) {
-                        Label("Play Now", systemImage: "play.fill")
+                        Label(L10n.tr("Play Now"), systemImage: "play.fill")
                     }
                 }
                 
@@ -2439,12 +2442,12 @@ private struct PlaylistTrackRow: View {
                     Button {
                         onEditTrack?()
                     } label: {
-                        Label("Edit Song Metadata...", systemImage: "square.and.pencil")
+                        Label(L10n.tr("Edit Song Metadata..."), systemImage: "square.and.pencil")
                     }
                 }
                 
                 if onInspectTrack != nil {
-                    Button("Inspect in Sidebar") {
+                    Button(L10n.tr("Inspect in Sidebar")) {
                         onInspectTrack?()
                     }
                 }
@@ -2459,39 +2462,39 @@ private struct PlaylistTrackRow: View {
                             }
                         }
                     } label: {
-                        Label("Add to Another Playlist", systemImage: "text.badge.plus")
+                        Label(L10n.tr("Add to Another Playlist"), systemImage: "text.badge.plus")
                     }
                     Divider()
                 }
                 
                 Button(action: onMoveToTop) {
-                    Label("Move to Top", systemImage: "arrow.up.to.line")
+                    Label(L10n.tr("Move to Top"), systemImage: "arrow.up.to.line")
                 }
                 .disabled(index == 0)
                 
                 Button(action: onMoveUp) {
-                    Label("Move Up", systemImage: "chevron.up")
+                    Label(L10n.tr("Move Up"), systemImage: "chevron.up")
                 }
                 .disabled(index == 0)
                 
                 Button(action: onMoveDown) {
-                    Label("Move Down", systemImage: "chevron.down")
+                    Label(L10n.tr("Move Down"), systemImage: "chevron.down")
                 }
                 .disabled(index == totalCount - 1)
                 
                 Button(action: onMoveToBottom) {
-                    Label("Move to Bottom", systemImage: "arrow.down.to.line")
+                    Label(L10n.tr("Move to Bottom"), systemImage: "arrow.down.to.line")
                 }
                 .disabled(index == totalCount - 1)
                 
                 Divider()
                 
                 Button(action: onToggleSelect) {
-                    Label("Select Track", systemImage: "checkmark.circle")
+                    Label(L10n.tr("Select Track"), systemImage: "checkmark.circle")
                 }
                 
                 Button(role: .destructive, action: onRemove) {
-                    Label("Remove from Playlist", systemImage: "trash")
+                    Label(L10n.tr("Remove from Playlist"), systemImage: "trash")
                 }
             }
         }
@@ -2502,6 +2505,7 @@ private struct PlaylistTrackRow: View {
 // PLAYLIST SORT MENU BUTTON (CIRCULAR LIQUID GLASS BUTTON)
 // -----------------------------------------------------------------------------
 private struct PlaylistSortMenuButton: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let isDisabled: Bool
     let onSortTitleAsc: () -> Void
     let onSortTitleDesc: () -> Void
@@ -2516,26 +2520,26 @@ private struct PlaylistSortMenuButton: View {
     var body: some View {
         Menu {
             Button(action: onSortTitleAsc) {
-                Label("Title (A → Z)", systemImage: "textformat")
+                Label(L10n.tr("Title (A → Z)"), systemImage: "textformat")
             }
             Button(action: onSortTitleDesc) {
-                Label("Title (Z → A)", systemImage: "textformat")
+                Label(L10n.tr("Title (Z → A)"), systemImage: "textformat")
             }
             Button(action: onSortArtistAsc) {
-                Label("Artist (A → Z)", systemImage: "person")
+                Label(L10n.tr("Artist (A → Z)"), systemImage: "person")
             }
             Button(action: onSortAlbum) {
-                Label("Album & Track Number", systemImage: "square.stack")
+                Label(L10n.tr("Album & Track Number"), systemImage: "square.stack")
             }
             Button(action: onSortFilenameAsc) {
-                Label("Filename (A → Z)", systemImage: "doc.text")
+                Label(L10n.tr("Filename (A → Z)"), systemImage: "doc.text")
             }
             Divider()
             Button(action: onReverseOrder) {
-                Label("Reverse Current Order", systemImage: "arrow.up.arrow.down")
+                Label(L10n.tr("Reverse Current Order"), systemImage: "arrow.up.arrow.down")
             }
             Button(action: onShuffleOrder) {
-                Label("Shuffle Order", systemImage: "shuffle")
+                Label(L10n.tr("Shuffle Order"), systemImage: "shuffle")
             }
         } label: {
             ZStack {
@@ -2580,7 +2584,7 @@ private struct PlaylistSortMenuButton: View {
         .contentShape(Circle())
         .disabled(isDisabled)
         .opacity(isDisabled ? 0.40 : 1.0)
-        .help("Sort playlist tracks")
+        .help(L10n.tr("Sort playlist tracks"))
         .onHover { hovering in
             guard !isDisabled else { return }
             guard isHovered != hovering else { return }
@@ -2605,6 +2609,7 @@ private struct PlaylistSortMenuButton: View {
 // TRACK DRAG HANDLE BUTTON (HOLD & DRAG TO ORGANIZE OR DRAG TO ANOTHER PLAYLIST)
 // -----------------------------------------------------------------------------
 private struct TrackDragHandleButton: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let trackPath: String
     let isRowHovered: Bool
     let onStartDrag: () -> Void
@@ -2657,7 +2662,7 @@ private struct TrackDragHandleButton: View {
             onStartDrag()
             return NSItemProvider(object: trackPath as NSString)
         }
-        .help("Hold and drag to reorder within playlist, or drop onto another playlist")
+        .help(L10n.tr("Hold and drag to reorder within playlist, or drop onto another playlist"))
     }
 }
 
@@ -2665,6 +2670,7 @@ private struct TrackDragHandleButton: View {
 // DROP INSERTION LINE (GOLD SONY REFRACTION BEACON)
 // -----------------------------------------------------------------------------
 private struct DropInsertionLine: View {
+    @ObservedObject private var localization = AppLocalization.shared
     var body: some View {
         HStack(spacing: 4) {
             Circle()
@@ -2757,6 +2763,7 @@ private let modalFormatOptions: [ModalFilterOption] = [
 // MODAL BROWSING MODE SEGMENTED BAR (LIQUID GLASS SLIDING PILL)
 // -----------------------------------------------------------------------------
 private struct ModalBrowsingModeSegmentedBarView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     @Binding var selectedMode: AddBrowsingMode
     let onSelectMode: (AddBrowsingMode) -> Void
     
@@ -2803,6 +2810,7 @@ private struct ModalBrowsingModeSegmentedBarView: View {
 }
 
 private struct ModalBrowsingModeTabPillView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let mode: AddBrowsingMode
     let isSelected: Bool
     let namespace: Namespace.ID
@@ -2815,7 +2823,7 @@ private struct ModalBrowsingModeTabPillView: View {
             HStack(spacing: 5) {
                 Image(systemName: mode.icon)
                     .font(.system(size: 11, weight: isSelected ? .bold : .semibold))
-                Text(mode.rawValue)
+                Text(L10n.lookup(mode.rawValue))
                     .font(.system(size: 12, weight: isSelected ? .bold : .medium))
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
@@ -2867,6 +2875,7 @@ private struct ModalBrowsingModeTabPillView: View {
 // MODAL FORMAT SEGMENTED BAR (LIQUID GLASS SLIDING PILL)
 // -----------------------------------------------------------------------------
 private struct ModalFormatSegmentedBarView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let options: [ModalFilterOption]
     @Binding var selectedFormat: String
     let onSelectFormat: (String) -> Void
@@ -2914,6 +2923,7 @@ private struct ModalFormatSegmentedBarView: View {
 }
 
 private struct ModalFormatTabPillView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let option: ModalFilterOption
     let isSelected: Bool
     let namespace: Namespace.ID
@@ -2928,7 +2938,7 @@ private struct ModalFormatTabPillView: View {
                     Image(systemName: icon)
                         .font(.system(size: 10, weight: isSelected ? .bold : .semibold))
                 }
-                Text(option.title)
+                Text(L10n.lookup(option.title))
                     .font(.system(size: 11.5, weight: isSelected ? .bold : .medium))
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
@@ -2979,6 +2989,7 @@ private struct ModalFormatTabPillView: View {
 }
 
 private struct ModalActivePillBackground: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let isHiRes: Bool
     let isHovered: Bool
     
@@ -3016,6 +3027,7 @@ private struct ModalActivePillBackground: View {
 }
 
 private struct ModalHoverPillBackground: View {
+    @ObservedObject private var localization = AppLocalization.shared
     var body: some View {
         ZStack {
             Color.white.opacity(0.09)
@@ -3066,6 +3078,7 @@ private struct ModalArtistItem: Identifiable {
 }
 
 private struct SheetCloseButton: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let action: () -> Void
 
     var body: some View {
@@ -3077,11 +3090,12 @@ private struct SheetCloseButton: View {
         }
         .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 14))
         .keyboardShortcut(.cancelAction)
-        .help("Close (Esc)")
+        .help(L10n.tr("Close (Esc)"))
     }
 }
 
 private struct AddTracksModal: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let playlistName: String
     let tracks: [Track]
     let existingPlaylistPaths: Set<String>
@@ -3186,9 +3200,9 @@ private struct AddTracksModal: View {
     private func friendlyDateString(for date: Date) -> String {
         let cal = Calendar.current
         if cal.isDateInToday(date) {
-            return "Today"
+            return L10n.tr("Today")
         } else if cal.isDateInYesterday(date) {
-            return "Yesterday"
+            return L10n.tr("Yesterday")
         } else {
             return Self.friendlyDateFormatter.string(from: date)
         }
@@ -3276,13 +3290,13 @@ private struct AddTracksModal: View {
     private var resultsCountLabel: String {
         switch mode {
         case .songs:
-            return "\(filteredTracks.count.formatted()) songs"
+            return L10n.tr("\(filteredTracks.count.formatted()) songs")
         case .recentlyAdded:
-            return "\(filteredTracks.count.formatted()) recent songs"
+            return L10n.tr("\(filteredTracks.count.formatted()) recent songs")
         case .albums:
-            return "\(filteredAlbums.count.formatted()) albums"
+            return L10n.tr("\(filteredAlbums.count.formatted()) albums")
         case .artists:
-            return "\(filteredArtists.count.formatted()) artists"
+            return L10n.tr("\(filteredArtists.count.formatted()) artists")
         }
     }
     
@@ -3313,19 +3327,19 @@ private struct AddTracksModal: View {
                 LiquidGlassIconBadge(icon: "plus.rectangle.on.rectangle", size: 40, cornerRadius: 10)
                 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Add Tracks to Playlist")
+                    Text(L10n.tr("Add Tracks to Playlist"))
                         .font(WalkmanFont.title3)
                         .foregroundStyle(.white)
                     
                     HStack(spacing: 6) {
-                        Text("Target Playlist:")
+                        Text(L10n.tr("Target Playlist:"))
                             .foregroundStyle(.secondary)
                         Text(playlistName)
                             .font(WalkmanFont.subheadlineBold)
                             .foregroundStyle(.white)
                         Text("•")
                             .foregroundStyle(.tertiary)
-                        Text("\(existingPlaylistPaths.count) tracks currently in playlist")
+                        Text(L10n.tr("\(existingPlaylistPaths.count) tracks currently in playlist"))
                             .foregroundStyle(.secondary)
                     }
                     .font(WalkmanFont.subheadline)
@@ -3357,9 +3371,9 @@ private struct AddTracksModal: View {
                             .foregroundStyle(search.isEmpty ? WalkmanTheme.silverMuted : WalkmanTheme.silverLight)
                         
                         TextField(
-                            (mode == .songs || mode == .recentlyAdded) ? "Search songs by title, artist, album..." :
-                            mode == .albums ? "Search albums by title or artist..." :
-                            "Search artists...",
+                            (mode == .songs || mode == .recentlyAdded) ? L10n.tr("Search songs by title, artist, album...") :
+                            mode == .albums ? L10n.tr("Search albums by title or artist...") :
+                            L10n.tr("Search artists..."),
                             text: $search
                         )
                         .textFieldStyle(.plain)
@@ -3413,7 +3427,7 @@ private struct AddTracksModal: View {
                         HStack(spacing: 5) {
                             Image(systemName: hideExisting ? "eye.slash" : "eye")
                                 .font(.system(size: 11))
-                            Text("Hide songs already in playlist")
+                            Text(L10n.tr("Hide songs already in playlist"))
                                 .font(WalkmanFont.subheadline)
                         }
                     }
@@ -3444,12 +3458,12 @@ private struct AddTracksModal: View {
                             Image(systemName: mode == .recentlyAdded ? "clock.arrow.circlepath" : "music.note")
                                 .font(.system(size: 32))
                                 .foregroundStyle(.tertiary)
-                            Text(mode == .recentlyAdded ? "No recently added tracks" : "No matching tracks")
+                            Text(mode == .recentlyAdded ? L10n.tr("No recently added tracks") : L10n.tr("No matching tracks"))
                                 .font(WalkmanFont.headline)
                                 .foregroundStyle(.secondary)
                             Text(hideExisting
-                                 ? "All matching tracks may already be in the playlist. Try unchecking 'Hide songs already in playlist'."
-                                 : "Try clearing your search query or choosing 'All Formats'.")
+                                 ? L10n.tr("All matching tracks may already be in the playlist. Try unchecking 'Hide songs already in playlist'.")
+                                 : L10n.tr("Try clearing your search query or choosing 'All Formats'."))
                                 .font(WalkmanFont.subheadline)
                                 .foregroundStyle(.tertiary)
                                 .multilineTextAlignment(.center)
@@ -3504,7 +3518,7 @@ private struct AddTracksModal: View {
                             Image(systemName: "square.stack")
                                 .font(.system(size: 32))
                                 .foregroundStyle(.tertiary)
-                            Text("No matching albums")
+                            Text(L10n.tr("No matching albums"))
                                 .font(WalkmanFont.headline)
                                 .foregroundStyle(.secondary)
                             Spacer()
@@ -3550,7 +3564,7 @@ private struct AddTracksModal: View {
                             Image(systemName: "person.2")
                                 .font(.system(size: 32))
                                 .foregroundStyle(.tertiary)
-                            Text("No matching artists")
+                            Text(L10n.tr("No matching artists"))
                                 .font(WalkmanFont.headline)
                                 .foregroundStyle(.secondary)
                             Spacer()
@@ -3601,7 +3615,7 @@ private struct AddTracksModal: View {
                 // Left: Selection Counter & Bulk Controls
                 HStack(spacing: 10) {
                     if selectedTrackPaths.isEmpty {
-                        Text(addedInSessionPaths.isEmpty ? "No tracks selected" : "\(addedInSessionPaths.count) added to Walkman")
+                        Text(addedInSessionPaths.isEmpty ? L10n.tr("No tracks selected") : L10n.tr("\(addedInSessionPaths.count) added to Walkman"))
                             .font(WalkmanFont.callout)
                             .foregroundStyle(addedInSessionPaths.isEmpty ? .secondary : WalkmanTheme.silverLight)
                     } else {
@@ -3609,7 +3623,7 @@ private struct AddTracksModal: View {
                             Image(systemName: "checkmark.circle.fill")
                                 .font(.system(size: 13, weight: .semibold))
                                 .foregroundStyle(WalkmanTheme.silverLight)
-                            Text("\(selectedTrackPaths.count) \(selectedTrackPaths.count == 1 ? "track" : "tracks") selected")
+                            Text(L10n.tr("\(selectedTrackPaths.count) \(selectedTrackPaths.count == 1 ? L10n.tr("track") : L10n.tr("tracks")) selected"))
                                 .font(WalkmanFont.calloutBold)
                                 .foregroundStyle(.white)
                         }
@@ -3618,7 +3632,7 @@ private struct AddTracksModal: View {
                             HStack(spacing: 4) {
                                 Image(systemName: "xmark")
                                     .font(.system(size: 10, weight: .semibold))
-                                Text("Clear")
+                                Text(L10n.tr("Clear"))
                                     .font(WalkmanFont.calloutMedium)
                             }
                             .padding(.horizontal, 12)
@@ -3626,7 +3640,7 @@ private struct AddTracksModal: View {
                             .foregroundStyle(WalkmanTheme.silverLight)
                         }
                         .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 16))
-                        .help("Deselect all selected tracks")
+                        .help(L10n.tr("Deselect all selected tracks"))
                     }
                     
                     if visibleUnselectedCount > 0 {
@@ -3634,7 +3648,7 @@ private struct AddTracksModal: View {
                             HStack(spacing: 5) {
                                 Image(systemName: "checkmark.circle")
                                     .font(.system(size: 11, weight: .semibold))
-                                Text("Select All Visible (\(visibleUnselectedCount))")
+                                Text(L10n.tr("Select All Visible (\(visibleUnselectedCount))"))
                                     .font(WalkmanFont.calloutMedium)
                             }
                             .padding(.horizontal, 14)
@@ -3642,7 +3656,7 @@ private struct AddTracksModal: View {
                             .foregroundStyle(WalkmanTheme.silverLight)
                         }
                         .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 16))
-                        .help("Select all tracks matching current search & format filter")
+                        .help(L10n.tr("Select all tracks matching current search & format filter"))
                     }
                 }
                 
@@ -3650,7 +3664,7 @@ private struct AddTracksModal: View {
                 
                 // Right: Close / Add / Done Button
                 Button(action: onDismiss) {
-                    Text("Close")
+                    Text(L10n.tr("Close"))
                         .font(WalkmanFont.calloutMedium)
                         .padding(.horizontal, 22)
                         .frame(height: 38)
@@ -3671,7 +3685,7 @@ private struct AddTracksModal: View {
                         HStack(spacing: 6) {
                             Image(systemName: "plus.circle.fill")
                                 .font(.system(size: 13, weight: .semibold))
-                            Text("Add \(selectedTrackPaths.count) \(selectedTrackPaths.count == 1 ? "Track" : "Tracks")")
+                            Text(L10n.tr("Add \(selectedTrackPaths.count) \(selectedTrackPaths.count == 1 ? L10n.tr("track") : L10n.tr("tracks"))"))
                                 .font(WalkmanFont.calloutBold)
                         }
                         .padding(.horizontal, 22)
@@ -3687,7 +3701,7 @@ private struct AddTracksModal: View {
                                 Image(systemName: "checkmark")
                                     .font(.system(size: 11, weight: .bold))
                             }
-                            Text("Done")
+                            Text(L10n.tr("Done"))
                                 .font(WalkmanFont.calloutBold)
                         }
                         .padding(.horizontal, 24)
@@ -3716,6 +3730,7 @@ private struct AddTracksModal: View {
 // MARK: - Subviews for AddTracksModal
 
 private struct ModalTrackRow: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let track: Track
     let isSelected: Bool
     let isInPlaylist: Bool
@@ -3749,7 +3764,7 @@ private struct ModalTrackRow: View {
                 TrackCoverThumbnail(track: track, size: 36, isPlaying: isPlaying)
             }
             .buttonStyle(.plain)
-            .help(isPlaying ? "Pause preview" : "Play preview")
+            .help(isPlaying ? L10n.tr("Pause preview") : L10n.tr("Play preview"))
             
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
@@ -3759,7 +3774,7 @@ private struct ModalTrackRow: View {
                         .lineLimit(1)
                     
                     if track.isHiRes {
-                        Text("Hi-Res")
+                        Text(L10n.tr("Hi-Res"))
                             .font(WalkmanFont.badge)
                             .padding(.horizontal, 4.5)
                             .padding(.vertical, 1.5)
@@ -3809,7 +3824,7 @@ private struct ModalTrackRow: View {
                 HStack(spacing: 5) {
                     Image(systemName: "checkmark")
                         .font(.system(size: 9.5, weight: .bold))
-                    Text("In Playlist")
+                    Text(L10n.tr("In Playlist"))
                         .font(WalkmanFont.calloutMedium)
                 }
                 .padding(.horizontal, 10)
@@ -3824,7 +3839,7 @@ private struct ModalTrackRow: View {
                     HStack(spacing: 5) {
                         Image(systemName: "plus")
                             .font(.system(size: 11, weight: .bold))
-                        Text("Add")
+                        Text(L10n.tr("Add"))
                             .font(WalkmanFont.calloutBold)
                     }
                     .padding(.horizontal, 14)
@@ -3833,7 +3848,7 @@ private struct ModalTrackRow: View {
                 }
                 .buttonStyle(LiquidGlassButtonStyle(variant: .prominent, cornerRadius: 14))
                 .fixedSize(horizontal: true, vertical: false)
-                .help("Add track instantly to playlist on Walkman")
+                .help(L10n.tr("Add track instantly to playlist on Walkman"))
             }
         }
         .padding(.horizontal, 12)
@@ -3870,6 +3885,7 @@ private struct ModalTrackRow: View {
 }
 
 private struct ModalAlbumRow: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let album: ModalAlbumItem
     let isAllInPlaylist: Bool
     let unaddedCount: Int
@@ -3904,7 +3920,7 @@ private struct ModalAlbumRow: View {
                         .lineLimit(1)
                     
                     if album.isHiRes {
-                        Text("Hi-Res")
+                        Text(L10n.tr("Hi-Res"))
                             .font(WalkmanFont.badge)
                             .padding(.horizontal, 4.5)
                             .padding(.vertical, 1.5)
@@ -3920,7 +3936,7 @@ private struct ModalAlbumRow: View {
                     .lineLimit(1)
                 
                 HStack(spacing: 8) {
-                    Text("\(album.trackCount) songs")
+                    Text(L10n.tr("\(album.trackCount) songs"))
                         .font(WalkmanFont.subheadline)
                         .foregroundStyle(.tertiary)
                     
@@ -3935,13 +3951,13 @@ private struct ModalAlbumRow: View {
                     if isAllInPlaylist {
                         Text("•")
                             .foregroundStyle(.tertiary)
-                        Text("All in playlist")
+                        Text(L10n.tr("All in playlist"))
                             .font(WalkmanFont.subheadline)
                             .foregroundStyle(WalkmanTheme.silverLight)
                     } else if selectedCount > 0 {
                         Text("•")
                             .foregroundStyle(.tertiary)
-                        Text("\(selectedCount) / \(album.trackCount) selected")
+                        Text(L10n.tr("\(selectedCount) / \(album.trackCount) selected"))
                             .font(WalkmanFont.subheadline)
                             .foregroundStyle(WalkmanTheme.silverLight)
                     }
@@ -3954,7 +3970,7 @@ private struct ModalAlbumRow: View {
                 HStack(spacing: 5) {
                     Image(systemName: "checkmark")
                         .font(.system(size: 9.5, weight: .bold))
-                    Text("In Playlist")
+                    Text(L10n.tr("In Playlist"))
                         .font(WalkmanFont.calloutMedium)
                 }
                 .padding(.horizontal, 12)
@@ -3970,8 +3986,8 @@ private struct ModalAlbumRow: View {
                         Image(systemName: "plus")
                             .font(.system(size: 11, weight: .bold))
                         Text(unaddedCount < album.trackCount
-                             ? "Add Remaining (\(unaddedCount))"
-                             : "Add Album (\(album.trackCount))")
+                             ? L10n.tr("Add Remaining (\(unaddedCount))")
+                             : L10n.tr("Add Album (\(album.trackCount))"))
                             .font(WalkmanFont.calloutBold)
                     }
                     .padding(.horizontal, 14)
@@ -3980,7 +3996,7 @@ private struct ModalAlbumRow: View {
                 }
                 .buttonStyle(LiquidGlassButtonStyle(variant: .prominent, cornerRadius: 14))
                 .fixedSize(horizontal: true, vertical: false)
-                .help("Add all unadded tracks of this album directly to playlist")
+                .help(L10n.tr("Add all unadded tracks of this album directly to playlist"))
             }
         }
         .padding(.horizontal, 14)
@@ -4017,6 +4033,7 @@ private struct ModalAlbumRow: View {
 }
 
 private struct ModalArtistRow: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let artist: ModalArtistItem
     let isAllInPlaylist: Bool
     let unaddedCount: Int
@@ -4047,20 +4064,20 @@ private struct ModalArtistRow: View {
                     .lineLimit(1)
                 
                 HStack(spacing: 6) {
-                    Text("\(artist.albumCount) albums • \(artist.trackCount) songs")
+                    Text(L10n.tr("\(artist.albumCount) albums • \(artist.trackCount) songs"))
                         .font(WalkmanFont.subheadline)
                         .foregroundStyle(WalkmanTheme.silverMuted)
                     
                     if isAllInPlaylist {
                         Text("•")
                             .foregroundStyle(.tertiary)
-                        Text("All in playlist")
+                        Text(L10n.tr("All in playlist"))
                             .font(WalkmanFont.subheadline)
                             .foregroundStyle(WalkmanTheme.silverLight)
                     } else if selectedCount > 0 {
                         Text("•")
                             .foregroundStyle(.tertiary)
-                        Text("\(selectedCount) / \(artist.trackCount) selected")
+                        Text(L10n.tr("\(selectedCount) / \(artist.trackCount) selected"))
                             .font(WalkmanFont.subheadline)
                             .foregroundStyle(WalkmanTheme.silverLight)
                     }
@@ -4073,7 +4090,7 @@ private struct ModalArtistRow: View {
                 HStack(spacing: 5) {
                     Image(systemName: "checkmark")
                         .font(.system(size: 9.5, weight: .bold))
-                    Text("In Playlist")
+                    Text(L10n.tr("In Playlist"))
                         .font(WalkmanFont.calloutMedium)
                 }
                 .padding(.horizontal, 12)
@@ -4089,8 +4106,8 @@ private struct ModalArtistRow: View {
                         Image(systemName: "plus")
                             .font(.system(size: 11, weight: .bold))
                         Text(unaddedCount < artist.trackCount
-                             ? "Add Remaining (\(unaddedCount))"
-                             : "Add All Songs (\(artist.trackCount))")
+                             ? L10n.tr("Add Remaining (\(unaddedCount))")
+                             : L10n.tr("Add All Songs (\(artist.trackCount))"))
                             .font(WalkmanFont.calloutBold)
                     }
                     .padding(.horizontal, 14)
@@ -4099,7 +4116,7 @@ private struct ModalArtistRow: View {
                 }
                 .buttonStyle(LiquidGlassButtonStyle(variant: .prominent, cornerRadius: 14))
                 .fixedSize(horizontal: true, vertical: false)
-                .help("Add all unadded songs by this artist directly to playlist")
+                .help(L10n.tr("Add all unadded songs by this artist directly to playlist"))
             }
         }
         .padding(.horizontal, 14)

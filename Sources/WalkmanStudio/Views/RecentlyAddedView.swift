@@ -56,6 +56,7 @@ fileprivate struct FilterOption: Identifiable {
 }
 
 public struct RecentlyAddedView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let tracks: [Track]
     let isLoading: Bool
     @Binding var selectedTrackId: String?
@@ -433,9 +434,9 @@ public struct RecentlyAddedView: View {
         ExpandableLiquidGlassSearchBar(
             text: $searchQuery,
             isExpanded: $isSearchExpanded,
-            placeholder: "Search recently added...",
+            placeholder: L10n.tr("Search recently added..."),
             expandedWidth: 260,
-            helpText: "Search recently added"
+            helpText: L10n.tr("Search recently added")
         )
     }
     
@@ -455,7 +456,7 @@ public struct RecentlyAddedView: View {
                 HStack(spacing: 6) {
                     Image(systemName: isPlayingFromVisibleQueue ? "pause.fill" : "play.fill")
                         .font(.system(size: 11, weight: .bold))
-                    Text(isPlayingFromVisibleQueue ? "Pause" : "Play Recent")
+                    Text(isPlayingFromVisibleQueue ? L10n.tr("Pause") : L10n.tr("Play Recent"))
                         .font(.system(size: 13, weight: .semibold))
                 }
                 .padding(.horizontal, 14)
@@ -465,7 +466,7 @@ public struct RecentlyAddedView: View {
             }
             .buttonStyle(LiquidGlassButtonStyle(variant: .prominent, cornerRadius: 19))
             .disabled(displayedTracks.isEmpty)
-            .help(isPlayingFromVisibleQueue ? "Pause playback" : "Play recent tracks in order")
+            .help(isPlayingFromVisibleQueue ? L10n.tr("Pause playback") : L10n.tr("Play recent tracks in order"))
             
             Button(action: shufflePlaybackRecent) {
                 Image(systemName: "shuffle")
@@ -475,7 +476,7 @@ public struct RecentlyAddedView: View {
             }
             .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 19))
             .disabled(displayedTracks.isEmpty)
-            .help("Shuffle and play recent tracks")
+            .help(L10n.tr("Shuffle and play recent tracks"))
 
             RecentlyAddedTimeScopeMenuButton(timeScope: $timeScope)
 
@@ -500,7 +501,7 @@ public struct RecentlyAddedView: View {
             }
             .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 19))
             .disabled(displayedTracks.isEmpty || isPreparingLyricsSheet)
-            .help("LRC Fetcher: Fetch and sync .LRC lyrics for recently added tracks")
+            .help(L10n.tr("LRC Fetcher: Fetch and sync .LRC lyrics for recently added tracks"))
         }
     }
     
@@ -510,7 +511,7 @@ public struct RecentlyAddedView: View {
                 ProgressView()
                     .controlSize(.small)
                     .scaleEffect(0.75)
-                Text("Scanning...")
+                Text(L10n.tr("Scanning..."))
                     .font(.system(size: 12.5, weight: .medium, design: .monospaced))
                     .foregroundStyle(WalkmanTheme.silverMuted)
             } else {
@@ -523,7 +524,7 @@ public struct RecentlyAddedView: View {
                     .lineLimit(1)
             }
         }
-        .help(displayedTracks.count == 1 ? "1 Recent Track" : "\(displayedTracks.count.formatted()) Recent Tracks")
+        .help(displayedTracks.count == 1 ? L10n.tr("1 Recent Track") : L10n.tr("\(displayedTracks.count.formatted()) Recent Tracks"))
         .padding(.horizontal, 14)
         .frame(height: 38)
         .background(
@@ -584,11 +585,11 @@ public struct RecentlyAddedView: View {
                     .foregroundStyle(WalkmanTheme.silverMuted)
             }
             
-            Text("No Recently Added Tracks")
+            Text(L10n.tr("No Recently Added Tracks"))
                 .font(WalkmanFont.title3)
                 .foregroundStyle(.white)
             
-            Text("Drag and drop audio files into Transfer & Convert to copy music to your Walkman.")
+            Text(L10n.tr("Drag and drop audio files into Transfer & Convert to copy music to your Walkman."))
                 .font(WalkmanFont.callout)
                 .foregroundStyle(Color.secondary)
                 .multilineTextAlignment(.center)
@@ -598,7 +599,7 @@ public struct RecentlyAddedView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "arrow.triangle.2.circlepath")
                         .font(.system(size: 11, weight: .semibold))
-                    Text("Go to Transfer Queue")
+                    Text(L10n.tr("Go to Transfer Queue"))
                         .font(WalkmanFont.calloutMedium)
                 }
                 .padding(.horizontal, 16)
@@ -629,15 +630,15 @@ public struct RecentlyAddedView: View {
                     .foregroundStyle(WalkmanTheme.silverMuted)
             }
             
-            Text("No Matching New Tracks")
+            Text(L10n.tr("No Matching New Tracks"))
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(.white)
             
             Text(searchQuery.isEmpty
                  ? (timeScope != .allTime
-                    ? "No tracks were added in the \(timeScope.rawValue.lowercased())."
-                    : "No recently added tracks match the selected format.")
-                 : "No recently added tracks match \"\(searchQuery)\" with the selected filters.")
+                    ? L10n.tr("No tracks were added in the \(L10n.lookup(timeScope.rawValue)).")
+                    : L10n.tr("No recently added tracks match the selected format."))
+                 : L10n.tr("No recently added tracks match \"\(searchQuery)\" with the selected filters."))
                 .font(WalkmanFont.callout)
                 .foregroundStyle(Color.secondary)
                 .multilineTextAlignment(.center)
@@ -649,7 +650,7 @@ public struct RecentlyAddedView: View {
                 timeScope = .allTime
                 recomputeDisplayedTracks()
             }) {
-                Text(timeScope != .allTime ? "View All Added Tracks" : "Reset Filters")
+                Text(timeScope != .allTime ? L10n.tr("View All Added Tracks") : L10n.tr("Reset Filters"))
                     .font(WalkmanFont.calloutMedium)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 6)
@@ -672,7 +673,7 @@ public struct RecentlyAddedView: View {
             }
             .width(min: 26, ideal: 34, max: 44)
             
-            TableColumn("Title", value: \.title) { item in
+            TableColumn(L10n.tr("Title"), value: \.title) { item in
                 let track = item.track
                 let isCurrent = player.currentTrack?.id == track.id
                 let isPlayingThis = isCurrent && player.isPlaying
@@ -689,7 +690,7 @@ public struct RecentlyAddedView: View {
                         TrackCoverThumbnail(track: track, size: 30, isPlaying: isPlayingThis)
                     }
                     .buttonStyle(.plain)
-                    .help(isPlayingThis ? "Pause" : "Play preview")
+                    .help(isPlayingThis ? L10n.tr("Pause") : L10n.tr("Play preview"))
                     
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 5) {
@@ -708,7 +709,7 @@ public struct RecentlyAddedView: View {
                                 Image(systemName: "character.book.closed.fill")
                                     .font(.system(size: 9))
                                     .foregroundStyle(WalkmanTheme.silverMuted)
-                                    .help("Language Study & Audiobooks (/LEARNING/)")
+                                    .help(L10n.tr("Language Study & Audiobooks (/LEARNING/)"))
                             }
                         }
                     }
@@ -716,7 +717,7 @@ public struct RecentlyAddedView: View {
             }
             .width(min: 130, ideal: 220)
             
-            TableColumn("Artist", value: \.artist) { item in
+            TableColumn(L10n.tr("Artist"), value: \.artist) { item in
                 Text(item.artist.isEmpty ? "Unknown Artist" : item.artist)
                     .font(WalkmanFont.callout)
                     .foregroundStyle(Color.white.opacity(0.85))
@@ -724,7 +725,7 @@ public struct RecentlyAddedView: View {
             }
             .width(min: 90, ideal: 140)
             
-            TableColumn("Album", value: \.album) { item in
+            TableColumn(L10n.tr("Album"), value: \.album) { item in
                 Text(item.album.isEmpty ? "—" : item.album)
                     .font(WalkmanFont.callout)
                     .foregroundStyle(Color.secondary)
@@ -732,7 +733,7 @@ public struct RecentlyAddedView: View {
             }
             .width(min: 90, ideal: 150)
             
-            TableColumn("Format", value: \.format) { item in
+            TableColumn(L10n.tr("Format"), value: \.format) { item in
                 HStack(spacing: 4.5) {
                     Text(item.format)
                         .font(WalkmanFont.badge)
@@ -766,7 +767,7 @@ public struct RecentlyAddedView: View {
                         HStack(spacing: 2.5) {
                             Image(systemName: "waveform")
                                 .font(.system(size: 7, weight: .black))
-                            Text("Hi-Res")
+                            Text(L10n.tr("Hi-Res"))
                                 .font(WalkmanFont.badge)
                         }
                         .padding(.horizontal, 5)
@@ -800,7 +801,7 @@ public struct RecentlyAddedView: View {
                         Capsule().stroke(Color(red: 255/255, green: 165/255, blue: 30/255).opacity(0.55), lineWidth: 0.8)
                     )
                     .foregroundStyle(Color(red: 255/255, green: 195/255, blue: 80/255))
-                    .help("Sony 12 Tone / SenseMe Analyzed • \(item.track.senseMeChannels.joined(separator: ", "))")
+                    .help(L10n.tr("Sony 12 Tone / SenseMe Analyzed • \(item.track.senseMeChannels.joined(separator: ", "))"))
                 } else {
                     Text("—")
                         .font(WalkmanFont.monoSmall)
@@ -809,7 +810,7 @@ public struct RecentlyAddedView: View {
             }
             .width(min: 60, ideal: 76, max: 90)
             
-            TableColumn("Date Added", value: \.dateAdded) { item in
+            TableColumn(L10n.tr("Date Added"), value: \.dateAdded) { item in
                 Text(formatDateAdded(item.dateAdded))
                     .font(WalkmanFont.callout)
                     .foregroundStyle(Color.secondary)
@@ -817,7 +818,7 @@ public struct RecentlyAddedView: View {
             }
             .width(min: 85, ideal: 115, max: 150)
             
-            TableColumn("Duration", value: \.durationSeconds) { item in
+            TableColumn(L10n.tr("Duration"), value: \.durationSeconds) { item in
                 Text(formatDuration(item.durationSeconds))
                     .font(WalkmanFont.monoSmall)
                     .foregroundStyle(WalkmanTheme.silverMuted)
@@ -826,7 +827,7 @@ public struct RecentlyAddedView: View {
         }
         .contextMenu(forSelectionType: RankedTrack.ID.self) { items in
             if let id = items.first, let item = displayedTracks.first(where: { $0.id == id }) {
-                Button("Play") {
+                Button(L10n.tr("Play")) {
                     self.selectedTrackId = item.track.id
                     player.play(track: item.track, in: currentPlaybackQueue)
                 }
@@ -836,28 +837,28 @@ public struct RecentlyAddedView: View {
                 Button {
                     onEditTrack?(item.track)
                 } label: {
-                    Label("Edit Song Metadata...", systemImage: "square.and.pencil")
+                    Label(L10n.tr("Edit Song Metadata..."), systemImage: "square.and.pencil")
                 }
                 
                 Button {
                     onTrimCutTrack?(item.track)
                 } label: {
-                    Label("Trim & Cut...", systemImage: "scissors")
+                    Label(L10n.tr("Trim & Cut..."), systemImage: "scissors")
                 }
                 
                 Button {
                     ArtworkExportService.exportArtwork(for: item.track)
                 } label: {
-                    Label("Export Cover Art to Mac...", systemImage: "square.and.arrow.down")
+                    Label(L10n.tr("Export Cover Art to Mac..."), systemImage: "square.and.arrow.down")
                 }
                 
-                Button("Inspect in Sidebar") {
+                Button(L10n.tr("Inspect in Sidebar")) {
                     onInspectTrack(item.track)
                 }
                 
                 Divider()
                 
-                Button("Copy Path") {
+                Button(L10n.tr("Copy Path")) {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(item.track.fullPath, forType: .string)
                 }
@@ -876,7 +877,7 @@ public struct RecentlyAddedView: View {
                         onDeleteTrack?(r.track)
                     }
                 } label: {
-                    Label(items.count > 1 ? "Delete \(items.count) Songs from Device" : "Delete from Device", systemImage: "trash")
+                    Label(items.count > 1 ? L10n.tr("Delete \(items.count) Songs from Device") : L10n.tr("Delete from Device"), systemImage: "trash")
                 }
             }
         } primaryAction: { items in
@@ -897,6 +898,7 @@ public struct RecentlyAddedView: View {
 // FORMAT SEGMENTED BAR VIEW (LIQUID GLASS SLIDING PILL TRANSITION)
 // -----------------------------------------------------------------------------
 private struct FormatSegmentedBarView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let options: [FilterOption]
     @Binding var selectedFilter: String
     let onSelectFilter: (String) -> Void
@@ -947,6 +949,7 @@ private struct FormatSegmentedBarView: View {
 // FORMAT TAB PILL VIEW (ROUND LIQUID GLASS CLICK BOX WITH HOVER & SLIDING PILL)
 // -----------------------------------------------------------------------------
 private struct FormatTabPillView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let option: FilterOption
     let isSelected: Bool
     let namespace: Namespace.ID
@@ -961,7 +964,7 @@ private struct FormatTabPillView: View {
                     Image(systemName: icon)
                         .font(.system(size: 11, weight: isSelected ? .bold : .semibold))
                 }
-                Text(option.title)
+                Text(L10n.lookup(option.title))
                     .font(.system(size: 12.5, weight: isSelected ? .bold : .medium))
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
@@ -1018,6 +1021,7 @@ private struct FormatTabPillView: View {
 // ACTIVE LIQUID GLASS PILL BACKGROUND
 // -----------------------------------------------------------------------------
 private struct ActivePillBackground: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let isHiRes: Bool
     let isHovered: Bool
     
@@ -1061,6 +1065,7 @@ private struct ActivePillBackground: View {
 // HOVER LIQUID GLASS PILL BACKGROUND
 // -----------------------------------------------------------------------------
 private struct HoverPillBackground: View {
+    @ObservedObject private var localization = AppLocalization.shared
     var body: some View {
         ZStack {
             Color.white.opacity(0.09)
@@ -1097,6 +1102,7 @@ private struct HoverPillBackground: View {
 // RECENTLY ADDED TIME SCOPE MENU BUTTON (CIRCULAR LIQUID GLASS DESIGN)
 // -----------------------------------------------------------------------------
 private struct RecentlyAddedTimeScopeMenuButton: View {
+    @ObservedObject private var localization = AppLocalization.shared
     @Binding var timeScope: RecentlyAddedTimeScope
     @State private var isHovered = false
 
@@ -1106,9 +1112,9 @@ private struct RecentlyAddedTimeScopeMenuButton: View {
 
     var body: some View {
         Menu {
-            Picker("Scope", selection: $timeScope) {
+            Picker(L10n.tr("Scope"), selection: $timeScope) {
                 ForEach(RecentlyAddedTimeScope.allCases) { scope in
-                    Label(scope.rawValue, systemImage: scope.icon)
+                    Label(L10n.lookup(scope.rawValue), systemImage: scope.icon)
                         .tag(scope)
                 }
             }
@@ -1179,7 +1185,7 @@ private struct RecentlyAddedTimeScopeMenuButton: View {
         .menuIndicator(.hidden)
         .buttonStyle(.plain)
         .contentShape(Circle())
-        .help("Filter time scope (\(timeScope.rawValue))")
+        .help(L10n.tr("Filter time scope (\(L10n.lookup(timeScope.rawValue)))"))
         .onHover { hovering in
             guard isHovered != hovering else { return }
             withAnimation(.easeInOut(duration: 0.15)) {

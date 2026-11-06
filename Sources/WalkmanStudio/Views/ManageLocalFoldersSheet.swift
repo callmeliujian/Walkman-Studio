@@ -2,6 +2,7 @@ import SwiftUI
 import AppKit
 
 public struct ManageLocalFoldersSheet: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let onDismiss: () -> Void
 
     @ObservedObject private var localService = LocalMusicLibraryService.shared
@@ -61,16 +62,16 @@ public struct ManageLocalFoldersSheet: View {
         )
         .shadow(color: Color.black.opacity(0.45), radius: 24, x: 0, y: 10)
         .confirmationDialog(
-            "Remove Folder from Local Library?",
+            L10n.tr("Remove Folder from Local Library?"),
             isPresented: $showRemoveConfirmation,
             presenting: folderToRemove
         ) { folder in
-            Button("Remove from Library", role: .destructive) {
+            Button(L10n.tr("Remove from Library"), role: .destructive) {
                 localService.removeFolder(id: folder.id)
             }
-            Button("Cancel", role: .cancel) {}
+            Button(L10n.tr("Cancel"), role: .cancel) {}
         } message: { folder in
-            Text("Are you sure you want to remove \"\(folder.displayName)\" from Walkman Studio? All indexed tracks from this folder will be cleared from your local library database. Audio files on disk will NOT be touched.")
+            Text(L10n.tr("Are you sure you want to remove \"\(folder.displayName)\" from Walkman Studio? All indexed tracks from this folder will be cleared from your local library database. Audio files on disk will NOT be touched."))
         }
     }
 
@@ -88,11 +89,11 @@ public struct ManageLocalFoldersSheet: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 8) {
-                    Text("Manage Local Folders")
+                    Text(L10n.tr("Manage Local Folders"))
                         .font(.system(size: 18, weight: .bold))
                         .foregroundStyle(.white)
 
-                    Text("\(localService.folders.count) Folders")
+                    Text(L10n.tr("\(localService.folders.count) Folders"))
                         .font(.system(size: 11, weight: .bold, design: .monospaced))
                         .foregroundStyle(WalkmanTheme.silverMuted)
                         .padding(.horizontal, 7)
@@ -101,7 +102,7 @@ public struct ManageLocalFoldersSheet: View {
                         .clipShape(Capsule())
                 }
 
-                Text("Configure local folders indexed into Walkman Studio's database (~/.walkman_local_library.db)")
+                Text(L10n.tr("Configure local folders indexed into Walkman Studio's database (~/.walkman_local_library.db)"))
                     .font(.system(size: 12))
                     .foregroundStyle(WalkmanTheme.silverMuted)
             }
@@ -113,7 +114,7 @@ public struct ManageLocalFoldersSheet: View {
                 HStack(spacing: 5) {
                     Image(systemName: "plus.circle.fill")
                         .font(.system(size: 11, weight: .bold))
-                    Text("Add Folder...")
+                    Text(L10n.tr("Add Folder..."))
                         .font(.system(size: 12, weight: .semibold))
                 }
                 .foregroundStyle(Color(red: 20/255, green: 20/255, blue: 24/255))
@@ -125,7 +126,7 @@ public struct ManageLocalFoldersSheet: View {
                 .shadow(color: Color.black.opacity(0.20), radius: 3, x: 0, y: 1)
             }
             .buttonStyle(.plain)
-            .help("Select music directories from your Mac or external drive")
+            .help(L10n.tr("Select music directories from your Mac or external drive"))
 
             // Rescan All Button
             Button(action: { localService.rescanAllFolders() }) {
@@ -144,7 +145,7 @@ public struct ManageLocalFoldersSheet: View {
             }
             .buttonStyle(.plain)
             .disabled(localService.isScanning)
-            .help("Rescan all local music folders for changes")
+            .help(L10n.tr("Rescan all local music folders for changes"))
 
             // Close Button
             Button(action: onDismiss) {
@@ -153,7 +154,7 @@ public struct ManageLocalFoldersSheet: View {
                     .foregroundStyle(Color.white.opacity(0.40))
             }
             .buttonStyle(.plain)
-            .help("Close (Esc)")
+            .help(L10n.tr("Close (Esc)"))
         }
     }
 
@@ -193,7 +194,7 @@ public struct ManageLocalFoldersSheet: View {
                         .foregroundStyle(.white)
 
                     if isMissing {
-                        Text("MISSING OR RENAMED")
+                        Text(L10n.tr("MISSING OR RENAMED"))
                             .font(.system(size: 9.5, weight: .bold, design: .monospaced))
                             .foregroundStyle(Color.orange)
                             .padding(.horizontal, 6)
@@ -201,7 +202,7 @@ public struct ManageLocalFoldersSheet: View {
                             .background(Color.orange.opacity(0.20))
                             .clipShape(Capsule())
                     } else {
-                        Text("\(folder.trackCount) tracks")
+                        Text(L10n.tr("\(folder.trackCount) tracks"))
                             .font(.system(size: 10.5, weight: .bold, design: .monospaced))
                             .foregroundStyle(WalkmanTheme.silverLight)
                             .padding(.horizontal, 6)
@@ -215,13 +216,13 @@ public struct ManageLocalFoldersSheet: View {
                         .foregroundStyle(WalkmanTheme.silverMuted)
                 }
 
-                Text(isMissing ? "\(folder.path) (Location not found on disk)" : folder.path)
+                Text(isMissing ? L10n.tr("\(folder.path) (Location not found on disk)") : folder.path)
                     .font(.system(size: 11, design: .monospaced))
                     .foregroundStyle(isMissing ? Color.orange.opacity(0.85) : WalkmanTheme.silverMuted)
                     .lineLimit(1)
                     .truncationMode(.middle)
 
-                Text(isMissing ? "Status: Folder moved, renamed, or deleted in Finder" : "Last scanned: \(folder.lastScanned.formatted(date: .abbreviated, time: .shortened))")
+                Text(isMissing ? L10n.tr("Status: Folder moved, renamed, or deleted in Finder") : L10n.tr("Last scanned: \(folder.lastScanned.formatted(date: .abbreviated, time: .shortened))"))
                     .font(.system(size: 10))
                     .foregroundStyle(isMissing ? Color.orange.opacity(0.70) : Color.white.opacity(0.40))
             }
@@ -235,7 +236,7 @@ public struct ManageLocalFoldersSheet: View {
                     Button(action: { openRelocatePicker(for: folder) }) {
                         HStack(spacing: 4) {
                             Image(systemName: "folder.badge.gearshape")
-                            Text("Relocate...")
+                            Text(L10n.tr("Relocate..."))
                                 .font(.system(size: 11, weight: .semibold))
                         }
                         .foregroundStyle(Color.orange)
@@ -245,7 +246,7 @@ public struct ManageLocalFoldersSheet: View {
                         .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                     }
                     .buttonStyle(.plain)
-                    .help("Select new location for renamed or moved folder")
+                    .help(L10n.tr("Select new location for renamed or moved folder"))
                 } else {
                     // Rescan
                     Button(action: { localService.rescanFolder(url: folder.url) }) {
@@ -257,7 +258,7 @@ public struct ManageLocalFoldersSheet: View {
                             .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                     }
                     .buttonStyle(.plain)
-                    .help("Rescan this folder")
+                    .help(L10n.tr("Rescan this folder"))
 
                     // Reveal in Finder
                     Button(action: {
@@ -271,7 +272,7 @@ public struct ManageLocalFoldersSheet: View {
                             .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                     }
                     .buttonStyle(.plain)
-                    .help("Show in Finder")
+                    .help(L10n.tr("Show in Finder"))
                 }
 
                 // Remove
@@ -287,7 +288,7 @@ public struct ManageLocalFoldersSheet: View {
                         .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                 }
                 .buttonStyle(.plain)
-                .help("Remove folder from library database")
+                .help(L10n.tr("Remove folder from library database"))
             }
         }
         .padding(12)
@@ -312,11 +313,11 @@ public struct ManageLocalFoldersSheet: View {
             }
 
             VStack(spacing: 6) {
-                Text("No Local Music Folders Added")
+                Text(L10n.tr("No Local Music Folders Added"))
                     .font(.system(size: 16, weight: .bold))
                     .foregroundStyle(.white)
 
-                Text("Add folders from your Mac or external drive to index and manage music in Walkman Studio without requiring a connected Walkman.")
+                Text(L10n.tr("Add folders from your Mac or external drive to index and manage music in Walkman Studio without requiring a connected Walkman."))
                     .font(.system(size: 12))
                     .foregroundStyle(WalkmanTheme.silverMuted)
                     .multilineTextAlignment(.center)
@@ -326,7 +327,7 @@ public struct ManageLocalFoldersSheet: View {
             Button(action: openFolderPicker) {
                 HStack(spacing: 6) {
                     Image(systemName: "plus.circle.fill")
-                    Text("Add Music Folder...")
+                    Text(L10n.tr("Add Music Folder..."))
                 }
                 .font(.system(size: 12.5, weight: .semibold))
                 .foregroundStyle(Color(red: 20/255, green: 20/255, blue: 24/255))
@@ -347,19 +348,19 @@ public struct ManageLocalFoldersSheet: View {
                 Circle()
                     .fill(Color.green)
                     .frame(width: 6, height: 6)
-                Text("SQLite Database: ~/.walkman_local_library.db")
+                Text(L10n.tr("SQLite Database: ~/.walkman_local_library.db"))
                     .font(.system(size: 11, design: .monospaced))
                     .foregroundStyle(WalkmanTheme.silverMuted)
             }
 
             Spacer()
 
-            Text("\(localService.tracks.count) total tracks indexed")
+            Text(L10n.tr("\(localService.tracks.count) total tracks indexed"))
                 .font(.system(size: 11, weight: .medium, design: .monospaced))
                 .foregroundStyle(WalkmanTheme.silverLight)
 
             Button(action: onDismiss) {
-                Text("Done")
+                Text(L10n.tr("Done"))
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 14)
@@ -378,8 +379,8 @@ public struct ManageLocalFoldersSheet: View {
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = true
         panel.canCreateDirectories = false
-        panel.prompt = "Add to Library"
-        panel.title = "Select Local Music Folders"
+        panel.prompt = L10n.tr("Add to Library")
+        panel.title = L10n.tr("Select Local Music Folders")
 
         if panel.runModal() == .OK {
             let urls = panel.urls
@@ -395,8 +396,8 @@ public struct ManageLocalFoldersSheet: View {
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
         panel.canCreateDirectories = false
-        panel.prompt = "Relocate Folder"
-        panel.title = "Choose New Location for \"\(folder.displayName)\""
+        panel.prompt = L10n.tr("Relocate Folder")
+        panel.title = L10n.tr("Choose New Location for \"\(folder.displayName)\"")
 
         if panel.runModal() == .OK, let url = panel.url {
             _ = localService.relocateFolder(id: folder.id, toURL: url)

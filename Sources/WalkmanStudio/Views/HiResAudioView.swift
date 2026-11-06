@@ -36,6 +36,7 @@ fileprivate struct FilterOption: Identifiable {
 }
 
 public struct HiResAudioView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let tracks: [Track]
     let precomputedAlbums: [AlbumItem]?
     let precomputedArtists: [ArtistItem]?
@@ -630,9 +631,9 @@ public struct HiResAudioView: View {
         ExpandableLiquidGlassSearchBar(
             text: $searchQuery,
             isExpanded: $isSearchExpanded,
-            placeholder: "Search Hi-Res titles, artists, albums...",
+            placeholder: L10n.tr("Search Hi-Res titles, artists, albums..."),
             expandedWidth: 260,
-            helpText: "Search Hi-Res tracks"
+            helpText: L10n.tr("Search Hi-Res tracks")
         )
     }
     
@@ -652,7 +653,7 @@ public struct HiResAudioView: View {
                 HStack(spacing: 6) {
                     Image(systemName: isPlayingFromHiResQueue ? "pause.fill" : "play.fill")
                         .font(.system(size: 11, weight: .bold))
-                    Text(isPlayingFromHiResQueue ? "Pause" : "Play Hi-Res")
+                    Text(isPlayingFromHiResQueue ? L10n.tr("Pause") : L10n.tr("Play Hi-Res"))
                         .font(.system(size: 13, weight: .semibold))
                 }
                 .padding(.horizontal, 14)
@@ -662,7 +663,7 @@ public struct HiResAudioView: View {
             }
             .buttonStyle(LiquidGlassButtonStyle(variant: .prominent, cornerRadius: 19))
             .disabled(displayedTracks.isEmpty)
-            .help(isPlayingFromHiResQueue ? "Pause playback" : "Play Hi-Res tracks in order")
+            .help(isPlayingFromHiResQueue ? L10n.tr("Pause playback") : L10n.tr("Play Hi-Res tracks in order"))
             
             Button(action: shufflePlaybackHiRes) {
                 Image(systemName: "shuffle")
@@ -672,7 +673,7 @@ public struct HiResAudioView: View {
             }
             .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 19))
             .disabled(displayedTracks.isEmpty)
-            .help("Shuffle Hi-Res tracks")
+            .help(L10n.tr("Shuffle Hi-Res tracks"))
 
             Button(action: {
                 isPreparingLyricsSheet = true
@@ -695,7 +696,7 @@ public struct HiResAudioView: View {
             }
             .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 19))
             .disabled(displayedTracks.isEmpty || isPreparingLyricsSheet)
-            .help("LRC Fetcher: Fetch and sync .LRC lyrics for Hi-Res audio tracks")
+            .help(L10n.tr("LRC Fetcher: Fetch and sync .LRC lyrics for Hi-Res audio tracks"))
         }
     }
     
@@ -770,13 +771,13 @@ public struct HiResAudioView: View {
     private var countPillHelpText: String {
         switch viewMode {
         case .tracks:
-            return displayedTracks.count == 1 ? "1 Master" : "\(displayedTracks.count.formatted()) Masters"
+            return displayedTracks.count == 1 ? L10n.tr("1 Master") : L10n.tr("\(displayedTracks.count.formatted()) Masters")
         case .albums:
             let count = uniqueAlbumCount
-            return count == 1 ? "1 Album" : "\(count.formatted()) Albums"
+            return count == 1 ? L10n.tr("1 Album") : L10n.tr("\(count.formatted()) Albums")
         case .artists:
             let count = uniqueArtistCount
-            return count == 1 ? "1 Artist" : "\(count.formatted()) Artists"
+            return count == 1 ? L10n.tr("1 Artist") : L10n.tr("\(count.formatted()) Artists")
         }
     }
     
@@ -813,10 +814,10 @@ public struct HiResAudioView: View {
                         .frame(width: 48, height: 48)
                     
                     VStack(spacing: 1) {
-                        Text("Hi-Res")
+                        Text(L10n.tr("Hi-Res"))
                             .font(.system(size: 12, weight: .black, design: .serif))
                             .foregroundStyle(Color.black)
-                        Text("AUDIO")
+                        Text(L10n.tr("AUDIO"))
                             .font(.system(size: 8, weight: .bold))
                             .tracking(0.5)
                             .foregroundStyle(Color.black)
@@ -831,7 +832,7 @@ public struct HiResAudioView: View {
             
             VStack(alignment: .leading, spacing: 3.5) {
                 HStack(spacing: 8) {
-                    Text("Hi-Res Studio Master Library")
+                    Text(L10n.tr("Hi-Res Studio Master Library"))
                         .font(WalkmanFont.title3)
                         .foregroundStyle(.white)
                     
@@ -847,7 +848,7 @@ public struct HiResAudioView: View {
                         )
                 }
                 
-                Text("Audiophile 24-bit / 96kHz+ lossless streams calibrated for Sony S-Master HX DAC & DSEE Ultimate.")
+                Text(L10n.tr("Audiophile 24-bit / 96kHz+ lossless streams calibrated for Sony S-Master HX DAC & DSEE Ultimate."))
                     .font(WalkmanFont.callout)
                     .foregroundStyle(WalkmanTheme.silverMuted)
             }
@@ -857,10 +858,10 @@ public struct HiResAudioView: View {
             // Audio specs capsule
             HStack(spacing: 8) {
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text("\(baseHiResTracks.count) Total Masters")
+                    Text(L10n.tr("\(baseHiResTracks.count) Total Masters"))
                         .font(WalkmanFont.bodyBold)
                         .foregroundStyle(WalkmanTheme.silverLight)
-                    Text("Lossless PCM / DSD")
+                    Text(L10n.tr("Lossless PCM / DSD"))
                         .font(WalkmanFont.subheadline)
                         .foregroundStyle(WalkmanTheme.silverMuted)
                 }
@@ -904,13 +905,13 @@ public struct HiResAudioView: View {
                     .foregroundStyle(WalkmanTheme.silverMuted)
             }
             
-            Text("No Matching Hi-Res Tracks")
+            Text(L10n.tr("No Matching Hi-Res Tracks"))
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(.white)
             
             Text(searchQuery.isEmpty
-                 ? "No audio tracks match the selected Hi-Res filter."
-                 : "No Hi-Res tracks match \"\(searchQuery)\" with the selected filter.")
+                 ? L10n.tr("No audio tracks match the selected Hi-Res filter.")
+                 : L10n.tr("No Hi-Res tracks match \"\(searchQuery)\" with the selected filter."))
                 .font(WalkmanFont.callout)
                 .foregroundStyle(Color.secondary)
                 .multilineTextAlignment(.center)
@@ -920,7 +921,7 @@ public struct HiResAudioView: View {
                 searchQuery = ""
                 formatFilter = "ALL"
             }) {
-                Text("Reset Filters")
+                Text(L10n.tr("Reset Filters"))
                     .font(WalkmanFont.calloutMedium)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 6)
@@ -939,6 +940,7 @@ public struct HiResAudioView: View {
 // HI-RES FILTER & VIEW MODE MENU BUTTON (APPLE-STYLE CIRCULAR LIQUID GLASS)
 // -----------------------------------------------------------------------------
 private struct HiResFilterMenuButton: View {
+    @ObservedObject private var localization = AppLocalization.shared
     @Binding var viewMode: HiResViewMode
     @Binding var trackSortOption: HiResTrackSortOption
     @Binding var albumSortOption: AlbumSortOption
@@ -951,26 +953,26 @@ private struct HiResFilterMenuButton: View {
     
     var body: some View {
         Menu {
-            Picker("View As", selection: $viewMode) {
+            Picker(L10n.tr("View As"), selection: $viewMode) {
                 ForEach(HiResViewMode.allCases) { mode in
-                    Label(mode.rawValue, systemImage: mode.icon).tag(mode)
+                    Label(L10n.lookup(mode.rawValue), systemImage: mode.icon).tag(mode)
                 }
             }
             .pickerStyle(.inline)
             
             if viewMode == .tracks {
                 Divider()
-                Picker("Sort Tracks", selection: $trackSortOption) {
+                Picker(L10n.tr("Sort Tracks"), selection: $trackSortOption) {
                     ForEach(HiResTrackSortOption.allCases) { opt in
-                        Text(opt.rawValue).tag(opt)
+                        Text(L10n.lookup(opt.rawValue)).tag(opt)
                     }
                 }
                 .pickerStyle(.inline)
             } else if viewMode == .albums {
                 Divider()
-                Picker("Sort Albums", selection: $albumSortOption) {
+                Picker(L10n.tr("Sort Albums"), selection: $albumSortOption) {
                     ForEach(AlbumSortOption.allCases) { opt in
-                        Text(opt.rawValue).tag(opt)
+                        Text(L10n.lookup(opt.rawValue)).tag(opt)
                     }
                 }
                 .pickerStyle(.inline)
@@ -1041,7 +1043,7 @@ private struct HiResFilterMenuButton: View {
         .menuIndicator(.hidden)
         .buttonStyle(.plain)
         .contentShape(Circle())
-        .help("View and sort options (Currently \(viewMode.rawValue))")
+        .help(L10n.tr("View and sort options (Currently \(L10n.lookup(viewMode.rawValue)))"))
         .onHover { hovering in
             guard isHovered != hovering else { return }
             isHovered = hovering
@@ -1065,6 +1067,7 @@ private struct HiResFilterMenuButton: View {
 // HI-RES SEGMENTED BAR (MATCHED GEOMETRY SLIDING LIQUID GLASS LENS)
 // -----------------------------------------------------------------------------
 private struct HiResSegmentedBarView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let options: [FilterOption]
     @Binding var selectedFilter: String
     let onSelectFilter: (String) -> Void
@@ -1115,6 +1118,7 @@ private struct HiResSegmentedBarView: View {
 // HI-RES TAB PILL VIEW (ROUND LIQUID GLASS CLICK BOX WITH HOVER)
 // -----------------------------------------------------------------------------
 private struct HiResTabPillView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let option: FilterOption
     let isSelected: Bool
     let namespace: Namespace.ID
@@ -1129,7 +1133,7 @@ private struct HiResTabPillView: View {
                     Image(systemName: icon)
                         .font(.system(size: 11, weight: isSelected ? .bold : .semibold))
                 }
-                Text(option.title)
+                Text(L10n.lookup(option.title))
                     .font(.system(size: 12.5, weight: isSelected ? .bold : .medium))
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
@@ -1183,6 +1187,7 @@ private struct HiResTabPillView: View {
 }
 
 private struct ActiveHiResPillBackground: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let isHovered: Bool
     
     var body: some View {
@@ -1222,6 +1227,7 @@ private struct ActiveHiResPillBackground: View {
 }
 
 private struct HoverHiResPillBackground: View {
+    @ObservedObject private var localization = AppLocalization.shared
     var body: some View {
         ZStack {
             Color.white.opacity(0.09)
@@ -1251,6 +1257,7 @@ private struct HoverHiResPillBackground: View {
 // HI-RES TRACK ROW VIEW (TACTILE HOVER & AUDIO STATE)
 // -----------------------------------------------------------------------------
 private struct HiResRowBackground: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let isPlaying: Bool
     let isHovered: Bool
     
@@ -1309,6 +1316,7 @@ private struct HiResRowBackground: View {
 }
 
 private struct HiResTrackRowView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let track: Track
     let isPlayingThis: Bool
     let onSelect: () -> Void
@@ -1356,7 +1364,7 @@ private struct HiResTrackRowView: View {
                         .lineLimit(1)
                         .animation(.easeOut(duration: 0.15), value: isHovered)
                     
-                    Text("\(track.bitsPerSample)-bit / \(track.sampleRate / 1000)kHz")
+                    Text(L10n.tr("\(track.bitsPerSample)-bit / \(track.sampleRate / 1000)kHz"))
                         .font(WalkmanFont.badge)
                         .padding(.horizontal, 5.5)
                         .padding(.vertical, 2)
@@ -1431,30 +1439,30 @@ private struct HiResTrackRowView: View {
             onPlayToggle()
         }
         .contextMenu {
-            Button(isPlayingThis ? "Pause" : "Play Track") {
+            Button(isPlayingThis ? L10n.tr("Pause") : L10n.tr("Play Track")) {
                 onPlayToggle()
             }
             Divider()
             Button {
                 onEdit?()
             } label: {
-                Label("Edit Song Metadata...", systemImage: "square.and.pencil")
+                Label(L10n.tr("Edit Song Metadata..."), systemImage: "square.and.pencil")
             }
             Button {
                 onTrimCut?()
             } label: {
-                Label("Trim & Cut...", systemImage: "scissors")
+                Label(L10n.tr("Trim & Cut..."), systemImage: "scissors")
             }
             Button {
                 ArtworkExportService.exportArtwork(for: track)
             } label: {
-                Label("Export Cover Art to Mac...", systemImage: "square.and.arrow.down")
+                Label(L10n.tr("Export Cover Art to Mac..."), systemImage: "square.and.arrow.down")
             }
-            Button("Inspect in Sidebar") {
+            Button(L10n.tr("Inspect in Sidebar")) {
                 onSelect()
             }
             Divider()
-            Button("Copy Path") {
+            Button(L10n.tr("Copy Path")) {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(track.fullPath, forType: .string)
             }
@@ -1462,7 +1470,7 @@ private struct HiResTrackRowView: View {
             Button(role: .destructive) {
                 onDelete?()
             } label: {
-                Label("Delete from Device", systemImage: "trash")
+                Label(L10n.tr("Delete from Device"), systemImage: "trash")
             }
         }
     }

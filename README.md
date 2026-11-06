@@ -404,6 +404,12 @@ Pre-built `.dmg` disk images and `.zip` standalone archives are available for al
 
 ## Getting Started
 
+### Interface Language / 界面语言
+
+Open **About Walkman Studio → Language** to choose **Follow System**, **English**, or **简体中文**. The choice is saved and applies immediately without restarting or resetting the current page. Follow System uses Simplified Chinese for a Chinese system language and English otherwise. Music metadata, filenames, and storage paths retain their original values.
+
+打开 **About Walkman Studio（关于 Walkman Studio）→ Language（语言）**，可选择“跟随系统”“English”或“简体中文”。切换后立即生效并自动保存，无需重启。
+
 ### 1. Clone the Repository
 ```bash
 git clone https://github.com/Jhay-EL/Walkman-Studio.git

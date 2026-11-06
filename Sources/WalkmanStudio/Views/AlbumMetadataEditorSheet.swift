@@ -2,6 +2,7 @@ import SwiftUI
 import AppKit
 
 public struct AlbumMetadataEditorSheet: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let album: AlbumItem
     let onSaved: () -> Void
     var onSavedTracks: (([Track]) -> Void)? = nil
@@ -40,7 +41,8 @@ public struct AlbumMetadataEditorSheet: View {
     @State private var saveProgress: Double = 0.0
     @State private var saveStatus: String = ""
     @State private var errorMessage: String? = nil
-    @State private var isFetchingOnlineInfo: Bool = false
+    @StateObject private var metadataLookup = OnlineMetadataLookup()
+    private var isFetchingOnlineInfo: Bool { metadataLookup.isSearching }
     @State private var isAnalyzingSenseMe: Bool = false
     @State private var senseMeProgress: (current: Int, total: Int, title: String)? = nil
     @State private var showPermissionSheet: Bool = false
@@ -113,7 +115,7 @@ public struct AlbumMetadataEditorSheet: View {
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
         panel.allowedContentTypes = [.image, .jpeg, .png]
-        panel.prompt = "Choose Album Artwork"
+        panel.prompt = L10n.tr("Choose Album Artwork")
         if panel.runModal() == .OK, let url = panel.url, let data = try? Data(contentsOf: url) {
             handleNewImageData(data)
         }
@@ -156,7 +158,7 @@ public struct AlbumMetadataEditorSheet: View {
             } else {
                 await MainActor.run {
                     self.isFetchingOnlineArt = false
-                    self.errorMessage = "No online artwork found"
+                    self.errorMessage = L10n.tr("No online artwork found")
                     DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                         self.errorMessage = nil
                     }
@@ -167,48 +169,29 @@ public struct AlbumMetadataEditorSheet: View {
 
     private func fetchOnlineAlbumMetadata() {
         guard !isFetchingOnlineInfo else { return }
-        isFetchingOnlineInfo = true
         errorMessage = nil
-
         let searchTitle = albumName.isEmpty ? album.name : albumName
         let searchArtist = albumArtist.isEmpty ? album.artist : albumArtist
         let repFile = album.representativeTrack?.filename ?? "01.flac"
-
-        Task {
-            if let meta = await OnlineMetadataService.shared.fetchMetadata(
-                filename: repFile,
-                currentTitle: searchTitle,
-                currentArtist: searchArtist,
-                currentAlbum: searchTitle
-            ) {
-                await MainActor.run {
-                    if !meta.album.isEmpty && meta.album.lowercased() != "unknown album" {
-                        self.albumName = meta.album
-                    }
-                    if !meta.artist.isEmpty && meta.artist.lowercased() != "unknown artist" {
-                        self.albumArtist = meta.artist
-                    }
-                    if !meta.year.isEmpty {
-                        self.year = meta.year
-                    }
-                    if !meta.genre.isEmpty {
-                        self.genre = meta.genre
-                    }
-                    if let artData = meta.artworkData, self.coverData == nil || self.coverData?.isEmpty == true {
-                        self.handleNewImageData(artData)
-                    }
-                    self.isFetchingOnlineInfo = false
-                }
-            } else {
-                await MainActor.run {
-                    self.isFetchingOnlineInfo = false
-                    self.errorMessage = "No online album metadata found"
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                        self.errorMessage = nil
-                    }
-                }
+        metadataLookup.search(filename: repFile, title: searchTitle, artist: searchArtist, album: searchTitle, onMatch: { meta in
+            if !meta.album.isEmpty && meta.album.lowercased() != "unknown album" {
+                self.albumName = meta.album
             }
-        }
+            if !meta.artist.isEmpty && meta.artist.lowercased() != "unknown artist" {
+                self.albumArtist = meta.artist
+            }
+            if !meta.year.isEmpty {
+                self.year = meta.year
+            }
+            if !meta.genre.isEmpty {
+                self.genre = meta.genre
+            }
+            if let artData = meta.artworkData, self.coverData == nil || self.coverData?.isEmpty == true {
+                self.handleNewImageData(artData)
+            }
+        }, onNotFound: {
+            self.errorMessage = L10n.tr("No online album metadata found")
+        })
     }
 
     private func autoNumberTracks() {
@@ -307,7 +290,7 @@ public struct AlbumMetadataEditorSheet: View {
         guard !isSaving else { return }
         isSaving = true
         saveProgress = 0.0
-        saveStatus = "Preparing album metadata..."
+        saveStatus = L10n.tr("Preparing album metadata...")
         errorMessage = nil
 
         let newAlbumName = self.albumName.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -339,7 +322,7 @@ public struct AlbumMetadataEditorSheet: View {
             for (index, row) in rows.enumerated() {
                 await MainActor.run {
                     self.saveProgress = Double(index) / Double(max(1, total))
-                    self.saveStatus = "Updating track \(index + 1) of \(total): \(row.title)..."
+                    self.saveStatus = L10n.tr("Updating track \(index + 1) of \(total): \(row.title)...")
                 }
 
                 let trackURL = URL(fileURLWithPath: row.track.fullPath)
@@ -409,7 +392,7 @@ public struct AlbumMetadataEditorSheet: View {
                     self.isSaving = false
                     self.permissionFileURL = permURL
                     self.showPermissionSheet = true
-                    self.saveStatus = "Storage permission required to edit files."
+                    self.saveStatus = L10n.tr("Storage permission required to edit files.")
                 }
                 return
             }
@@ -432,7 +415,7 @@ public struct AlbumMetadataEditorSheet: View {
 
             await MainActor.run {
                 self.saveProgress = 1.0
-                self.saveStatus = "Saved album successfully!"
+                self.saveStatus = L10n.tr("Saved album successfully!")
                 self.isSaving = false
                 NotificationCenter.default.post(
                     name: .trackMetadataDidUpdate,
@@ -492,6 +475,7 @@ public struct AlbumMetadataEditorSheet: View {
         }
         .frame(minWidth: 1040, idealWidth: 1120, maxWidth: 1240, minHeight: 700, idealHeight: 780, maxHeight: 900)
         .modalGlassChassis(cornerRadius: 16)
+        .onlineMetadataPicker(metadataLookup, identity: album.id)
         .sheet(isPresented: $showPermissionSheet) {
             if let fURL = permissionFileURL ?? trackRows.first.map({ URL(fileURLWithPath: $0.track.fullPath) }) {
                 StoragePermissionRequestSheet(
@@ -518,11 +502,11 @@ public struct AlbumMetadataEditorSheet: View {
             LiquidGlassIconBadge(icon: "square.stack.fill", size: 32)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Album Metadata Editor")
+                Text(L10n.tr("Album Metadata Editor"))
                     .font(WalkmanFont.title3)
                     .foregroundStyle(.white)
 
-                Text("\(album.name) • \(album.trackCount) tracks • \(album.primaryFormat)")
+                Text(L10n.tr("\(album.name) • \(album.trackCount) tracks • \(album.primaryFormat)"))
                     .font(WalkmanFont.monoSmall)
                     .foregroundStyle(WalkmanTheme.silverMuted)
                     .lineLimit(1)
@@ -564,10 +548,10 @@ public struct AlbumMetadataEditorSheet: View {
                             Image(systemName: "photo.badge.plus")
                                 .font(.system(size: 36))
                                 .foregroundStyle(WalkmanTheme.silverMuted)
-                            Text("Drop Artwork")
+                            Text(L10n.tr("Drop Artwork"))
                                 .font(WalkmanFont.calloutMedium)
                                 .foregroundStyle(.secondary)
-                            Text("Auto Baseline RGB")
+                            Text(L10n.tr("Auto Baseline RGB"))
                                 .font(WalkmanFont.subheadline)
                                 .foregroundStyle(.tertiary)
                         }
@@ -589,24 +573,24 @@ public struct AlbumMetadataEditorSheet: View {
                 }
                 return true
             }
-            .help("Click or drag-and-drop to update album artwork across all tracks")
+            .help(L10n.tr("Click or drag-and-drop to update album artwork across all tracks"))
             .contextMenu {
                 if coverImage != nil || (coverData != nil && coverData?.isEmpty == false) {
                     Button(action: exportArtworkToMac) {
-                        Label("Export Album Artwork to Mac...", systemImage: "square.and.arrow.down")
+                        Label(L10n.tr("Export Album Artwork to Mac..."), systemImage: "square.and.arrow.down")
                     }
                     Divider()
                 }
                 Button(action: selectArtworkFile) {
-                    Label("Choose Artwork...", systemImage: "photo")
+                    Label(L10n.tr("Choose Artwork..."), systemImage: "photo")
                 }
                 Button(action: fetchOnlineArtwork) {
-                    Label("Fetch Online Artwork", systemImage: "arrow.down.circle")
+                    Label(L10n.tr("Fetch Online Artwork"), systemImage: "arrow.down.circle")
                 }
                 if coverImage != nil {
                     Divider()
                     Button(role: .destructive, action: removeArtwork) {
-                        Label("Remove Artwork", systemImage: "trash")
+                        Label(L10n.tr("Remove Artwork"), systemImage: "trash")
                     }
                 }
             }
@@ -630,7 +614,7 @@ public struct AlbumMetadataEditorSheet: View {
                     HStack(spacing: 5) {
                         Image(systemName: "folder")
                             .font(.system(size: 11, weight: .semibold))
-                        Text("Choose...")
+                        Text(L10n.tr("Choose..."))
                             .font(WalkmanFont.calloutBold)
                     }
                     .foregroundStyle(WalkmanTheme.silverLight)
@@ -642,14 +626,14 @@ public struct AlbumMetadataEditorSheet: View {
                 AlbumIconSquareButton(
                     icon: isFetchingOnlineArt ? "arrow.triangle.2.circlepath" : "arrow.down.circle",
                     isDisabled: isFetchingOnlineArt,
-                    helpText: "Fetch Online Artwork",
+                    helpText: L10n.tr("Fetch Online Artwork"),
                     action: fetchOnlineArtwork
                 )
 
                 if coverImage != nil || (coverData != nil && coverData?.isEmpty == false) {
                     AlbumIconSquareButton(
                         icon: "square.and.arrow.down",
-                        helpText: "Export Album Artwork to Mac...",
+                        helpText: L10n.tr("Export Album Artwork to Mac..."),
                         action: exportArtworkToMac
                     )
                 }
@@ -658,7 +642,7 @@ public struct AlbumMetadataEditorSheet: View {
                     AlbumIconSquareButton(
                         icon: "trash",
                         isDestructive: true,
-                        helpText: "Remove artwork from all album tracks",
+                        helpText: L10n.tr("Remove artwork from all album tracks"),
                         action: removeArtwork
                     )
                 }
@@ -666,13 +650,13 @@ public struct AlbumMetadataEditorSheet: View {
                 if isCoverArtModified {
                     AlbumIconSquareButton(
                         icon: "arrow.uturn.backward",
-                        helpText: "Revert to original album artwork",
+                        helpText: L10n.tr("Revert to original album artwork"),
                         action: revertArtwork
                     )
                 }
             }
 
-            Text("Updates embedded artwork in all \(album.trackCount) tracks & writes folder.jpg / cover.jpg")
+            Text(L10n.tr("Updates embedded artwork in all \(album.trackCount) tracks & writes folder.jpg / cover.jpg"))
                 .font(WalkmanFont.subheadline)
                 .foregroundStyle(WalkmanTheme.silverMuted)
                 .multilineTextAlignment(.center)
@@ -685,7 +669,7 @@ public struct AlbumMetadataEditorSheet: View {
     private var albumTagsColumn: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("ALBUM PROPERTIES (APPLIED TO ALL TRACKS)")
+                Text(L10n.tr("ALBUM PROPERTIES (APPLIED TO ALL TRACKS)"))
                     .font(WalkmanFont.sectionHeader)
                     .foregroundStyle(.tertiary)
 
@@ -698,12 +682,12 @@ public struct AlbumMetadataEditorSheet: View {
                                 .controlSize(.small)
                                 .scaleEffect(0.65)
                                 .frame(width: 12, height: 12)
-                            Text("Matching...")
+                            Text(L10n.tr("Matching..."))
                                 .font(WalkmanFont.calloutBold)
                         } else {
                             Image(systemName: "sparkles")
                                 .font(.system(size: 11, weight: .semibold))
-                            Text("Auto-Fill Album Info")
+                            Text(L10n.tr("Auto-Fill Album Info"))
                                 .font(WalkmanFont.calloutBold)
                         }
                     }
@@ -713,15 +697,15 @@ public struct AlbumMetadataEditorSheet: View {
                 }
                 .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 8))
                 .disabled(isFetchingOnlineInfo)
-                .help("Query iTunes and Deezer databases to match album title, artist, year, and genre")
+                .help(L10n.tr("Query iTunes and Deezer databases to match album title, artist, year, and genre"))
             }
 
-            AlbumInputField(label: "Album Title", text: $albumName)
+            AlbumInputField(label: L10n.tr("Album Title"), text: $albumName)
 
             VStack(alignment: .leading, spacing: 5) {
-                AlbumInputField(label: "Album Artist", text: $albumArtist)
+                AlbumInputField(label: L10n.tr("Album Artist"), text: $albumArtist)
 
-                Toggle("Apply this artist to all track tags", isOn: $applyArtistToAll)
+                Toggle(L10n.tr("Apply this artist to all track tags"), isOn: $applyArtistToAll)
                     .font(WalkmanFont.subheadline)
                     .toggleStyle(.checkbox)
                     .foregroundStyle(WalkmanTheme.silverMuted)
@@ -729,8 +713,8 @@ public struct AlbumMetadataEditorSheet: View {
             }
 
             HStack(spacing: 14) {
-                AlbumInputField(label: "Release Year", text: $year)
-                AlbumInputField(label: "Genre", text: $genre)
+                AlbumInputField(label: L10n.tr("Release Year"), text: $year)
+                AlbumInputField(label: L10n.tr("Genre"), text: $genre)
             }
         }
     }
@@ -741,7 +725,7 @@ public struct AlbumMetadataEditorSheet: View {
             // Tracklist Header & Quick Actions
             HStack {
                 HStack(spacing: 6) {
-                    Text("TRACKLIST & TRACK NUMBERS")
+                    Text(L10n.tr("TRACKLIST & TRACK NUMBERS"))
                         .font(WalkmanFont.sectionHeader)
                         .foregroundStyle(.tertiary)
 
@@ -758,7 +742,7 @@ public struct AlbumMetadataEditorSheet: View {
                         HStack(spacing: 5) {
                             Image(systemName: "list.number")
                                 .font(.system(size: 11, weight: .semibold))
-                            Text("Auto-Number (1..N)")
+                            Text(L10n.tr("Auto-Number (1..N)"))
                                 .font(WalkmanFont.calloutBold)
                         }
                         .foregroundStyle(WalkmanTheme.silverLight)
@@ -766,13 +750,13 @@ public struct AlbumMetadataEditorSheet: View {
                         .frame(height: 28)
                     }
                     .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 8))
-                    .help("Automatically renumbers all tracks from 1 to \(trackRows.count)")
+                    .help(L10n.tr("Automatically renumbers all tracks from 1 to \(trackRows.count)"))
 
                     Button(action: padTrackNumbers) {
                         HStack(spacing: 5) {
                             Image(systemName: "number")
                                 .font(.system(size: 11, weight: .semibold))
-                            Text("Pad (01..N)")
+                            Text(L10n.tr("Pad (01..N)"))
                                 .font(WalkmanFont.calloutBold)
                         }
                         .foregroundStyle(WalkmanTheme.silverLight)
@@ -780,7 +764,7 @@ public struct AlbumMetadataEditorSheet: View {
                         .frame(height: 28)
                     }
                     .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 8))
-                    .help("Formats track numbers with leading zero (01, 02...) for optimal Walkman alphabetical folder sorting")
+                    .help(L10n.tr("Formats track numbers with leading zero (01, 02...) for optimal Walkman alphabetical folder sorting"))
 
                     Button(action: sortTracksByTrackNum) {
                         Image(systemName: "arrow.up.arrow.down")
@@ -789,7 +773,7 @@ public struct AlbumMetadataEditorSheet: View {
                             .frame(width: 28, height: 28)
                     }
                     .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 8))
-                    .help("Sort list by track number")
+                    .help(L10n.tr("Sort list by track number"))
 
                     Button(action: sortTracksByTitle) {
                         Image(systemName: "textformat.abc")
@@ -798,7 +782,7 @@ public struct AlbumMetadataEditorSheet: View {
                             .frame(width: 28, height: 28)
                     }
                     .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 8))
-                    .help("Sort list by track title")
+                    .help(L10n.tr("Sort list by track title"))
 
                     Button(action: analyzeAlbumSenseMe) {
                         HStack(spacing: 5) {
@@ -811,7 +795,7 @@ public struct AlbumMetadataEditorSheet: View {
                             } else {
                                 Image(systemName: "waveform.path.ecg")
                                     .font(.system(size: 11, weight: .semibold))
-                                Text("Analyze SenseMe\(unanalyzedTracksCount > 0 ? " (\(unanalyzedTracksCount))" : "")")
+                                Text(L10n.tr("Analyze SenseMe\(unanalyzedTracksCount > 0 ? " (\(unanalyzedTracksCount))" : "")"))
                                     .font(WalkmanFont.calloutBold)
                             }
                         }
@@ -821,7 +805,7 @@ public struct AlbumMetadataEditorSheet: View {
                     }
                     .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 8))
                     .disabled(isAnalyzingSenseMe || trackRows.isEmpty)
-                    .help("Analyze album tracks for Sony 12 Tone / SenseMe and embed hardware-compatible metadata")
+                    .help(L10n.tr("Analyze album tracks for Sony 12 Tone / SenseMe and embed hardware-compatible metadata"))
                 }
             }
 
@@ -834,24 +818,24 @@ public struct AlbumMetadataEditorSheet: View {
                         .foregroundStyle(.tertiary)
                         .frame(width: 50, alignment: .center)
 
-                    Text("Order")
+                    Text(L10n.tr("Order"))
                         .font(WalkmanFont.sectionHeader)
                         .foregroundStyle(.tertiary)
                         .frame(width: 48, alignment: .center)
 
-                    Text("Track Title")
+                    Text(L10n.tr("Track Title"))
                         .font(WalkmanFont.sectionHeader)
                         .foregroundStyle(.tertiary)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
                     if !applyArtistToAll {
-                        Text("Track Artist")
+                        Text(L10n.tr("Track Artist"))
                             .font(WalkmanFont.sectionHeader)
                             .foregroundStyle(.tertiary)
                             .frame(width: 240, alignment: .leading)
                     }
 
-                    Text("Format")
+                    Text(L10n.tr("Format"))
                         .font(WalkmanFont.sectionHeader)
                         .foregroundStyle(.tertiary)
                         .frame(width: 60, alignment: .center)
@@ -861,7 +845,7 @@ public struct AlbumMetadataEditorSheet: View {
                         .foregroundStyle(.tertiary)
                         .frame(width: 65, alignment: .center)
 
-                    Text("Duration")
+                    Text(L10n.tr("Duration"))
                         .font(WalkmanFont.sectionHeader)
                         .foregroundStyle(.tertiary)
                         .frame(width: 60, alignment: .trailing)
@@ -935,7 +919,7 @@ public struct AlbumMetadataEditorSheet: View {
                             .foregroundStyle(.orange)
 
                         Button(action: { showPermissionSheet = true }) {
-                            Text("Grant Permission...")
+                            Text(L10n.tr("Grant Permission..."))
                                 .font(WalkmanFont.captionBold)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 3)
@@ -969,7 +953,7 @@ public struct AlbumMetadataEditorSheet: View {
                 Spacer()
 
                 Button(action: onDismiss) {
-                    Text("Cancel")
+                    Text(L10n.tr("Cancel"))
                         .font(WalkmanFont.calloutBold)
                         .foregroundStyle(WalkmanTheme.silverLight)
                         .padding(.horizontal, 22)
@@ -986,11 +970,11 @@ public struct AlbumMetadataEditorSheet: View {
                                 .controlSize(.small)
                                 .scaleEffect(0.65)
                                 .frame(width: 14, height: 14)
-                            Text("Saving Album...")
+                            Text(L10n.tr("Saving Album..."))
                         } else {
                             Image(systemName: "checkmark")
                                 .font(.system(size: 12, weight: .bold))
-                            Text("Save Album (\(trackRows.count) Tracks)")
+                            Text(L10n.tr("Save Album (\(trackRows.count) Tracks)"))
                         }
                     }
                     .font(WalkmanFont.headline)
@@ -1010,6 +994,7 @@ public struct AlbumMetadataEditorSheet: View {
 
 // MARK: - Track Row View
 private struct TrackRowView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let index: Int
     let totalCount: Int
     @Binding var row: AlbumMetadataEditorSheet.EditableTrackRow
@@ -1127,7 +1112,7 @@ private struct TrackRowView: View {
         .background(isHovered ? Color.white.opacity(0.045) : (index % 2 == 1 ? Color.white.opacity(0.015) : Color.clear))
         .contextMenu {
             Button(action: onAnalyzeSenseMe) {
-                Label(row.isSenseMeAnalyzed ? "Re-Analyze SenseMe (12 Tone)" : "Analyze SenseMe (12 Tone)", systemImage: "waveform.path.ecg")
+                Label(row.isSenseMeAnalyzed ? L10n.tr("Re-Analyze SenseMe (12 Tone)") : L10n.tr("Analyze SenseMe (12 Tone)"), systemImage: "waveform.path.ecg")
             }
         }
         .onHover { h in
@@ -1140,6 +1125,7 @@ private struct TrackRowView: View {
 
 // MARK: - Album Input Field
 private struct AlbumInputField: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let label: String
     @Binding var text: String
     @State private var isHovered: Bool = false
@@ -1204,6 +1190,7 @@ private struct AlbumInputField: View {
 }
 
 private struct AlbumIconSquareButton: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let icon: String
     var isDestructive: Bool = false
     var isDisabled: Bool = false
@@ -1224,6 +1211,7 @@ private struct AlbumIconSquareButton: View {
 }
 
 private struct SheetCloseButton: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let action: () -> Void
 
     var body: some View {
@@ -1235,6 +1223,6 @@ private struct SheetCloseButton: View {
         }
         .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 14))
         .keyboardShortcut(.cancelAction)
-        .help("Close")
+        .help(L10n.tr("Close"))
     }
 }

@@ -3,6 +3,7 @@ import AppKit
 import UniformTypeIdentifiers
 
 public struct TransferQueueView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let drives: [WalkmanDrive]
     let activeDrive: WalkmanDrive?
     let onTransferComplete: () -> Void
@@ -34,7 +35,7 @@ public struct TransferQueueView: View {
 
     // Audio Import / Folder Scanning State
     @State private var isImporting: Bool = false
-    @State private var importStatusMessage: String = "Scanning folder for music..."
+    @State private var importStatusMessage: String = L10n.tr("Scanning folder for music...")
     @State private var importCurrent: Int = 0
     @State private var importTotal: Int = 0
     @State private var importCurrentTitle: String = ""
@@ -189,7 +190,7 @@ public struct TransferQueueView: View {
                                 Image(systemName: isLocalDestination ? "internaldrive.fill" : (targetMode == .learning ? "character.book.closed.fill" : "hifispeaker.fill"))
                                     .font(.system(size: 10))
                                     .foregroundStyle(isLocalDestination ? WalkmanTheme.silverLight : (targetMode == .learning ? WalkmanTheme.hiResGold : WalkmanTheme.silverMuted))
-                                Text(isLocalDestination ? "TARGET: LOCAL STORAGE" : (targetMode == .learning ? "TARGET: /LEARNING" : "DESTINATION DRIVE"))
+                                Text(isLocalDestination ? L10n.tr("TARGET: LOCAL STORAGE") : (targetMode == .learning ? L10n.tr("TARGET: /LEARNING") : L10n.tr("DESTINATION DRIVE")))
                                     .font(WalkmanFont.sectionHeader)
                                     .foregroundStyle(isLocalDestination ? WalkmanTheme.silverLight.opacity(0.85) : (targetMode == .learning ? WalkmanTheme.hiResGold.opacity(0.9) : Color.white.opacity(0.4)))
                             }
@@ -197,7 +198,7 @@ public struct TransferQueueView: View {
                             LiquidGlassDropdownMenu(title: currentTargetDriveLabel) {
                                 Picker("", selection: $targetDriveId) {
                                     if !drives.isEmpty {
-                                        Section("Walkman Storage") {
+                                        Section(L10n.tr("Walkman Storage")) {
                                             ForEach(drives) { d in
                                                 let dev = WalkmanDeviceDetector.shared.detectDevices(drives: drives).first(where: { $0.drives.contains(where: { $0.mountPoint == d.mountPoint }) })
                                                 let label = (drives.count > 2 && dev != nil) ? "\(dev!.specificModel) • \(d.name)" : d.name
@@ -205,10 +206,10 @@ public struct TransferQueueView: View {
                                             }
                                         }
                                     }
-                                    Section("Local Storage") {
-                                        Text("Local Music Library").tag("local_library")
+                                    Section(L10n.tr("Local Storage")) {
+                                        Text(L10n.tr("Local Music Library")).tag("local_library")
                                         ForEach(LocalMusicLibraryService.shared.folders) { f in
-                                            Text("Folder: \(f.displayName)").tag("local_folder_\(f.id)")
+                                            Text(L10n.tr("Folder: \(f.displayName)")).tag("local_folder_\(f.id)")
                                         }
                                     }
                                 }
@@ -226,7 +227,7 @@ public struct TransferQueueView: View {
                                         .tint(WalkmanTheme.silver)
                                         .scaleEffect(x: 1, y: 0.6, anchor: .center)
                                     HStack(spacing: 4) {
-                                        Text(String(format: "%.1f GB free", freeGB))
+                                        Text(String(format: L10n.lookup("%.1f GB free"), freeGB))
                                             .font(WalkmanFont.monoSmall)
                                             .foregroundStyle(.white.opacity(0.88))
                                         Text(String(format: "/ %.1f GB", totalGB))
@@ -235,7 +236,7 @@ public struct TransferQueueView: View {
                                     }
                                 }
                             } else {
-                                Text("No Destination Selected")
+                                Text(L10n.tr("No Destination Selected"))
                                     .font(WalkmanFont.subheadline)
                                     .foregroundStyle(.orange)
                             }
@@ -251,42 +252,42 @@ public struct TransferQueueView: View {
                                 Image(systemName: "waveform")
                                     .font(.system(size: 10))
                                     .foregroundStyle(WalkmanTheme.silverMuted)
-                                Text("CONVERSION PRESET")
+                                Text(L10n.tr("CONVERSION PRESET"))
                                     .font(WalkmanFont.sectionHeader)
                                     .foregroundStyle(.tertiary)
                             }
 
                             LiquidGlassDropdownMenu(title: presetDisplayName(selectedPreset)) {
                                 Picker("", selection: $selectedPreset) {
-                                    Section("Pass-Through & Optimization") {
-                                        Text("Optimize Metadata Only (Direct Copy)").tag("copy_optimize")
-                                        Text("Direct Copy (Raw Passthrough)").tag("copy_raw")
+                                    Section(L10n.tr("Pass-Through & Optimization")) {
+                                        Text(L10n.tr("Optimize Metadata Only (Direct Copy)")).tag("copy_optimize")
+                                        Text(L10n.tr("Direct Copy (Raw Passthrough)")).tag("copy_raw")
                                     }
 
-                                    Section("Podcasts, Audiobooks & Voice (Speech Optimized)") {
-                                        Text("MP3 128 kbps Spoken Word (Compact Size)").tag("mp3_128")
-                                        Text("MP3 192 kbps Voice Master (High Clarity)").tag("mp3_192")
-                                        Text("AAC 128 kbps Spoken Audio (M4A)").tag("aac_128")
+                                    Section(L10n.tr("Podcasts, Audiobooks & Voice (Speech Optimized)")) {
+                                        Text(L10n.tr("MP3 128 kbps Spoken Word (Compact Size)")).tag("mp3_128")
+                                        Text(L10n.tr("MP3 192 kbps Voice Master (High Clarity)")).tag("mp3_192")
+                                        Text(L10n.tr("AAC 128 kbps Spoken Audio (M4A)")).tag("aac_128")
                                     }
 
-                                    Section("Lossless FLAC (Sony S-Master HX)") {
-                                        Text("FLAC 16-bit / 44.1kHz (CD Quality)").tag("flac_16")
-                                        Text("FLAC 24-bit / 48kHz (Studio Lossless)").tag("flac_24_48")
-                                        Text("FLAC 24-bit / 96kHz (Hi-Res Master)").tag("flac_24_96")
-                                        Text("FLAC 24-bit / 192kHz (Ultra Hi-Res)").tag("flac_24_192")
+                                    Section(L10n.tr("Lossless FLAC (Sony S-Master HX)")) {
+                                        Text(L10n.tr("FLAC 16-bit / 44.1kHz (CD Quality)")).tag("flac_16")
+                                        Text(L10n.tr("FLAC 24-bit / 48kHz (Studio Lossless)")).tag("flac_24_48")
+                                        Text(L10n.tr("FLAC 24-bit / 96kHz (Hi-Res Master)")).tag("flac_24_96")
+                                        Text(L10n.tr("FLAC 24-bit / 192kHz (Ultra Hi-Res)")).tag("flac_24_192")
                                     }
 
-                                    Section("MP3 (Strict ID3v2.3 UTF-16)") {
-                                        Text("MP3 320 kbps CBR (Maximum Quality)").tag("mp3_320")
-                                        Text("MP3 256 kbps CBR (High Quality)").tag("mp3_256")
-                                        Text("MP3 VBR V0 (~245 kbps Variable)").tag("mp3_v0")
+                                    Section(L10n.tr("MP3 (Strict ID3v2.3 UTF-16)")) {
+                                        Text(L10n.tr("MP3 320 kbps CBR (Maximum Quality)")).tag("mp3_320")
+                                        Text(L10n.tr("MP3 256 kbps CBR (High Quality)")).tag("mp3_256")
+                                        Text(L10n.tr("MP3 VBR V0 (~245 kbps Variable)")).tag("mp3_v0")
                                     }
 
-                                    Section("Apple & PCM Audio") {
-                                        Text("AAC 320 kbps (High Fidelity M4A)").tag("aac_320")
-                                        Text("AAC 256 kbps (iTunes Standard M4A)").tag("aac_256")
-                                        Text("ALAC Apple Lossless (16-bit)").tag("alac_16")
-                                        Text("WAV 16-bit / 44.1kHz PCM").tag("wav_16")
+                                    Section(L10n.tr("Apple & PCM Audio")) {
+                                        Text(L10n.tr("AAC 320 kbps (High Fidelity M4A)")).tag("aac_320")
+                                        Text(L10n.tr("AAC 256 kbps (iTunes Standard M4A)")).tag("aac_256")
+                                        Text(L10n.tr("ALAC Apple Lossless (16-bit)")).tag("alac_16")
+                                        Text(L10n.tr("WAV 16-bit / 44.1kHz PCM")).tag("wav_16")
                                     }
                                 }
                                 .pickerStyle(.inline)
@@ -311,7 +312,7 @@ public struct TransferQueueView: View {
                                 Image(systemName: "arrow.up.arrow.down.circle.fill")
                                     .font(.system(size: 10))
                                     .foregroundStyle(WalkmanTheme.silverMuted)
-                                Text("SYNC TO WALKMAN")
+                                Text(L10n.tr("SYNC TO WALKMAN"))
                                     .font(WalkmanFont.sectionHeader)
                                     .foregroundStyle(.tertiary)
                             }
@@ -331,18 +332,18 @@ public struct TransferQueueView: View {
                                         ProgressView()
                                             .scaleEffect(0.70)
                                         let doneCount = queue.filter { $0.status == .success }.count
-                                        Text("Transferring (\(doneCount)/\(queue.count))...")
+                                        Text(L10n.tr("Transferring (\(doneCount)/\(queue.count))..."))
                                             .font(WalkmanFont.calloutBold)
                                             .foregroundStyle(Color(red: 20/255, green: 20/255, blue: 24/255))
                                     } else if queue.isEmpty {
                                         Image(systemName: "arrow.right.circle")
                                             .font(.system(size: 13, weight: .semibold))
-                                        Text("Queue Empty")
+                                        Text(L10n.tr("Queue Empty"))
                                             .font(WalkmanFont.calloutMedium)
                                     } else {
                                         Image(systemName: "arrow.right.circle.fill")
                                             .font(.system(size: 14, weight: .bold))
-                                        Text("Start Transfer (\(queue.count))")
+                                        Text(L10n.tr("Start Transfer (\(queue.count))"))
                                             .font(WalkmanFont.calloutBold)
                                     }
                                     Spacer(minLength: 0)
@@ -372,12 +373,12 @@ public struct TransferQueueView: View {
                                     Image(systemName: "checkmark.circle.fill")
                                         .font(.system(size: 10))
                                         .foregroundStyle(.green)
-                                    Text("All \(queue.count) tracks transferred")
+                                    Text(L10n.tr("All \(queue.count) tracks transferred"))
                                         .font(WalkmanFont.monoSmall)
                                         .foregroundStyle(.green)
                                 }
                             } else {
-                                Text("\(doneCount) of \(queue.count) transferred")
+                                Text(L10n.tr("\(doneCount) of \(queue.count) transferred"))
                                     .font(WalkmanFont.monoSmall)
                                     .foregroundStyle(.secondary)
                             }
@@ -398,16 +399,16 @@ public struct TransferQueueView: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
                         toggleChip(
-                            title: "Baseline RGB Art",
+                            title: L10n.tr("Baseline RGB Art"),
                             icon: "photo.badge.checkmark",
                             isOn: $optimizeArtwork,
-                            help: "Converts artwork to strict Baseline RGB JPEG (max 800x800) for Sony Walkman display engine"
+                            help: L10n.tr("Converts artwork to strict Baseline RGB JPEG (max 800x800) for Sony Walkman display engine")
                         )
                         toggleChip(
-                            title: ".LRC Lyrics",
+                            title: L10n.tr(".LRC Lyrics"),
                             icon: "quote.bubble",
                             isOn: $fetchLyrics,
-                            help: targetMode == .learning ? "Off by default for Language Study, but can be enabled to sync transcripts (.lrc) alongside lessons" : "Auto-downloads synchronized .lrc lyrics alongside music on Walkman",
+                            help: targetMode == .learning ? L10n.tr("Off by default for Language Study, but can be enabled to sync transcripts (.lrc) alongside lessons") : L10n.tr("Auto-downloads synchronized .lrc lyrics alongside music on Walkman"),
                             onToggled: { isOn in
                                 if isOn {
                                     triggerQueueLyricsFetchIfNeeded()
@@ -415,30 +416,30 @@ public struct TransferQueueView: View {
                             }
                         )
                         toggleChip(
-                            title: "Auto-Tags",
+                            title: L10n.tr("Auto-Tags"),
                             icon: "sparkles",
                             isOn: $autoFetchMetadata,
-                            help: targetMode == .learning ? "Disabled in Language Study mode (preserves original chapter titles & author info)" : "Auto-queries iTunes & Deezer for missing tags & high-res artwork",
+                            help: targetMode == .learning ? L10n.tr("Disabled in Language Study mode (preserves original chapter titles & author info)") : L10n.tr("Auto-queries iTunes & Deezer for missing tags & high-res artwork"),
                             disabled: targetMode == .learning
                         )
                         toggleChip(
                             title: "folder.jpg",
                             icon: "folder",
                             isOn: $saveFolderJpg,
-                            help: "Writes folder.jpg and cover.jpg into destination album directory"
+                            help: L10n.tr("Writes folder.jpg and cover.jpg into destination album directory")
                         )
                         toggleChip(
-                            title: "EBU R128 Leveling",
+                            title: L10n.tr("EBU R128 Leveling"),
                             icon: "speaker.wave.2",
                             isOn: $normalizeVolume,
-                            help: "Normalizes track loudness using EBU R128 standard during transcoding",
+                            help: L10n.tr("Normalizes track loudness using EBU R128 standard during transcoding"),
                             disabled: selectedPreset == "copy_optimize" || selectedPreset == "copy_raw"
                         )
                         toggleChip(
                             title: "12 Tone / SenseMe",
                             icon: "waveform.path.badge.plus",
                             isOn: $autoSenseMe,
-                            help: "Injects Sony 12 Tone Analysis (SenseMe) metadata so the Walkman illuminates the SenseMe channel indicator"
+                            help: L10n.tr("Injects Sony 12 Tone Analysis (SenseMe) metadata so the Walkman illuminates the SenseMe channel indicator")
                         )
                     }
                     .padding(.horizontal, 16)
@@ -520,7 +521,7 @@ public struct TransferQueueView: View {
                                     .font(.system(size: 13))
                                     .foregroundStyle(.orange)
 
-                                Text("\(duplicatesInQueue.count) track(s) in queue already exist on your Walkman library.")
+                                Text(L10n.tr("\(duplicatesInQueue.count) track(s) in queue already exist on your Walkman library."))
                                     .font(WalkmanFont.calloutMedium)
                                     .foregroundStyle(.white)
 
@@ -530,7 +531,7 @@ public struct TransferQueueView: View {
                                     HStack(spacing: 4) {
                                         Image(systemName: "trash")
                                             .font(.system(size: 10))
-                                        Text("Remove Duplicates")
+                                        Text(L10n.tr("Remove Duplicates"))
                                             .font(WalkmanFont.captionBold)
                                     }
                                     .padding(.horizontal, 10)
@@ -541,7 +542,7 @@ public struct TransferQueueView: View {
                                     .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.orange.opacity(0.4), lineWidth: 0.8))
                                 }
                                 .buttonStyle(.plain)
-                                .help("Remove all duplicate tracks from the queue to avoid redundant copies")
+                                .help(L10n.tr("Remove all duplicate tracks from the queue to avoid redundant copies"))
                             }
                             .padding(.horizontal, 14)
                             .padding(.vertical, 8)
@@ -619,11 +620,11 @@ public struct TransferQueueView: View {
                             .font(.system(size: 40))
                             .foregroundStyle(WalkmanTheme.silver)
 
-                        Text("Drop to Add to Transfer Queue")
+                        Text(L10n.tr("Drop to Add to Transfer Queue"))
                             .font(WalkmanFont.title2)
                             .foregroundStyle(.white)
 
-                        Text("Supports FLAC, MP3, M4A, M4B, WAV, ALAC, AAC, DSD • Auto-indexes tags & art")
+                        Text(L10n.tr("Supports FLAC, MP3, M4A, M4B, WAV, ALAC, AAC, DSD • Auto-indexes tags & art"))
                             .font(WalkmanFont.callout)
                             .foregroundStyle(.secondary)
                     }
@@ -774,13 +775,13 @@ public struct TransferQueueView: View {
                 .shadow(color: Color.black.opacity(0.20), radius: 6, x: 0, y: 2)
 
                 VStack(spacing: 5) {
-                    Text("Importing Music to Walkman Studio")
+                    Text(L10n.tr("Importing Music to Walkman Studio"))
                         .font(WalkmanFont.title2)
                         .foregroundStyle(WalkmanTheme.silverLight)
 
                     Text(!importStatusMessage.isEmpty ? importStatusMessage : (importTotal > 0
-                         ? "Analyzing audio metadata, tags, and inspecting duplicates..."
-                         : "Scanning folders for audio tracks and albums..."))
+                         ? L10n.tr("Analyzing audio metadata, tags, and inspecting duplicates...")
+                         : L10n.tr("Scanning folders for audio tracks and albums...")))
                         .font(WalkmanFont.subheadline)
                         .foregroundStyle(WalkmanTheme.silverMuted)
                         .multilineTextAlignment(.center)
@@ -793,7 +794,7 @@ public struct TransferQueueView: View {
 
                     HStack {
                         if importTotal > 0 {
-                            Text("\(importCurrent) of \(importTotal) tracks")
+                            Text(L10n.tr("\(importCurrent) of \(importTotal) tracks"))
                                 .font(WalkmanFont.monoSmall)
                                 .foregroundStyle(WalkmanTheme.silverLight)
 
@@ -803,7 +804,7 @@ public struct TransferQueueView: View {
                                 .font(WalkmanFont.monoSmall)
                                 .foregroundStyle(WalkmanTheme.silverLight)
                         } else {
-                            Text("Discovering tracks...")
+                            Text(L10n.tr("Discovering tracks..."))
                                 .font(WalkmanFont.monoSmall)
                                 .foregroundStyle(WalkmanTheme.silverMuted)
                             Spacer()
@@ -846,7 +847,7 @@ public struct TransferQueueView: View {
                         importCurrentTitle = ""
                     }
                 }) {
-                    Text("Cancel Import")
+                    Text(L10n.tr("Cancel Import"))
                         .font(WalkmanFont.calloutMedium)
                         .foregroundStyle(WalkmanTheme.silverLight)
                         .padding(.horizontal, 18)
@@ -927,7 +928,7 @@ public struct TransferQueueView: View {
 
                     // Title & Dynamic Subtitle
                     VStack(spacing: 5) {
-                        Text(transferIsComplete ? "Transfer Complete" : "Syncing to \(targetDriveName)")
+                        Text(transferIsComplete ? L10n.tr("Transfer Complete") : L10n.tr("Syncing to \(targetDriveName)"))
                             .font(WalkmanFont.title2)
                             .foregroundStyle(WalkmanTheme.silverLight)
 
@@ -944,7 +945,7 @@ public struct TransferQueueView: View {
                             .frame(maxWidth: 420)
 
                         HStack {
-                            Text("\(transferCurrentIndex) of \(transferTotalCount) tracks")
+                            Text(L10n.tr("\(transferCurrentIndex) of \(transferTotalCount) tracks"))
                                 .font(WalkmanFont.monoSmall)
                                 .foregroundStyle(WalkmanTheme.silverLight)
 
@@ -1002,7 +1003,7 @@ public struct TransferQueueView: View {
                                 Image(systemName: "checkmark.circle.fill")
                                     .font(.system(size: 10))
                                     .foregroundStyle(.green)
-                                Text("\(transferSuccessCount) transferred")
+                                Text(L10n.tr("\(transferSuccessCount) transferred"))
                                     .font(WalkmanFont.monoSmall)
                                     .foregroundStyle(.green)
                             }
@@ -1016,7 +1017,7 @@ public struct TransferQueueView: View {
                                     Image(systemName: "exclamationmark.triangle.fill")
                                         .font(.system(size: 10))
                                         .foregroundStyle(.orange)
-                                    Text("\(transferSkippedCount) skipped")
+                                    Text(L10n.tr("\(transferSkippedCount) skipped"))
                                         .font(WalkmanFont.monoSmall)
                                         .foregroundStyle(.orange)
                                 }
@@ -1031,7 +1032,7 @@ public struct TransferQueueView: View {
                                     Image(systemName: "xmark.circle.fill")
                                         .font(.system(size: 10))
                                         .foregroundStyle(.red)
-                                    Text("\(transferFailedCount) failed")
+                                    Text(L10n.tr("\(transferFailedCount) failed"))
                                         .font(WalkmanFont.monoSmall)
                                         .foregroundStyle(.red)
                                 }
@@ -1052,7 +1053,7 @@ public struct TransferQueueView: View {
                                     showTransferProgressModal = false
                                 }
                             }) {
-                                Text("Done")
+                                Text(L10n.tr("Done"))
                                     .font(WalkmanFont.calloutBold)
                                     .foregroundStyle(Color(red: 20/255, green: 20/255, blue: 24/255))
                                     .padding(.horizontal, 28)
@@ -1063,7 +1064,7 @@ public struct TransferQueueView: View {
                             Button(action: {
                                 cancelTransfer()
                             }) {
-                                Text("Cancel Transfer")
+                                Text(L10n.tr("Cancel Transfer"))
                                     .font(WalkmanFont.calloutMedium)
                                     .foregroundStyle(WalkmanTheme.silverLight)
                                     .padding(.horizontal, 18)
@@ -1128,12 +1129,12 @@ public struct TransferQueueView: View {
     private var transferModalSubtitle: String {
         if transferIsComplete {
             if transferSuccessCount == transferTotalCount {
-                return "All \(transferSuccessCount) track(s) successfully transferred to \(targetDriveName)."
+                return L10n.tr("All \(transferSuccessCount) track(s) successfully transferred to \(targetDriveName).")
             } else {
-                return "\(transferSuccessCount) of \(transferTotalCount) tracks transferred. See summary below."
+                return L10n.tr("\(transferSuccessCount) of \(transferTotalCount) tracks transferred. See summary below.")
             }
         } else {
-            return "Transcoding audio, embedding hardware tags & Baseline RGB art..."
+            return L10n.tr("Transcoding audio, embedding hardware tags & Baseline RGB art...")
         }
     }
 
@@ -1159,7 +1160,7 @@ public struct TransferQueueView: View {
                 .controlSize(.small)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(importTotal > 0 ? "Importing music to Walkman Studio (\(importCurrent)/\(importTotal))..." : "Scanning folder for music...")
+                Text(importTotal > 0 ? L10n.tr("Importing music to Walkman Studio (\(importCurrent)/\(importTotal))...") : L10n.tr("Scanning folder for music..."))
                     .font(WalkmanFont.calloutBold)
                     .foregroundStyle(WalkmanTheme.silverLight)
 
@@ -1183,7 +1184,7 @@ public struct TransferQueueView: View {
                     .foregroundStyle(WalkmanTheme.silverLight)
             }
 
-            Button("Cancel") {
+            Button(L10n.tr("Cancel")) {
                 importTask?.cancel()
                 withAnimation(.easeInOut(duration: 0.20)) {
                     isImporting = false
@@ -1237,13 +1238,13 @@ public struct TransferQueueView: View {
                 }
 
                 VStack(spacing: 5) {
-                    Text(targetMode == .learning ? "Drag & Drop Podcasts, Audiobooks, or Audio Files" : "Drag & Drop Audio Files or Folders")
+                    Text(targetMode == .learning ? L10n.tr("Drag & Drop Podcasts, Audiobooks, or Audio Files") : L10n.tr("Drag & Drop Audio Files or Folders"))
                         .font(WalkmanFont.title3)
                         .foregroundStyle(.white)
 
                     Text(targetMode == .learning
-                         ? "Drop podcast episodes or audiobooks (.m4b, .mp3, .m4a) to transfer directly to Walkman Language Study mode with DPC speed control, A-B Repeat, and Quick Replay."
-                         : "Drop songs or entire albums from Finder to convert, optimize Baseline RGB artwork, sync lyrics, and copy to Walkman.")
+                         ? L10n.tr("Drop podcast episodes or audiobooks (.m4b, .mp3, .m4a) to transfer directly to Walkman Language Study mode with DPC speed control, A-B Repeat, and Quick Replay.")
+                         : L10n.tr("Drop songs or entire albums from Finder to convert, optimize Baseline RGB artwork, sync lyrics, and copy to Walkman."))
                         .font(WalkmanFont.callout)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -1267,7 +1268,7 @@ public struct TransferQueueView: View {
                     HStack(spacing: 7) {
                         Image(systemName: "folder.badge.plus")
                             .font(.system(size: 13, weight: .bold))
-                        Text("Browse Audio Files or Folders...")
+                        Text(L10n.tr("Browse Audio Files or Folders..."))
                             .font(WalkmanFont.calloutBold)
                     }
                     .padding(.horizontal, 20)
@@ -1307,7 +1308,7 @@ public struct TransferQueueView: View {
     // -------------------------------------------------------------------------
     private var queueSummaryView: some View {
         HStack(spacing: 6) {
-            Text("Queue")
+            Text(L10n.tr("Queue"))
                 .font(WalkmanFont.headline)
                 .foregroundStyle(.white)
 
@@ -1339,7 +1340,7 @@ public struct TransferQueueView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 10))
-                    Text("\(missingCount) missing tags / art")
+                    Text(L10n.tr("\(missingCount) missing tags / art"))
                         .font(WalkmanFont.monoSmall)
                 }
                 .padding(.horizontal, 7)
@@ -1357,7 +1358,7 @@ public struct TransferQueueView: View {
                 .font(.system(size: 10.5))
                 .foregroundStyle(Color.white.opacity(0.55))
 
-            TextField("Filter queue...", text: $queueSearchText)
+            TextField(L10n.tr("Filter queue..."), text: $queueSearchText)
                 .textFieldStyle(.plain)
                 .font(WalkmanFont.callout)
 
@@ -1401,32 +1402,32 @@ public struct TransferQueueView: View {
             Button {
                 sortQueueByTrackNumber()
             } label: {
-                Label("Sort by Track Number", systemImage: "number")
+                Label(L10n.tr("Sort by Track Number"), systemImage: "number")
             }
             Button {
                 sortQueueByFilename()
             } label: {
-                Label("Sort by Filename (A-Z)", systemImage: "doc.plaintext")
+                Label(L10n.tr("Sort by Filename (A-Z)"), systemImage: "doc.plaintext")
             }
             Button {
                 sortQueueByArtistAlbum()
             } label: {
-                Label("Sort by Artist & Album", systemImage: "music.note.list")
+                Label(L10n.tr("Sort by Artist & Album"), systemImage: "music.note.list")
             }
         } label: {
             SortMenuPillLabel()
         }
         .menuIndicator(.hidden)
         .buttonStyle(.plain)
-        .help("Sort queue items by track number, filename, or album")
+        .help(L10n.tr("Sort queue items by track number, filename, or album"))
     }
 
     private var addFilesButtonView: some View {
         TransferBatchActionButton(
-            title: "Add Files...",
+            title: L10n.tr("Add Files..."),
             icon: "plus",
             isDisabled: isProcessing,
-            help: "Add more audio files or folders to the transfer queue",
+            help: L10n.tr("Add more audio files or folders to the transfer queue"),
             action: openFilePicker
         )
     }
@@ -1438,30 +1439,30 @@ public struct TransferQueueView: View {
         HStack(spacing: 6) {
             if targetMode != .learning {
                 TransferBatchActionButton(
-                    title: isBatchOptimizing ? "Optimizing..." : "Optimize All",
+                    title: isBatchOptimizing ? L10n.tr("Optimizing...") : L10n.tr("Optimize All"),
                     icon: "sparkles",
                     isLoading: isBatchOptimizing,
                     isDisabled: queue.isEmpty || isBatchOptimizing || isProcessing,
-                    help: "Fetches missing metadata and optimizes cover artwork to Baseline RGB JPEG for all tracks",
+                    help: L10n.tr("Fetches missing metadata and optimizes cover artwork to Baseline RGB JPEG for all tracks"),
                     action: batchOptimizeAll
                 )
             }
 
             TransferBatchActionButton(
-                title: isBatchFetchingLyrics ? "Fetching..." : "Fetch Lyrics",
+                title: isBatchFetchingLyrics ? L10n.tr("Fetching...") : L10n.tr("Fetch Lyrics"),
                 icon: "quote.bubble.fill",
                 isLoading: isBatchFetchingLyrics,
                 isDisabled: queue.isEmpty || isBatchFetchingLyrics || isProcessing,
-                help: "Fetches synchronized .LRC lyrics for all tracks in the queue",
+                help: L10n.tr("Fetches synchronized .LRC lyrics for all tracks in the queue"),
                 action: batchFetchAllLyrics
             )
 
             TransferBatchActionButton(
-                title: "Clear",
+                title: L10n.tr("Clear"),
                 icon: "trash",
                 isDestructive: true,
                 isDisabled: queue.isEmpty || isProcessing,
-                help: "Clear all tracks from the queue",
+                help: L10n.tr("Clear all tracks from the queue"),
                 action: {
                     if !queue.isEmpty {
                         showClearConfirmation = true
@@ -1476,57 +1477,57 @@ public struct TransferQueueView: View {
     // -------------------------------------------------------------------------
     private var currentTargetDriveLabel: String {
         if targetDriveId == "local_library" {
-            return "Local Music Library"
+            return L10n.tr("Local Music Library")
         } else if targetDriveId.hasPrefix("local_folder_") {
             let folderId = String(targetDriveId.dropFirst("local_folder_".count))
             if let folder = LocalMusicLibraryService.shared.folders.first(where: { $0.id == folderId }) {
-                return "Folder: \(folder.displayName)"
+                return L10n.tr("Folder: \(folder.displayName)")
             }
-            return "Local Folder"
+            return L10n.tr("Local Folder")
         } else if let drive = drives.first(where: { $0.mountPoint == targetDriveId }) {
             let dev = WalkmanDeviceDetector.shared.detectDevices(drives: drives).first(where: { $0.drives.contains(where: { $0.mountPoint == drive.mountPoint }) })
             return (drives.count > 2 && dev != nil) ? "\(dev!.specificModel) • \(drive.name)" : drive.name
         } else if let first = drives.first {
             return first.name
         } else {
-            return "Local Music Library"
+            return L10n.tr("Local Music Library")
         }
     }
 
     private func presetDisplayName(_ preset: String) -> String {
         switch preset {
         case "copy_optimize":
-            return "Optimize Metadata Only (Direct Copy)"
+            return L10n.tr("Optimize Metadata Only (Direct Copy)")
         case "copy_raw":
-            return "Direct Copy (Raw Passthrough)"
+            return L10n.tr("Direct Copy (Raw Passthrough)")
         case "mp3_128":
-            return "MP3 128 kbps Spoken Word"
+            return L10n.tr("MP3 128 kbps Spoken Word")
         case "mp3_192":
-            return "MP3 192 kbps Voice Master"
+            return L10n.tr("MP3 192 kbps Voice Master")
         case "aac_128":
-            return "AAC 128 kbps Spoken Audio"
+            return L10n.tr("AAC 128 kbps Spoken Audio")
         case "flac_16":
-            return "FLAC 16-bit / 44.1kHz (CD Quality)"
+            return L10n.tr("FLAC 16-bit / 44.1kHz (CD Quality)")
         case "flac_24_48":
-            return "FLAC 24-bit / 48kHz (Studio Lossless)"
+            return L10n.tr("FLAC 24-bit / 48kHz (Studio Lossless)")
         case "flac_24_96", "flac_24":
-            return "FLAC 24-bit / 96kHz (Hi-Res Master)"
+            return L10n.tr("FLAC 24-bit / 96kHz (Hi-Res Master)")
         case "flac_24_192":
-            return "Ultra Hi-Res FLAC 24-bit / 192kHz"
+            return L10n.tr("Ultra Hi-Res FLAC 24-bit / 192kHz")
         case "mp3_320":
-            return "MP3 320 kbps CBR (Maximum Quality)"
+            return L10n.tr("MP3 320 kbps CBR (Maximum Quality)")
         case "mp3_256":
-            return "MP3 256 kbps CBR (High Quality)"
+            return L10n.tr("MP3 256 kbps CBR (High Quality)")
         case "mp3_v0":
-            return "MP3 VBR V0 (~245 kbps Variable)"
+            return L10n.tr("MP3 VBR V0 (~245 kbps Variable)")
         case "aac_320":
-            return "AAC 320 kbps (High Fidelity M4A)"
+            return L10n.tr("AAC 320 kbps (High Fidelity M4A)")
         case "aac_256":
-            return "iTunes Standard AAC 256 kbps"
+            return L10n.tr("iTunes Standard AAC 256 kbps")
         case "alac_16":
-            return "ALAC Apple Lossless (16-bit)"
+            return L10n.tr("ALAC Apple Lossless (16-bit)")
         case "wav_16":
-            return "Uncompressed PCM 16-bit / 44.1kHz"
+            return L10n.tr("Uncompressed PCM 16-bit / 44.1kHz")
         default:
             return preset
         }
@@ -1535,39 +1536,39 @@ public struct TransferQueueView: View {
     private func presetDescription(_ preset: String) -> String {
         switch preset {
         case "copy_optimize":
-            return "Direct copy • Strict tags & Baseline JPEG"
+            return L10n.tr("Direct copy • Strict tags & Baseline JPEG")
         case "copy_raw":
-            return "Pass-through copy • Unmodified file copy"
+            return L10n.tr("Pass-through copy • Unmodified file copy")
         case "mp3_128":
-            return "Optimized for speech, podcasts & audiobooks • Compact size"
+            return L10n.tr("Optimized for speech, podcasts & audiobooks • Compact size")
         case "mp3_192":
-            return "High clarity spoken word for podcasts & audiobooks"
+            return L10n.tr("High clarity spoken word for podcasts & audiobooks")
         case "aac_128":
-            return "Efficient AAC spoken word audio for audiobooks"
+            return L10n.tr("Efficient AAC spoken word audio for audiobooks")
         case "flac_16":
-            return "CD Quality FLAC 16-bit / 44.1kHz"
+            return L10n.tr("CD Quality FLAC 16-bit / 44.1kHz")
         case "flac_24_48":
-            return "Studio lossless FLAC 24-bit / 48kHz"
+            return L10n.tr("Studio lossless FLAC 24-bit / 48kHz")
         case "flac_24_96", "flac_24":
-            return "Hi-Res studio master FLAC 24-bit / 96kHz"
+            return L10n.tr("Hi-Res studio master FLAC 24-bit / 96kHz")
         case "flac_24_192":
-            return "Ultra Hi-Res FLAC 24-bit / 192kHz"
+            return L10n.tr("Ultra Hi-Res FLAC 24-bit / 192kHz")
         case "mp3_320":
-            return "Maximum fidelity MP3 320 kbps (ID3v2.3 UTF-16)"
+            return L10n.tr("Maximum fidelity MP3 320 kbps (ID3v2.3 UTF-16)")
         case "mp3_256":
-            return "High quality MP3 256 kbps CBR"
+            return L10n.tr("High quality MP3 256 kbps CBR")
         case "mp3_v0":
-            return "Variable bitrate MP3 VBR V0 (~245 kbps)"
+            return L10n.tr("Variable bitrate MP3 VBR V0 (~245 kbps)")
         case "aac_320":
-            return "High fidelity AAC-LC 320 kbps (M4A)"
+            return L10n.tr("High fidelity AAC-LC 320 kbps (M4A)")
         case "aac_256":
-            return "iTunes standard AAC 256 kbps (M4A)"
+            return L10n.tr("iTunes standard AAC 256 kbps (M4A)")
         case "alac_16":
-            return "Apple Lossless 16-bit (M4A)"
+            return L10n.tr("Apple Lossless 16-bit (M4A)")
         case "wav_16":
-            return "Uncompressed PCM 16-bit / 44.1kHz"
+            return L10n.tr("Uncompressed PCM 16-bit / 44.1kHz")
         default:
-            return "Apple Silicon hardware acceleration"
+            return L10n.tr("Apple Silicon hardware acceleration")
         }
     }
 
@@ -1631,7 +1632,7 @@ public struct TransferQueueView: View {
     private func handleDrop(providers: [NSItemProvider]) {
         withAnimation(.easeInOut(duration: 0.20)) {
             isImporting = true
-            importStatusMessage = "Accessing dropped files..."
+            importStatusMessage = L10n.tr("Accessing dropped files...")
             importCurrent = 0
             importTotal = 0
             importProgress = 0.0
@@ -1682,7 +1683,7 @@ public struct TransferQueueView: View {
         if panel.runModal() == .OK {
             withAnimation(.easeInOut(duration: 0.20)) {
                 isImporting = true
-                importStatusMessage = "Preparing selected files..."
+                importStatusMessage = L10n.tr("Preparing selected files...")
                 importCurrent = 0
                 importTotal = 0
                 importProgress = 0.0
@@ -1701,7 +1702,7 @@ public struct TransferQueueView: View {
 
         withAnimation(.easeInOut(duration: 0.20)) {
             isImporting = true
-            importStatusMessage = "Scanning folders & discovering music..."
+            importStatusMessage = L10n.tr("Scanning folders & discovering music...")
             importCurrent = 0
             importTotal = 0
             importProgress = 0.0
@@ -1765,7 +1766,7 @@ public struct TransferQueueView: View {
             let total = collectedURLs.count
             await MainActor.run {
                 self.importTotal = total
-                self.importStatusMessage = "Importing \(total) tracks to Walkman Studio..."
+                self.importStatusMessage = L10n.tr("Importing \(total) tracks to Walkman Studio...")
             }
 
             // Single-Pass Concurrent Worker Pipeline:
@@ -1810,7 +1811,7 @@ public struct TransferQueueView: View {
                         self.importCurrent = count
                         self.importProgress = progress
                         self.importCurrentTitle = currentTitle
-                        self.importStatusMessage = "Importing track \(count) of \(total)..."
+                        self.importStatusMessage = L10n.tr("Importing track \(count) of \(total)...")
                     }
 
                     if currentIndex < total {
@@ -2064,7 +2065,7 @@ public struct TransferQueueView: View {
                 album: item.album,
                 durationSeconds: item.durationSeconds,
                 matchingWalkmanTrack: check.matchingTrack,
-                matchReason: check.reason ?? "Already present on \(target?.name ?? "destination")",
+                matchReason: check.reason ?? L10n.tr("Already present on \(target?.name ?? "destination")"),
                 destinationDriveName: target?.name ?? "Walkman"
             )
         }
@@ -2186,7 +2187,7 @@ public struct TransferQueueView: View {
     private func batchOptimizeAll() {
         guard !queue.isEmpty else { return }
         isBatchOptimizing = true
-        batchStatusText = "Optimizing tags & cover art..."
+        batchStatusText = L10n.tr("Optimizing tags & cover art...")
 
         Task {
             for i in 0..<queue.count {
@@ -2263,7 +2264,7 @@ public struct TransferQueueView: View {
     private func batchFetchAllLyrics() {
         guard !queue.isEmpty else { return }
         isBatchFetchingLyrics = true
-        batchStatusText = "Fetching lyrics from LRCLIB..."
+        batchStatusText = L10n.tr("Fetching lyrics from LRCLIB...")
 
         Task {
             let pendingItems = await MainActor.run {
@@ -2275,7 +2276,7 @@ public struct TransferQueueView: View {
             for it in pendingItems {
                 guard isBatchFetchingLyrics else { break }
                 await MainActor.run {
-                    self.batchStatusText = total > 1 ? "Fetching lyrics (\(completed + 1) of \(total))..." : "Fetching lyrics from LRCLIB..."
+                    self.batchStatusText = total > 1 ? L10n.tr("Fetching lyrics (\(completed + 1) of \(total))...") : L10n.tr("Fetching lyrics from LRCLIB...")
                 }
                 await fetchLyricsForTrackAsync(it)
                 completed += 1
@@ -2329,7 +2330,7 @@ public struct TransferQueueView: View {
         transferTotalCount = pendingIndices.count
         transferCurrentTitle = ""
         transferCurrentArtist = ""
-        transferCurrentStage = "Initializing transfer..."
+        transferCurrentStage = L10n.tr("Initializing transfer...")
         transferProgress = 0.0
         transferSuccessCount = 0
         transferSkippedCount = 0
@@ -2355,7 +2356,7 @@ public struct TransferQueueView: View {
                     self.transferCurrentIndex = currentIndex
                     self.transferCurrentTitle = rawSrcTitle
                     self.transferCurrentArtist = rawSrcArtist
-                    self.transferCurrentStage = "Checking destination..."
+                    self.transferCurrentStage = L10n.tr("Checking destination...")
                     self.transferProgress = Double(currentIndex - 1) / Double(max(1, self.transferTotalCount))
                     self.queue[i].status = .converting
                 }
@@ -2439,7 +2440,7 @@ public struct TransferQueueView: View {
                     if !stem.isEmpty && stem.lowercased() != "unknown" {
                         cleanTitle = stem
                     } else {
-                        cleanTitle = "Track \(trackNum)"
+                        cleanTitle = L10n.tr("Track \(trackNum)")
                     }
                 }
 
@@ -2474,7 +2475,7 @@ public struct TransferQueueView: View {
                         existingTracks: destinationTracks(for: target)
                     )
                     if dupCheck.isDuplicate || FileManager.default.fileExists(atPath: dest.path) {
-                        let reason = dupCheck.reason ?? "Already exists on \(target.name)"
+                        let reason = dupCheck.reason ?? L10n.tr("Already exists on \(target.name)")
                         await MainActor.run {
                             if i < self.queue.count {
                                 self.queue[i].status = .skipped(reason)
@@ -2495,8 +2496,8 @@ public struct TransferQueueView: View {
                     // 1. Audio Transfer / Transcode
                     await MainActor.run {
                         self.transferCurrentStage = (self.selectedPreset == "copy_optimize" || self.selectedPreset == "copy_raw")
-                            ? "Copying audio file to \(target.name)..."
-                            : "Transcoding audio (\(self.presetDisplayName(self.selectedPreset)))..."
+                            ? L10n.tr("Copying audio file to \(target.name)...")
+                            : L10n.tr("Transcoding audio (\(self.presetDisplayName(self.selectedPreset)))...")
                     }
 
                     if selectedPreset == "copy_optimize" || selectedPreset == "copy_raw" {
@@ -2523,7 +2524,7 @@ public struct TransferQueueView: View {
                     // 2. Hardware Metadata & Baseline JPEG Embedding
                     if selectedPreset != "copy_raw" {
                         await MainActor.run {
-                            self.transferCurrentStage = "Embedding metadata & Baseline RGB artwork..."
+                            self.transferCurrentStage = L10n.tr("Embedding metadata & Baseline RGB artwork...")
                         }
                         var finalArtData = queue[i].artworkData
                         if optimizeArtwork, let art = finalArtData {
@@ -2551,7 +2552,7 @@ public struct TransferQueueView: View {
                                 if lowerG.contains("audiobook") || lowerG.contains("podcast") || lowerG.contains("speech") {
                                     tagGenre = rawGenre
                                 } else {
-                                    tagGenre = "Language Learning"
+                                    tagGenre = L10n.tr("Language Learning")
                                 }
                             } else {
                                 tagGenre = rawGenre.isEmpty ? nil : rawGenre
@@ -2718,7 +2719,7 @@ public struct TransferQueueView: View {
                 } else {
                     self.transferIsComplete = true
                     self.transferProgress = 1.0
-                    self.transferCurrentStage = "Transfer Complete"
+                    self.transferCurrentStage = L10n.tr("Transfer Complete")
                     self.isProcessing = false
                     self.onTransferComplete()
                 }
@@ -2731,6 +2732,7 @@ public struct TransferQueueView: View {
 // ENHANCED QUEUE ITEM ROW (PREMIUM GLASS CARD DESIGN)
 // -----------------------------------------------------------------------------
 private struct QueueItemRow: View {
+    @ObservedObject private var localization = AppLocalization.shared
     @Binding var item: TransferItem
     let isThisPlaying: Bool
     let destinationExtension: String
@@ -2763,7 +2765,7 @@ private struct QueueItemRow: View {
                     }
                 }
                 .buttonStyle(.plain)
-                .help(isThisPlaying ? "Pause audio preview" : "Play audio preview")
+                .help(isThisPlaying ? L10n.tr("Pause audio preview") : L10n.tr("Play audio preview"))
 
                 // Cover Artwork Thumbnail with Hardware Compliance Badge
                 ZStack(alignment: .bottomTrailing) {
@@ -2801,7 +2803,7 @@ private struct QueueItemRow: View {
                 .onTapGesture {
                     onPickArtwork()
                 }
-                .help("Click to select custom album art or inspect compliance")
+                .help(L10n.tr("Click to select custom album art or inspect compliance"))
 
                 // Track Details & Metadata Hierarchy
                 VStack(alignment: .leading, spacing: 3) {
@@ -2820,7 +2822,7 @@ private struct QueueItemRow: View {
                                     RoundedRectangle(cornerRadius: 3.5, style: .continuous)
                                         .stroke(WalkmanTheme.hiResGold.opacity(0.35), lineWidth: 0.75)
                                 )
-                                .help("Track \(numInt)")
+                                .help(L10n.tr("Track \(numInt)"))
                         }
 
                         Text(item.title.isEmpty ? item.sourceURL.deletingPathExtension().lastPathComponent : item.title)
@@ -2829,7 +2831,7 @@ private struct QueueItemRow: View {
                             .lineLimit(1)
 
                         if item.bitsPerSample > 16 || item.sampleRate > 48000 {
-                            Text("Hi-Res")
+                            Text(L10n.tr("Hi-Res"))
                                 .font(WalkmanFont.badge)
                                 .padding(.horizontal, 4.5)
                                 .padding(.vertical, 1.5)
@@ -2842,7 +2844,7 @@ private struct QueueItemRow: View {
                             HStack(spacing: 3) {
                                 Image(systemName: "exclamationmark.triangle.fill")
                                     .font(.system(size: 8))
-                                Text("On \(destinationDriveName)")
+                                Text(L10n.tr("On \(destinationDriveName)"))
                                     .font(WalkmanFont.badge)
                             }
                             .padding(.horizontal, 4.5)
@@ -2851,7 +2853,7 @@ private struct QueueItemRow: View {
                             .foregroundStyle(.orange)
                             .clipShape(RoundedRectangle(cornerRadius: 2.5))
                             .overlay(RoundedRectangle(cornerRadius: 2.5).stroke(Color.orange.opacity(0.4), lineWidth: 0.6))
-                            .help(item.duplicateMatchInfo ?? "Already present on \(destinationDriveName)")
+                            .help(item.duplicateMatchInfo ?? L10n.tr("Already present on \(destinationDriveName)"))
                         }
                     }
 
@@ -2877,7 +2879,7 @@ private struct QueueItemRow: View {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .font(.system(size: 8.5))
                                 .foregroundStyle(.orange)
-                            Text("Duplicate: \(matchInfo)")
+                            Text(L10n.tr("Duplicate: \(matchInfo)"))
                                 .font(WalkmanFont.monoSmall)
                                 .foregroundStyle(.orange.opacity(0.95))
                                 .lineLimit(1)
@@ -2920,7 +2922,7 @@ private struct QueueItemRow: View {
                             HStack(spacing: 3) {
                                 Image(systemName: "quote.bubble.fill")
                                     .font(.system(size: 8))
-                                Text(item.isLyricsSynced ? "Synced .LRC" : "Plain Lyrics")
+                                Text(item.isLyricsSynced ? L10n.tr("Synced .LRC") : L10n.tr("Plain Lyrics"))
                                     .font(WalkmanFont.badge)
                             }
                             .padding(.horizontal, 5)
@@ -2957,7 +2959,7 @@ private struct QueueItemRow: View {
                         Circle()
                             .fill(Color.white.opacity(0.3))
                             .frame(width: 5, height: 5)
-                        Text("Ready")
+                        Text(L10n.tr("Ready"))
                             .font(WalkmanFont.badge)
                             .foregroundStyle(.secondary)
                     }
@@ -2969,7 +2971,7 @@ private struct QueueItemRow: View {
                 case .optimizing:
                     HStack(spacing: 4) {
                         ProgressView().scaleEffect(0.55).frame(width: 12, height: 12)
-                        Text("Optimizing...")
+                        Text(L10n.tr("Optimizing..."))
                             .font(WalkmanFont.badge)
                             .foregroundStyle(WalkmanTheme.silverLight)
                     }
@@ -2981,7 +2983,7 @@ private struct QueueItemRow: View {
                 case .converting:
                     HStack(spacing: 5) {
                         ProgressView().scaleEffect(0.6).frame(width: 12, height: 12)
-                        Text("Transferring...")
+                        Text(L10n.tr("Transferring..."))
                             .font(WalkmanFont.badge)
                             .foregroundStyle(WalkmanTheme.silverLight)
                     }
@@ -2996,7 +2998,7 @@ private struct QueueItemRow: View {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 11))
                             .foregroundStyle(.green)
-                        Text("Transferred")
+                        Text(L10n.tr("Transferred"))
                             .font(WalkmanFont.badge)
                             .foregroundStyle(.green)
                     }
@@ -3049,7 +3051,7 @@ private struct QueueItemRow: View {
                                 .clipShape(Circle())
                         }
                         .buttonStyle(.plain)
-                        .help("Auto-fetch missing metadata from internet")
+                        .help(L10n.tr("Auto-fetch missing metadata from internet"))
                     }
 
                     Button(action: onEdit) {
@@ -3061,7 +3063,7 @@ private struct QueueItemRow: View {
                             .clipShape(Circle())
                     }
                     .buttonStyle(.plain)
-                    .help("Edit tags, artwork, lyrics, and destination in popup window")
+                    .help(L10n.tr("Edit tags, artwork, lyrics, and destination in popup window"))
 
                     Button(action: onRemove) {
                         Image(systemName: "xmark")
@@ -3072,7 +3074,7 @@ private struct QueueItemRow: View {
                             .clipShape(Circle())
                     }
                     .buttonStyle(.plain)
-                    .help("Remove from queue")
+                    .help(L10n.tr("Remove from queue"))
                 }
             }
         }
@@ -3092,26 +3094,26 @@ private struct QueueItemRow: View {
         }
         .contextMenu {
             Button(action: onTogglePlay) {
-                Label(isThisPlaying ? "Pause Preview" : "Play Preview", systemImage: isThisPlaying ? "pause.fill" : "play.fill")
+                Label(isThisPlaying ? L10n.tr("Pause Preview") : L10n.tr("Play Preview"), systemImage: isThisPlaying ? "pause.fill" : "play.fill")
             }
             Divider()
             if !isLearningMode {
                 Button(action: onOptimize) {
-                    Label("Fetch Online Tags & Cover Art", systemImage: "sparkles")
+                    Label(L10n.tr("Fetch Online Tags & Cover Art"), systemImage: "sparkles")
                 }
                 Button(action: onFetchLyrics) {
-                    Label("Fetch Synchronized Lyrics (.LRC)", systemImage: "quote.bubble")
+                    Label(L10n.tr("Fetch Synchronized Lyrics (.LRC)"), systemImage: "quote.bubble")
                 }
             }
             Button(action: onPickArtwork) {
-                Label("Choose Custom Album Art...", systemImage: "photo")
+                Label(L10n.tr("Choose Custom Album Art..."), systemImage: "photo")
             }
             Button(action: onEdit) {
-                Label("Edit Metadata & Artwork...", systemImage: "pencil")
+                Label(L10n.tr("Edit Metadata & Artwork..."), systemImage: "pencil")
             }
             Divider()
             Button(role: .destructive, action: onRemove) {
-                Label("Remove from Queue", systemImage: "trash")
+                Label(L10n.tr("Remove from Queue"), systemImage: "trash")
             }
         }
     }
@@ -3119,6 +3121,7 @@ private struct QueueItemRow: View {
 
 // MARK: - Transfer Mode Segmented Bar View (Liquid Glass Matched Geometry)
 private struct TransferModeSegmentedBarView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     @Binding var targetMode: TransferTargetMode
     let onSelectMode: (TransferTargetMode) -> Void
 
@@ -3165,6 +3168,7 @@ private struct TransferModeSegmentedBarView: View {
 }
 
 private struct TransferModeTabPillView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let mode: TransferTargetMode
     let isSelected: Bool
     let namespace: Namespace.ID
@@ -3175,9 +3179,9 @@ private struct TransferModeTabPillView: View {
     private var labelTitle: String {
         switch mode {
         case .music:
-            return "Music Library"
+            return L10n.tr("Music Library")
         case .learning:
-            return "Language Study"
+            return L10n.tr("Language Study")
         }
     }
 
@@ -3242,6 +3246,7 @@ private struct TransferModeTabPillView: View {
 
 // MARK: - Active & Hover Mode Pill Backgrounds (Liquid Glass Sliding Lens)
 private struct ActiveModePillBackground: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let isGold: Bool
     var isHovered: Bool = false
 
@@ -3288,6 +3293,7 @@ private struct ActiveModePillBackground: View {
 }
 
 private struct HoverModePillBackground: View {
+    @ObservedObject private var localization = AppLocalization.shared
     var body: some View {
         ZStack {
             Color.white.opacity(0.09)
@@ -3314,6 +3320,7 @@ private struct HoverModePillBackground: View {
 
 // MARK: - Hardware Optimization Toggle Chip View (32pt Liquid Glass Capsule)
 private struct HardwareOptimizationToggleChipView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let title: String
     let icon: String
     @Binding var isOn: Bool
@@ -3443,6 +3450,7 @@ private struct HardwareOptimizationToggleChipView: View {
 
 // MARK: - Transfer Batch Action Button (32pt Liquid Glass Capsule)
 private struct TransferBatchActionButton: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let title: String
     let icon: String
     var isLoading: Bool = false
@@ -3538,13 +3546,14 @@ private struct TransferBatchActionButton: View {
 
 // MARK: - Sort Menu Pill Label (32pt Liquid Glass Capsule)
 private struct SortMenuPillLabel: View {
+    @ObservedObject private var localization = AppLocalization.shared
     @State private var isHovered = false
 
     var body: some View {
         HStack(spacing: 4.5) {
             Image(systemName: "arrow.up.arrow.down")
                 .font(.system(size: 10, weight: .semibold))
-            Text("Sort")
+            Text(L10n.tr("Sort"))
                 .font(.system(size: 11.5, weight: .medium))
                 .lineLimit(1)
         }
@@ -3598,6 +3607,7 @@ private struct SortMenuPillLabel: View {
 
 // MARK: - Liquid Glass Dropdown Menu (38pt Standard Dropdown)
 private struct LiquidGlassDropdownMenu<Content: View>: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let title: String
     @ViewBuilder let menuContent: () -> Content
 
@@ -3671,6 +3681,7 @@ private struct LiquidGlassDropdownMenu<Content: View>: View {
 
 // MARK: - Import Progress Bar (Liquid Glass)
 private struct ImportProgressBar: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let progress: Double
     let isIndeterminate: Bool
 
@@ -3725,6 +3736,7 @@ private struct ImportProgressBar: View {
 
 // MARK: - Indeterminate Liquid Glass Bar
 private struct IndeterminateLiquidGlassBar: View {
+    @ObservedObject private var localization = AppLocalization.shared
     @State private var phase: CGFloat = -0.3
 
     var body: some View {

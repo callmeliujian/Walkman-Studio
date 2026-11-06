@@ -3,6 +3,7 @@ import AppKit
 
 // MARK: - Transfer Sync Confirmation Sheet
 public struct TransferSyncSheet: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let queue: [TransferItem]
     let targetDrive: WalkmanDrive?
     let targetMode: TransferTargetMode
@@ -70,11 +71,11 @@ public struct TransferSyncSheet: View {
 
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 8) {
-                        Text("Sync to Sony Walkman")
+                        Text(L10n.tr("Sync to Sony Walkman"))
                             .font(WalkmanFont.title1)
                             .foregroundStyle(.primary)
 
-                        Text("\(queue.count) Tracks")
+                        Text(L10n.tr("\(queue.count) Tracks"))
                             .font(WalkmanFont.badge)
                             .foregroundStyle(WalkmanTheme.hiResGold)
                             .padding(.horizontal, 7)
@@ -83,7 +84,7 @@ public struct TransferSyncSheet: View {
                             .clipShape(Capsule())
                     }
 
-                    Text("Review target storage drive, conversion preset, and hardware optimization settings.")
+                    Text(L10n.tr("Review target storage drive, conversion preset, and hardware optimization settings."))
                         .font(WalkmanFont.callout)
                         .foregroundStyle(.secondary)
                         .lineLimit(2)
@@ -101,19 +102,19 @@ public struct TransferSyncSheet: View {
                 HStack(spacing: 10) {
                     MetricChip(
                         icon: "music.note.list",
-                        label: "Queue Items",
-                        value: "\(queue.count) Tracks",
+                        label: L10n.tr("Queue Items"),
+                        value: L10n.tr("\(queue.count) Tracks"),
                         accentColor: WalkmanTheme.silverLight
                     )
                     MetricChip(
                         icon: "internaldrive.badge.arrow.down",
-                        label: "Payload Size",
+                        label: L10n.tr("Payload Size"),
                         value: WalkmanEngine.formatBytes(totalBytes),
                         accentColor: Color.green
                     )
                     MetricChip(
                         icon: "clock",
-                        label: "Total Duration",
+                        label: L10n.tr("Total Duration"),
                         value: WalkmanEngine.formatDuration(totalDuration),
                         accentColor: WalkmanTheme.silverLight
                     )
@@ -121,11 +122,11 @@ public struct TransferSyncSheet: View {
 
                 // Destination & Preset Summary Card
                 VStack(spacing: 1) {
-                    SpecRow(label: "Destination Drive", value: "\(targetDrive?.name ?? "WALKMAN") (/\(targetMode.rootFolderName)/)")
-                    SpecRow(label: "Conversion Preset", value: presetDescription)
-                    SpecRow(label: "Tag Standard", value: "Strict ID3v2.3 (UTF-16) & Vorbis")
-                    SpecRow(label: "Artwork Engine", value: "Baseline RGB JPEG (800×800)")
-                    SpecRow(label: "AppleDouble Purge", value: "Clean ._* and .DS_Store ghost files")
+                    SpecRow(label: L10n.tr("Destination Drive"), value: "\(targetDrive?.name ?? "WALKMAN") (/\(targetMode.rootFolderName)/)")
+                    SpecRow(label: L10n.tr("Conversion Preset"), value: presetDescription)
+                    SpecRow(label: L10n.tr("Tag Standard"), value: "Strict ID3v2.3 (UTF-16) & Vorbis")
+                    SpecRow(label: L10n.tr("Artwork Engine"), value: "Baseline RGB JPEG (800×800)")
+                    SpecRow(label: L10n.tr("AppleDouble Purge"), value: "Clean ._* and .DS_Store ghost files")
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 .overlay(
@@ -140,22 +141,22 @@ public struct TransferSyncSheet: View {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .font(.system(size: 13))
                                 .foregroundStyle(.orange)
-                            Text("Duplicate Guardrail")
+                            Text(L10n.tr("Duplicate Guardrail"))
                                 .font(WalkmanFont.calloutBold)
                                 .foregroundStyle(.white)
                             Spacer()
-                            Text("\(duplicateItems.count) of \(queue.count) already on Walkman")
+                            Text(L10n.tr("\(duplicateItems.count) of \(queue.count) already on Walkman"))
                                 .font(WalkmanFont.captionBold)
                                 .foregroundStyle(.orange)
                         }
 
-                        Text("Some tracks in your queue already exist in the Walkman library. To avoid duplicate audio files taking up storage, you can automatically skip them.")
+                        Text(L10n.tr("Some tracks in your queue already exist in the Walkman library. To avoid duplicate audio files taking up storage, you can automatically skip them."))
                             .font(WalkmanFont.caption)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
 
                         Toggle(isOn: $skipDuplicates) {
-                            Text("Skip existing duplicate tracks (Recommended)")
+                            Text(L10n.tr("Skip existing duplicate tracks (Recommended)"))
                                 .font(WalkmanFont.bodyMedium)
                                 .foregroundStyle(.white)
                         }
@@ -172,7 +173,7 @@ public struct TransferSyncSheet: View {
 
                 // Staged Track List Preview
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("TRACKS TO BE TRANSFERRED (\(queue.count))")
+                    Text(L10n.tr("TRACKS TO BE TRANSFERRED (\(queue.count))"))
                         .font(WalkmanFont.sectionHeader)
                         .foregroundStyle(.tertiary)
 
@@ -210,7 +211,7 @@ public struct TransferSyncSheet: View {
                                                 HStack(spacing: 3) {
                                                     Image(systemName: "exclamationmark.triangle.fill")
                                                         .font(.system(size: 8))
-                                                    Text(skipDuplicates ? "Will Skip" : "Duplicate")
+                                                    Text(skipDuplicates ? L10n.tr("Will Skip") : L10n.tr("Duplicate"))
                                                         .font(WalkmanFont.badge)
                                                 }
                                                 .padding(.horizontal, 4.5)
@@ -218,7 +219,7 @@ public struct TransferSyncSheet: View {
                                                 .background(Color.orange.opacity(0.18))
                                                 .foregroundStyle(.orange)
                                                 .clipShape(RoundedRectangle(cornerRadius: 3))
-                                                .help(itm.duplicateMatchInfo ?? "Already present on Walkman library")
+                                                .help(itm.duplicateMatchInfo ?? L10n.tr("Already present on Walkman library"))
                                             }
                                         }
                                         Text(itm.artist.isEmpty ? "Unknown Artist" : itm.artist)
@@ -279,7 +280,7 @@ public struct TransferSyncSheet: View {
 
             // Footer
             HStack(alignment: .center) {
-                Text("Files are staged chronologically for Walkman Recent Transfers.")
+                Text(L10n.tr("Files are staged chronologically for Walkman Recent Transfers."))
                     .font(WalkmanFont.monoSmall)
                     .foregroundStyle(.tertiary)
                     .lineLimit(1)
@@ -288,7 +289,7 @@ public struct TransferSyncSheet: View {
 
                 // Cancel Button
                 Button(action: onCancel) {
-                    Text("Cancel")
+                    Text(L10n.tr("Cancel"))
                         .font(WalkmanFont.calloutMedium)
                         .foregroundStyle(WalkmanTheme.silverLight)
                         .padding(.horizontal, 18)
@@ -321,7 +322,7 @@ public struct TransferSyncSheet: View {
                     HStack(spacing: 6) {
                         Image(systemName: "arrow.right.circle.fill")
                             .font(.system(size: 13, weight: .bold))
-                        Text("Start Transfer Now")
+                        Text(L10n.tr("Start Transfer Now"))
                             .font(WalkmanFont.calloutBold)
                     }
                     .foregroundStyle(Color(red: 20 / 255, green: 20 / 255, blue: 24 / 255))
@@ -398,6 +399,7 @@ public struct TransferSyncSheet: View {
 
 // MARK: - Clear Queue Confirmation Sheet
 public struct ClearQueueConfirmSheet: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let queueCount: Int
     let onConfirm: () -> Void
     let onCancel: () -> Void
@@ -439,11 +441,11 @@ public struct ClearQueueConfirmSheet: View {
                 }
 
                 VStack(spacing: 6) {
-                    Text("Clear Transfer Queue?")
+                    Text(L10n.tr("Clear Transfer Queue?"))
                         .font(WalkmanFont.title1)
                         .foregroundStyle(.primary)
 
-                    Text("This will remove all \(queueCount) staged audio tracks from the transfer queue. Original files on your Mac will not be touched.")
+                    Text(L10n.tr("This will remove all \(queueCount) staged audio tracks from the transfer queue. Original files on your Mac will not be touched."))
                         .font(WalkmanFont.callout)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -462,7 +464,7 @@ public struct ClearQueueConfirmSheet: View {
                 Spacer()
 
                 Button(action: onCancel) {
-                    Text("Cancel")
+                    Text(L10n.tr("Cancel"))
                         .font(WalkmanFont.calloutMedium)
                         .foregroundStyle(WalkmanTheme.silverLight)
                         .padding(.horizontal, 18)
@@ -490,7 +492,7 @@ public struct ClearQueueConfirmSheet: View {
                 Button(action: onConfirm) {
                     HStack(spacing: 6) {
                         Image(systemName: "trash.fill")
-                        Text("Clear Queue")
+                        Text(L10n.tr("Clear Queue"))
                     }
                     .font(WalkmanFont.calloutBold)
                     .foregroundStyle(.white)
@@ -550,6 +552,7 @@ public struct ClearQueueConfirmSheet: View {
 
 // MARK: - Metric Chip
 private struct MetricChip: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let icon: String
     let label: String
     let value: String
@@ -584,6 +587,7 @@ private struct MetricChip: View {
 
 // MARK: - Spec Row
 private struct SpecRow: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let label: String
     let value: String
 
@@ -605,6 +609,7 @@ private struct SpecRow: View {
 
 // MARK: - Sheet Close Button
 private struct SheetCloseButton: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let action: () -> Void
     @State private var isHovered: Bool = false
 
@@ -627,7 +632,7 @@ private struct SheetCloseButton: View {
         }
         .buttonStyle(.plain)
         .keyboardShortcut(.cancelAction)
-        .help("Close")
+        .help(L10n.tr("Close"))
         .onHover { h in
             withAnimation(.spring(response: 0.20, dampingFraction: 0.70)) {
                 isHovered = h

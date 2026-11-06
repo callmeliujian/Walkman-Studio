@@ -175,6 +175,8 @@ public struct WindowConfigurator: NSViewRepresentable {
 
 @main
 struct WalkmanStudioApp: App {
+    @StateObject private var localization = AppLocalization.shared
+
     init() {
         if let iconURL = Bundle.main.url(forResource: "AppIcon", withExtension: "icns"),
            let img = NSImage(contentsOf: iconURL) {
@@ -187,6 +189,7 @@ struct WalkmanStudioApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environment(\.locale, localization.locale)
                 .frame(minWidth: 1320, idealWidth: 1440, minHeight: 720, idealHeight: 880)
                 .background(WindowConfigurator())
         }
@@ -194,17 +197,17 @@ struct WalkmanStudioApp: App {
         .windowToolbarStyle(.unified(showsTitle: false))
         .commands {
             CommandGroup(replacing: .appInfo) {
-                Button("About Walkman Studio") {
+                Button(L10n.tr("About Walkman Studio")) {
                     NotificationCenter.default.post(name: .showAboutWalkmanStudio, object: nil)
                 }
                 Divider()
-                Button("Manage Local Folders...") {
+                Button(L10n.tr("Manage Local Folders...")) {
                     NotificationCenter.default.post(name: .manageLocalFolders, object: nil)
                 }
                 .keyboardShortcut("l", modifiers: [.command, .shift])
             }
             CommandGroup(replacing: .newItem) {
-                Button("Manage Local Folders...") {
+                Button(L10n.tr("Manage Local Folders...")) {
                     NotificationCenter.default.post(name: .manageLocalFolders, object: nil)
                 }
                 .keyboardShortcut("o", modifiers: [.command, .shift])

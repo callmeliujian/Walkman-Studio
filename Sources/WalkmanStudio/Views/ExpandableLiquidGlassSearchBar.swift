@@ -7,6 +7,7 @@ import AppKit
 /// When the user clicks outside the search bar or presses Escape, it shrinks back into the circular icon.
 /// If an active query is present while collapsed, a gold accent indicator dot is shown and the query filter is preserved.
 public struct ExpandableLiquidGlassSearchBar: View {
+    @ObservedObject private var localization = AppLocalization.shared
     @Binding var text: String
     @Binding var isExpanded: Bool
     let placeholder: String
@@ -72,8 +73,8 @@ public struct ExpandableLiquidGlassSearchBar: View {
             .buttonStyle(.plain)
             .help(
                 !isExpanded && !text.isEmpty
-                ? "Active search: \"\(text)\" (Click to expand or edit)"
-                : (isExpanded ? "Search" : helpText)
+                ? L10n.tr("Active search: \"\(text)\" (Click to expand or edit)")
+                : (isExpanded ? L10n.tr("Search") : helpText)
             )
             
             // Text field and clear button revealed upon expansion
@@ -105,7 +106,7 @@ public struct ExpandableLiquidGlassSearchBar: View {
                             .foregroundStyle(WalkmanTheme.silverMuted)
                     }
                     .buttonStyle(.plain)
-                    .help("Clear search")
+                    .help(L10n.tr("Clear search"))
                     .transition(.opacity.combined(with: .scale))
                 }
             }

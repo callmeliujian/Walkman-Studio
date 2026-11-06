@@ -2,6 +2,7 @@ import SwiftUI
 import AppKit
 
 public struct MetadataStudioView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let track: Track?
     let onSaved: (() -> Void)?
     let onEdit: (() -> Void)?
@@ -263,7 +264,7 @@ public struct MetadataStudioView: View {
     }
     
     private func formatQuality(_ tr: Track) -> String {
-        let bits = tr.bitsPerSample > 0 ? "\(tr.bitsPerSample)-bit" : ""
+        let bits = tr.bitsPerSample > 0 ? L10n.tr("\(tr.bitsPerSample)-bit") : ""
         let rate = formatSampleRate(tr.sampleRate)
         if !bits.isEmpty && !rate.isEmpty {
             return "\(bits) / \(rate)"
@@ -294,18 +295,18 @@ public struct MetadataStudioView: View {
         let size = coverPixelSize
         if st.valid {
             if let (w, h) = size {
-                return "\(w)×\(h) • Walkman Ready"
+                return L10n.tr("\(w)×\(h) • Walkman Ready")
             }
-            return "Walkman Ready (Baseline)"
+            return L10n.tr("Walkman Ready (Baseline)")
         } else {
             if let (w, h) = size, (w > 800 || h > 800) {
-                return "\(w)×\(h) • Exceeds 800px"
+                return L10n.tr("\(w)×\(h) • Exceeds 800px")
             }
             if st.message.contains("Progressive") {
-                return "Progressive JPEG (Advisory)"
+                return L10n.tr("Progressive JPEG (Advisory)")
             }
             if st.message.contains("Color mode") || st.message.contains("RGB") {
-                return "Non-RGB Color Mode"
+                return L10n.tr("Non-RGB Color Mode")
             }
             return st.message
         }
@@ -471,7 +472,7 @@ public struct MetadataStudioView: View {
                         // Audio Badges Row
                         HStack(spacing: 6) {
                             if isHiRes {
-                                Text("Hi-Res")
+                                Text(L10n.tr("Hi-Res"))
                                     .font(WalkmanFont.badge)
                                     .padding(.horizontal, 5)
                                     .padding(.vertical, 2)
@@ -527,10 +528,10 @@ public struct MetadataStudioView: View {
                                 .frame(maxWidth: .infinity)
                                 .contextMenu {
                                     Button(action: exportArtworkToMac) {
-                                        Label("Export Cover Art to Mac...", systemImage: "square.and.arrow.down")
+                                        Label(L10n.tr("Export Cover Art to Mac..."), systemImage: "square.and.arrow.down")
                                     }
                                     Button(action: revealInFinder) {
-                                        Label("Reveal Audio File in Finder", systemImage: "folder")
+                                        Label(L10n.tr("Reveal Audio File in Finder"), systemImage: "folder")
                                     }
                                 }
                             
@@ -549,7 +550,7 @@ public struct MetadataStudioView: View {
                                     Image(systemName: "photo")
                                         .font(.system(size: 10))
                                         .foregroundStyle(WalkmanTheme.silverMuted)
-                                    Text("Embedded Cover Art")
+                                    Text(L10n.tr("Embedded Cover Art"))
                                         .font(WalkmanFont.monoSmall)
                                         .foregroundStyle(Color.secondary)
                                 }
@@ -576,10 +577,10 @@ public struct MetadataStudioView: View {
                                             .font(.system(size: 24))
                                             .foregroundStyle(WalkmanTheme.silverMuted)
                                     }
-                                    Text("No Embedded Artwork")
+                                    Text(L10n.tr("No Embedded Artwork"))
                                         .font(WalkmanFont.calloutMedium)
                                         .foregroundStyle(Color.secondary)
-                                    Text("Walkman shows default disc animation")
+                                    Text(L10n.tr("Walkman shows default disc animation"))
                                         .font(WalkmanFont.subheadline)
                                         .foregroundStyle(.tertiary)
                                 }
@@ -589,7 +590,7 @@ public struct MetadataStudioView: View {
                     
                     // 3. LYRICS CONTAINER
                     VStack(alignment: .leading, spacing: 8) {
-                        sectionHeader(title: "Lyrics", icon: "quote.bubble.fill")
+                        sectionHeader(title: L10n.tr("Lyrics"), icon: "quote.bubble.fill")
                         
                         if hasLyricsOnWalkman {
                             // Isolated Live Lyrics Reader with Throttled Auto-Scrolling
@@ -604,7 +605,7 @@ public struct MetadataStudioView: View {
                             HStack(spacing: 8) {
                                 ProgressView()
                                     .controlSize(.small)
-                                Text("Searching synchronized lyrics online...")
+                                Text(L10n.tr("Searching synchronized lyrics online..."))
                                     .font(WalkmanFont.monoSmall)
                                     .foregroundStyle(WalkmanTheme.silverMuted)
                                 Spacer()
@@ -618,7 +619,7 @@ public struct MetadataStudioView: View {
                                 Image(systemName: "quote.bubble")
                                     .font(.system(size: 11))
                                     .foregroundStyle(WalkmanTheme.silverMuted)
-                                Text("No lyrics found on device")
+                                Text(L10n.tr("No lyrics found on device"))
                                     .font(WalkmanFont.monoSmall)
                                     .foregroundStyle(Color.secondary)
                                 Spacer()
@@ -629,7 +630,7 @@ public struct MetadataStudioView: View {
                             .contextMenu {
                                 if let onEdit = onEdit {
                                     Button(action: onEdit) {
-                                        Label("Edit Metadata & Fetch Lyrics...", systemImage: "pencil")
+                                        Label(L10n.tr("Edit Metadata & Fetch Lyrics..."), systemImage: "pencil")
                                     }
                                 }
                             }
@@ -653,11 +654,11 @@ public struct MetadataStudioView: View {
                             }
 
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(isAnalyzed ? "SenseMe Analyzed" : "Not Analyzed")
+                                Text(isAnalyzed ? L10n.tr("SenseMe Analyzed") : L10n.tr("Not Analyzed"))
                                     .font(WalkmanFont.bodyBold)
                                     .foregroundStyle(isAnalyzed ? Color.white : Color.secondary)
                                     .lineLimit(1)
-                                Text(isAnalyzed ? "12 Tone acoustic metadata is embedded in file" : "No 12 Tone metadata embedded in file")
+                                Text(isAnalyzed ? L10n.tr("12 Tone acoustic metadata is embedded in file") : L10n.tr("No 12 Tone metadata embedded in file"))
                                     .font(WalkmanFont.subheadline)
                                     .foregroundStyle(isAnalyzed ? WalkmanTheme.silverMuted : Color.white.opacity(0.35))
                                     .lineLimit(2)
@@ -674,20 +675,20 @@ public struct MetadataStudioView: View {
 
                     // 5. TAGS & METADATA
                     VStack(alignment: .leading, spacing: 8) {
-                        sectionHeader(title: "Tags & Metadata", icon: "tag.fill")
+                        sectionHeader(title: L10n.tr("Tags & Metadata"), icon: "tag.fill")
                         
                         VStack(spacing: 0) {
-                            ReadOnlyDetailRow(label: "Title", value: displayTitle)
+                            ReadOnlyDetailRow(label: L10n.tr("Title"), value: displayTitle)
                             Divider().overlay(Color.white.opacity(0.06))
-                            ReadOnlyDetailRow(label: "Artist", value: displayArtist)
+                            ReadOnlyDetailRow(label: L10n.tr("Artist"), value: displayArtist)
                             Divider().overlay(Color.white.opacity(0.06))
-                            ReadOnlyDetailRow(label: "Album", value: displayAlbum)
+                            ReadOnlyDetailRow(label: L10n.tr("Album"), value: displayAlbum)
                             Divider().overlay(Color.white.opacity(0.06))
-                            ReadOnlyDetailRow(label: "Track #", value: displayTrackNum.isEmpty ? "—" : "#\(displayTrackNum)", isMonospace: true)
+                            ReadOnlyDetailRow(label: L10n.tr("Track #"), value: displayTrackNum.isEmpty ? "—" : "#\(displayTrackNum)", isMonospace: true)
                             Divider().overlay(Color.white.opacity(0.06))
-                            ReadOnlyDetailRow(label: "Year", value: displayYear.isEmpty ? "—" : displayYear, isMonospace: true)
+                            ReadOnlyDetailRow(label: L10n.tr("Year"), value: displayYear.isEmpty ? "—" : displayYear, isMonospace: true)
                             Divider().overlay(Color.white.opacity(0.06))
-                            ReadOnlyDetailRow(label: "Genre", value: displayGenre.isEmpty ? "—" : displayGenre)
+                            ReadOnlyDetailRow(label: L10n.tr("Genre"), value: displayGenre.isEmpty ? "—" : displayGenre)
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 4)
@@ -695,7 +696,7 @@ public struct MetadataStudioView: View {
                         .contextMenu {
                             if let editAction = onEdit {
                                 Button(action: editAction) {
-                                    Label("Edit Metadata in Studio...", systemImage: "pencil")
+                                    Label(L10n.tr("Edit Metadata in Studio..."), systemImage: "pencil")
                                 }
                             }
                         }
@@ -703,27 +704,27 @@ public struct MetadataStudioView: View {
 
                     // 6. AUDIO SPECIFICATIONS
                     VStack(alignment: .leading, spacing: 8) {
-                        sectionHeader(title: "Audio Specifications", icon: "waveform")
+                        sectionHeader(title: L10n.tr("Audio Specifications"), icon: "waveform")
                         
                         VStack(spacing: 0) {
-                            AudioSpecRow(label: "Format", value: tr.format, systemImage: "doc.fill")
+                            AudioSpecRow(label: L10n.tr("Format"), value: tr.format, systemImage: "doc.fill")
                             Divider().overlay(Color.white.opacity(0.06))
                             let sampleRateStr = formatSampleRate(tr.sampleRate)
-                            AudioSpecRow(label: "Sample Rate", value: sampleRateStr.isEmpty ? "Standard" : sampleRateStr, systemImage: "waveform.badge.magnifyingglass")
+                            AudioSpecRow(label: L10n.tr("Sample Rate"), value: sampleRateStr.isEmpty ? "Standard" : sampleRateStr, systemImage: "waveform.badge.magnifyingglass")
                             Divider().overlay(Color.white.opacity(0.06))
-                            let bitsStr = tr.bitsPerSample > 0 ? "\(tr.bitsPerSample)-bit" : "16-bit Standard"
-                            AudioSpecRow(label: "Bit Depth", value: bitsStr, systemImage: "slider.horizontal.3")
+                            let bitsStr = tr.bitsPerSample > 0 ? L10n.tr("\(tr.bitsPerSample)-bit") : L10n.tr("16-bit Standard")
+                            AudioSpecRow(label: L10n.tr("Bit Depth"), value: bitsStr, systemImage: "slider.horizontal.3")
                             Divider().overlay(Color.white.opacity(0.06))
                             AudioSpecRow(
-                                label: "Hardware Tags",
-                                value: tr.format == "MP3" ? "Strict ID3v2.3 (UTF-16)" : (tr.format == "FLAC" ? "Vorbis Comments (SMFM Block 2)" : "MP4 iTunes Metadata"),
+                                label: L10n.tr("Hardware Tags"),
+                                value: tr.format == "MP3" ? L10n.tr("Strict ID3v2.3 (UTF-16)") : (tr.format == "FLAC" ? L10n.tr("Vorbis Comments (SMFM Block 2)") : L10n.tr("MP4 iTunes Metadata")),
                                 systemImage: "cpu"
                             )
                             Divider().overlay(Color.white.opacity(0.06))
                             let isMicroSD = tr.fullPath.lowercased().contains("microsd") || tr.fullPath.lowercased().contains("sd_card") || tr.fullPath.lowercased().contains("sdcard")
                             AudioSpecRow(
-                                label: "Storage",
-                                value: isMicroSD ? "MicroSD Card" : "Internal Memory",
+                                label: L10n.tr("Storage"),
+                                value: isMicroSD ? L10n.tr("MicroSD Card") : L10n.tr("Internal Memory"),
                                 systemImage: isMicroSD ? "sdcard.fill" : "internaldrive.fill"
                             )
                         }
@@ -742,23 +743,23 @@ public struct MetadataStudioView: View {
                     ) {
                         StatTile(
                             icon: "clock",
-                            label: "Duration",
+                            label: L10n.tr("Duration"),
                             value: formatDuration(tr.durationSeconds)
                         )
                         StatTile(
                             icon: "speedometer",
-                            label: "Bitrate",
-                            value: tr.bitrateKbps > 0 ? "\(tr.bitrateKbps) kbps" : "Lossless"
+                            label: L10n.tr("Bitrate"),
+                            value: tr.bitrateKbps > 0 ? "\(tr.bitrateKbps) kbps" : L10n.tr("Lossless")
                         )
                         StatTile(
                             icon: "waveform",
-                            label: "Quality",
+                            label: L10n.tr("Quality"),
                             value: formatQuality(tr),
                             highlight: isHiRes
                         )
                         StatTile(
                             icon: "internaldrive",
-                            label: "File Size",
+                            label: L10n.tr("File Size"),
                             value: formatSize(tr.sizeBytes)
                         )
                     }
@@ -766,7 +767,7 @@ public struct MetadataStudioView: View {
                     // 8. FILE LOCATION
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(spacing: 6) {
-                            sectionHeader(title: "File Location", icon: "folder.fill")
+                            sectionHeader(title: L10n.tr("File Location"), icon: "folder.fill")
                             Spacer()
                             Button(action: copyPathToClipboard) {
                                 Image(systemName: "doc.on.doc")
@@ -774,7 +775,7 @@ public struct MetadataStudioView: View {
                                     .foregroundStyle(WalkmanTheme.silverMuted)
                             }
                             .buttonStyle(.plain)
-                            .help("Copy File Path")
+                            .help(L10n.tr("Copy File Path"))
 
                             Button(action: revealInFinder) {
                                 Image(systemName: "arrow.up.forward.square")
@@ -782,7 +783,7 @@ public struct MetadataStudioView: View {
                                     .foregroundStyle(WalkmanTheme.silverMuted)
                             }
                             .buttonStyle(.plain)
-                            .help("Reveal Audio File in Finder")
+                            .help(L10n.tr("Reveal Audio File in Finder"))
                         }
                         
                         // Exact File Location Container
@@ -800,10 +801,10 @@ public struct MetadataStudioView: View {
                         .liquidGlass(cornerRadius: 12)
                         .contextMenu {
                             Button(action: revealInFinder) {
-                                Label("Reveal Audio File in Finder", systemImage: "folder")
+                                Label(L10n.tr("Reveal Audio File in Finder"), systemImage: "folder")
                             }
                             Button(action: copyPathToClipboard) {
-                                Label("Copy File Path", systemImage: "doc.on.doc")
+                                Label(L10n.tr("Copy File Path"), systemImage: "doc.on.doc")
                             }
                         }
                     }
@@ -825,10 +826,10 @@ public struct MetadataStudioView: View {
                                 .font(.system(size: 26))
                                 .foregroundStyle(WalkmanTheme.silverMuted)
                         }
-                        Text("Track Details")
+                        Text(L10n.tr("Track Details"))
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(.white)
-                        Text("Select a song from the library to inspect its audio properties, hardware tags, cover artwork, and lyrics.")
+                        Text(L10n.tr("Select a song from the library to inspect its audio properties, hardware tags, cover artwork, and lyrics."))
                             .font(.system(size: 12, weight: .regular))
                             .foregroundStyle(Color.secondary)
                             .multilineTextAlignment(.center)
@@ -882,6 +883,7 @@ public struct MetadataStudioView: View {
 // MARK: - Subcomponents
 
 private struct StatTile: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let icon: String
     let label: String
     let value: String
@@ -962,6 +964,7 @@ private struct StatTile: View {
 }
 
 private struct ReadOnlyDetailRow: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let label: String
     let value: String
     var isMonospace: Bool = false
@@ -994,6 +997,7 @@ private struct ReadOnlyDetailRow: View {
 }
 
 private struct AudioSpecRow: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let label: String
     let value: String
     var systemImage: String? = nil
@@ -1034,6 +1038,7 @@ private struct AudioSpecRow: View {
 // MARK: - Isolated Live Components
 
 private struct LiveLyricsReader: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let lines: [MetadataStudioView.ParsedLyricLine]
     let trackId: String
     let isHiRes: Bool
@@ -1108,7 +1113,7 @@ private struct LiveLyricsReader: View {
             .liquidGlass(cornerRadius: 10)
             .contextMenu {
                 Button(action: onCopy) {
-                    Label("Copy Lyrics to Clipboard", systemImage: "doc.on.doc")
+                    Label(L10n.tr("Copy Lyrics to Clipboard"), systemImage: "doc.on.doc")
                 }
             }
             .onAppear {

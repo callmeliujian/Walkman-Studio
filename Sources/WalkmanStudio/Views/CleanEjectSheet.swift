@@ -1,6 +1,7 @@
 import SwiftUI
 
 public struct CleanEjectSheet: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let drives: [WalkmanDrive]
     let onEjectComplete: () -> Void
     let onDismiss: () -> Void
@@ -8,7 +9,7 @@ public struct CleanEjectSheet: View {
     @State private var selectedDrivePath: String = "ALL"
     @State private var isCleaning: Bool = false
     @State private var isFinished: Bool = false
-    @State private var statusMessage: String = "Ready to purge macOS dotfiles and safely eject."
+    @State private var statusMessage: String = L10n.tr("Ready to purge macOS dotfiles and safely eject.")
     @State private var deletedFiles: [String] = []
     @State private var unmountResults: [String: Bool] = [:]
     
@@ -20,7 +21,7 @@ public struct CleanEjectSheet: View {
     
     private func runCleanAndEject() {
         isCleaning = true
-        statusMessage = "Executing dot_clean -m & scanning for shadow files..."
+        statusMessage = L10n.tr("Executing dot_clean -m & scanning for shadow files...")
         
         Task {
             var allDeleted: [String] = []
@@ -34,13 +35,13 @@ public struct CleanEjectSheet: View {
             
             for drive in targetDrives {
                 await MainActor.run {
-                    statusMessage = "Purging shadow files on \(drive.name)..."
+                    statusMessage = L10n.tr("Purging shadow files on \(drive.name)...")
                 }
                 let cleanResult = await WalkmanEngine.shared.cleanGhostFiles(mountPoint: drive.mountPoint)
                 allDeleted.append(contentsOf: cleanResult.deleted)
                 
                 await MainActor.run {
-                    statusMessage = "Unmounting \(drive.name)..."
+                    statusMessage = L10n.tr("Unmounting \(drive.name)...")
                 }
                 let unmountResult = await WalkmanEngine.shared.unmountDrive(mountPoint: drive.mountPoint)
                 await MainActor.run {
@@ -52,7 +53,7 @@ public struct CleanEjectSheet: View {
                 self.deletedFiles = allDeleted
                 self.isCleaning = false
                 self.isFinished = true
-                self.statusMessage = "All volumes cleaned and safely ejected."
+                self.statusMessage = L10n.tr("All volumes cleaned and safely ejected.")
                 self.onEjectComplete()
             }
         }
@@ -73,11 +74,11 @@ public struct CleanEjectSheet: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(isFinished ? "Safe to Disconnect" : "Clean macOS Junk & Safe Eject")
+                    Text(isFinished ? L10n.tr("Safe to Disconnect") : L10n.tr("Clean macOS Junk & Safe Eject"))
                         .font(WalkmanFont.title2)
                         .foregroundStyle(.white)
                     
-                    Text("Complies with Sony Walkman FAT32/exFAT hardware rules")
+                    Text(L10n.tr("Complies with Sony Walkman FAT32/exFAT hardware rules"))
                         .font(WalkmanFont.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -88,12 +89,12 @@ public struct CleanEjectSheet: View {
             if !isFinished && !isCleaning {
                 // Volume Selection
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("SELECT VOLUMES TO EJECT")
+                    Text(L10n.tr("SELECT VOLUMES TO EJECT"))
                         .font(WalkmanFont.sectionHeader)
                         .foregroundStyle(.tertiary)
                     
                     Picker("", selection: $selectedDrivePath) {
-                        Text("All Walkman Drives (\(drives.count) Volumes)").tag("ALL")
+                        Text(L10n.tr("All Walkman Drives (\(drives.count) Volumes)")).tag("ALL")
                         ForEach(drives) { d in
                             Text(d.name).tag(d.mountPoint)
                         }
@@ -107,7 +108,7 @@ public struct CleanEjectSheet: View {
                 
                 // Explanatory checklist
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("AUTOMATIC ACTIONS PERFORMED:")
+                    Text(L10n.tr("AUTOMATIC ACTIONS PERFORMED:"))
                         .font(WalkmanFont.sectionHeader)
                         .foregroundStyle(.tertiary)
                     
@@ -115,7 +116,7 @@ public struct CleanEjectSheet: View {
                         Image(systemName: "checkmark")
                             .font(.system(size: 11, weight: .bold))
                             .foregroundStyle(WalkmanTheme.silver)
-                        Text("Executes native macOS `dot_clean -m` to merge AppleDouble resource forks")
+                        Text(L10n.tr("Executes native macOS `dot_clean -m` to merge AppleDouble resource forks"))
                             .font(WalkmanFont.callout)
                             .foregroundStyle(.secondary)
                     }
@@ -124,7 +125,7 @@ public struct CleanEjectSheet: View {
                         Image(systemName: "checkmark")
                             .font(.system(size: 11, weight: .bold))
                             .foregroundStyle(WalkmanTheme.silver)
-                        Text("Deletes hidden .DS_Store, .Spotlight-V100, .Trashes, and ._* ghost files")
+                        Text(L10n.tr("Deletes hidden .DS_Store, .Spotlight-V100, .Trashes, and ._* ghost files"))
                             .font(WalkmanFont.callout)
                             .foregroundStyle(.secondary)
                     }
@@ -133,7 +134,7 @@ public struct CleanEjectSheet: View {
                         Image(systemName: "checkmark")
                             .font(.system(size: 11, weight: .bold))
                             .foregroundStyle(WalkmanTheme.silver)
-                        Text("Unmounts safely via diskutil so device does not trigger corrupted filesystem errors")
+                        Text(L10n.tr("Unmounts safely via diskutil so device does not trigger corrupted filesystem errors"))
                             .font(WalkmanFont.callout)
                             .foregroundStyle(.secondary)
                     }
@@ -159,11 +160,11 @@ public struct CleanEjectSheet: View {
                     if isFinished {
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
-                                Text("CLEANUP REPORT")
+                                Text(L10n.tr("CLEANUP REPORT"))
                                     .font(WalkmanFont.sectionHeader)
                                     .foregroundStyle(.tertiary)
                                 Spacer()
-                                Text("\(deletedFiles.count) Ghost Files Removed")
+                                Text(L10n.tr("\(deletedFiles.count) Ghost Files Removed"))
                                     .font(WalkmanFont.monoSmall.weight(.bold))
                                     .foregroundStyle(WalkmanTheme.silverLight)
                             }
@@ -175,7 +176,7 @@ public struct CleanEjectSheet: View {
                                         .foregroundStyle(.white)
                                     Spacer()
                                     let ok = unmountResults[driveName] ?? false
-                                    Text(ok ? "Safely Unmounted" : "Failed to unmount")
+                                    Text(ok ? L10n.tr("Safely Unmounted") : L10n.tr("Failed to unmount"))
                                         .font(WalkmanFont.subheadlineMedium)
                                         .foregroundStyle(ok ? Color.green : Color.red)
                                 }
@@ -193,7 +194,7 @@ public struct CleanEjectSheet: View {
                 Spacer()
                 
                 if !isCleaning && !isFinished {
-                    Button("Cancel") {
+                    Button(L10n.tr("Cancel")) {
                         onDismiss()
                     }
                     .font(WalkmanFont.callout)
@@ -203,7 +204,7 @@ public struct CleanEjectSheet: View {
                     Button(action: runCleanAndEject) {
                         HStack(spacing: 6) {
                             Image(systemName: "trash.slash")
-                            Text("Purge Junk & Eject")
+                            Text(L10n.tr("Purge Junk & Eject"))
                         }
                         .font(WalkmanFont.calloutBold)
                         .padding(.horizontal, 16)
@@ -214,7 +215,7 @@ public struct CleanEjectSheet: View {
                     }
                     .buttonStyle(.plain)
                 } else if isFinished {
-                    Button("Done") {
+                    Button(L10n.tr("Done")) {
                         onDismiss()
                     }
                     .font(WalkmanFont.calloutBold)

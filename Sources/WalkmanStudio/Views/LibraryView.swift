@@ -9,6 +9,7 @@ fileprivate struct FilterOption: Identifiable {
 }
 
 public struct LibraryView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let tracks: [Track]
     let isLoading: Bool
     @Binding var selectedTrackId: String?
@@ -355,9 +356,9 @@ public struct LibraryView: View {
         ExpandableLiquidGlassSearchBar(
             text: $searchQuery,
             isExpanded: $isSearchExpanded,
-            placeholder: "Search title, artist, or album...",
+            placeholder: L10n.tr("Search title, artist, or album..."),
             expandedWidth: 260,
-            helpText: "Search tracks"
+            helpText: L10n.tr("Search tracks")
         )
     }
     
@@ -377,7 +378,7 @@ public struct LibraryView: View {
                 HStack(spacing: 6) {
                     Image(systemName: isPlayingFromVisibleList ? "pause.fill" : "play.fill")
                         .font(.system(size: 11, weight: .bold))
-                    Text(isPlayingFromVisibleList ? "Pause" : "Play All")
+                    Text(isPlayingFromVisibleList ? L10n.tr("Pause") : L10n.tr("Play All"))
                         .font(.system(size: 13, weight: .semibold))
                 }
                 .padding(.horizontal, 14)
@@ -387,7 +388,7 @@ public struct LibraryView: View {
             }
             .buttonStyle(LiquidGlassButtonStyle(variant: .prominent, cornerRadius: 19))
             .disabled(visibleTracks.isEmpty)
-            .help(isPlayingFromVisibleList ? "Pause playback" : "Play all visible tracks in order")
+            .help(isPlayingFromVisibleList ? L10n.tr("Pause playback") : L10n.tr("Play all visible tracks in order"))
             
             Button(action: shufflePlaybackAll) {
                 Image(systemName: "shuffle")
@@ -397,7 +398,7 @@ public struct LibraryView: View {
             }
             .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 19))
             .disabled(visibleTracks.isEmpty)
-            .help("Shuffle and play visible tracks")
+            .help(L10n.tr("Shuffle and play visible tracks"))
 
             Button(action: {
                 isPreparingLyricsSheet = true
@@ -420,7 +421,7 @@ public struct LibraryView: View {
             }
             .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 19))
             .disabled(visibleTracks.isEmpty || isPreparingLyricsSheet)
-            .help("LRC Fetcher: Fetch and sync .LRC lyrics for library tracks")
+            .help(L10n.tr("LRC Fetcher: Fetch and sync .LRC lyrics for library tracks"))
 
             let unanalyzedCount = visibleTracks.filter { !$0.isSenseMeAnalyzed }.count
             let hasSelection = selectedTrackId != nil
@@ -443,7 +444,7 @@ public struct LibraryView: View {
                         Image(systemName: "waveform.path.ecg")
                             .font(.system(size: 11, weight: .semibold))
                         ViewThatFits(in: .horizontal) {
-                            Text(hasSelection ? "Analyze SenseMe" : (unanalyzedCount > 0 ? "Analyze SenseMe (\(unanalyzedCount))" : "SenseMe Analyzed"))
+                            Text(hasSelection ? L10n.tr("Analyze SenseMe") : (unanalyzedCount > 0 ? L10n.tr("Analyze SenseMe (\(unanalyzedCount))") : L10n.tr("SenseMe Analyzed")))
                                 .font(WalkmanFont.calloutMedium)
                             Text("SenseMe")
                                 .font(WalkmanFont.calloutMedium)
@@ -457,7 +458,7 @@ public struct LibraryView: View {
             }
             .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 19))
             .disabled(isBatchAnalyzing || visibleTracks.isEmpty || (!hasSelection && unanalyzedCount == 0))
-            .help(hasSelection ? "Analyze selected track for Sony 12 Tone / SenseMe" : (unanalyzedCount > 0 ? "Analyze \(unanalyzedCount) unanalyzed tracks for Sony 12 Tone / SenseMe" : "All visible tracks have 12 Tone / SenseMe metadata"))
+            .help(hasSelection ? L10n.tr("Analyze selected track for Sony 12 Tone / SenseMe") : (unanalyzedCount > 0 ? L10n.tr("Analyze \(unanalyzedCount) unanalyzed tracks for Sony 12 Tone / SenseMe") : L10n.tr("All visible tracks have 12 Tone / SenseMe metadata")))
         }
     }
     
@@ -467,7 +468,7 @@ public struct LibraryView: View {
                 ProgressView()
                     .controlSize(.small)
                     .scaleEffect(0.75)
-                Text("Scanning...")
+                Text(L10n.tr("Scanning..."))
                     .font(.system(size: 12.5, weight: .medium, design: .monospaced))
                     .foregroundStyle(WalkmanTheme.silverMuted)
             } else {
@@ -480,7 +481,7 @@ public struct LibraryView: View {
                     .lineLimit(1)
             }
         }
-        .help(visibleTracks.count == 1 ? "1 Track" : "\(visibleTracks.count.formatted()) Tracks")
+        .help(visibleTracks.count == 1 ? L10n.tr("1 Track") : L10n.tr("\(visibleTracks.count.formatted()) Tracks"))
         .padding(.horizontal, 14)
         .frame(height: 38)
         .background(
@@ -541,11 +542,11 @@ public struct LibraryView: View {
                     .foregroundStyle(WalkmanTheme.silverMuted)
             }
             
-            Text("No Tracks on Selected Storage")
+            Text(L10n.tr("No Tracks on Selected Storage"))
                 .font(WalkmanFont.title3)
                 .foregroundStyle(.white)
             
-            Text("Drag and drop audio files into Transfer & Convert to sync music onto your Walkman.")
+            Text(L10n.tr("Drag and drop audio files into Transfer & Convert to sync music onto your Walkman."))
                 .font(WalkmanFont.callout)
                 .foregroundStyle(Color.secondary)
                 .multilineTextAlignment(.center)
@@ -555,7 +556,7 @@ public struct LibraryView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "arrow.triangle.2.circlepath")
                         .font(.system(size: 11, weight: .semibold))
-                    Text("Go to Transfer & Convert")
+                    Text(L10n.tr("Go to Transfer & Convert"))
                         .font(WalkmanFont.calloutMedium)
                 }
                 .padding(.horizontal, 16)
@@ -586,11 +587,11 @@ public struct LibraryView: View {
                     .foregroundStyle(WalkmanTheme.silverMuted)
             }
             
-            Text("No Matching Songs")
+            Text(L10n.tr("No Matching Songs"))
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(.white)
             
-            Text("No songs match \"\(searchQuery)\" with the selected filter.")
+            Text(L10n.tr("No songs match \"\(searchQuery)\" with the selected filter."))
                 .font(WalkmanFont.callout)
                 .foregroundStyle(Color.secondary)
                 .multilineTextAlignment(.center)
@@ -599,7 +600,7 @@ public struct LibraryView: View {
                 searchQuery = ""
                 formatFilter = "ALL"
             }) {
-                Text("Clear Search & Filters")
+                Text(L10n.tr("Clear Search & Filters"))
                     .font(WalkmanFont.calloutMedium)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 6)
@@ -622,7 +623,7 @@ public struct LibraryView: View {
             }
             .width(min: 26, ideal: 34, max: 44)
             
-            TableColumn("Title", value: \.title) { track in
+            TableColumn(L10n.tr("Title"), value: \.title) { track in
                 let isCurrent = player.currentTrack?.id == track.id
                 let isPlayingThis = isCurrent && player.isPlaying
                 
@@ -638,7 +639,7 @@ public struct LibraryView: View {
                         TrackCoverThumbnail(track: track, size: 30, isPlaying: isPlayingThis)
                     }
                     .buttonStyle(.plain)
-                    .help(isPlayingThis ? "Pause" : "Play preview")
+                    .help(isPlayingThis ? L10n.tr("Pause") : L10n.tr("Play preview"))
                     
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 5) {
@@ -657,7 +658,7 @@ public struct LibraryView: View {
                                 Image(systemName: "character.book.closed.fill")
                                     .font(.system(size: 9))
                                     .foregroundStyle(WalkmanTheme.silverMuted)
-                                    .help("Language Study & Audiobooks (/LEARNING/)")
+                                    .help(L10n.tr("Language Study & Audiobooks (/LEARNING/)"))
                             }
                         }
                     }
@@ -665,7 +666,7 @@ public struct LibraryView: View {
             }
             .width(min: 130, ideal: 220)
             
-            TableColumn("Artist", value: \.artist) { track in
+            TableColumn(L10n.tr("Artist"), value: \.artist) { track in
                 Text(track.artist.isEmpty ? "Unknown Artist" : track.artist)
                     .font(WalkmanFont.callout)
                     .foregroundStyle(Color.white.opacity(0.85))
@@ -673,7 +674,7 @@ public struct LibraryView: View {
             }
             .width(min: 90, ideal: 140)
             
-            TableColumn("Album", value: \.album) { track in
+            TableColumn(L10n.tr("Album"), value: \.album) { track in
                 Text(track.album.isEmpty ? "—" : track.album)
                     .font(WalkmanFont.callout)
                     .foregroundStyle(Color.secondary)
@@ -681,7 +682,7 @@ public struct LibraryView: View {
             }
             .width(min: 90, ideal: 150)
             
-            TableColumn("Format", value: \.format) { track in
+            TableColumn(L10n.tr("Format"), value: \.format) { track in
                 let hiRes = isHiRes(track)
                 HStack(spacing: 4.5) {
                     Text(track.format)
@@ -716,7 +717,7 @@ public struct LibraryView: View {
                         HStack(spacing: 2.5) {
                             Image(systemName: "waveform")
                                 .font(.system(size: 7, weight: .black))
-                            Text("Hi-Res")
+                            Text(L10n.tr("Hi-Res"))
                                 .font(WalkmanFont.badge)
                         }
                         .padding(.horizontal, 5)
@@ -751,7 +752,7 @@ public struct LibraryView: View {
                         Capsule().stroke(Color(red: 255/255, green: 165/255, blue: 30/255).opacity(0.55), lineWidth: 0.8)
                     )
                     .foregroundStyle(Color(red: 255/255, green: 195/255, blue: 80/255))
-                    .help("Sony 12 Tone / SenseMe Analyzed • \(track.senseMeChannels.joined(separator: ", "))")
+                    .help(L10n.tr("Sony 12 Tone / SenseMe Analyzed • \(track.senseMeChannels.joined(separator: ", "))"))
                 } else {
                     Text("—")
                         .font(WalkmanFont.monoSmall)
@@ -760,14 +761,14 @@ public struct LibraryView: View {
             }
             .width(min: 60, ideal: 76, max: 90)
             
-            TableColumn("Duration", value: \.durationSeconds) { track in
+            TableColumn(L10n.tr("Duration"), value: \.durationSeconds) { track in
                 Text(formatDuration(track.durationSeconds))
                     .font(WalkmanFont.monoSmall)
                     .foregroundStyle(Color.white.opacity(0.85))
             }
             .width(min: 50, ideal: 64, max: 80)
             
-            TableColumn("Bitrate", value: \.bitrateKbps) { track in
+            TableColumn(L10n.tr("Bitrate"), value: \.bitrateKbps) { track in
                 Text(track.bitrateKbps > 0 ? "\(track.bitrateKbps)k" : "—")
                     .font(WalkmanFont.monoSmall)
                     .foregroundStyle(Color.secondary)
@@ -778,7 +779,7 @@ public struct LibraryView: View {
             if let firstId = selection.first, let track = tracks.first(where: { $0.id == firstId }) {
                 let isThisPlaying = player.currentTrack?.id == track.id && player.isPlaying
                 
-                Button(isThisPlaying ? "Pause Playback" : "Play Preview") {
+                Button(isThisPlaying ? L10n.tr("Pause Playback") : L10n.tr("Play Preview")) {
                     self.selectedTrackId = track.id
                     if isThisPlaying {
                         player.pause()
@@ -792,22 +793,22 @@ public struct LibraryView: View {
                 Button {
                     onEditTrack?(track)
                 } label: {
-                    Label("Edit Song Metadata...", systemImage: "square.and.pencil")
+                    Label(L10n.tr("Edit Song Metadata..."), systemImage: "square.and.pencil")
                 }
                 
                 Button {
                     onTrimCutTrack?(track)
                 } label: {
-                    Label("Trim & Cut...", systemImage: "scissors")
+                    Label(L10n.tr("Trim & Cut..."), systemImage: "scissors")
                 }
                 
                 Button {
                     ArtworkExportService.exportArtwork(for: track)
                 } label: {
-                    Label("Export Cover Art to Mac...", systemImage: "square.and.arrow.down")
+                    Label(L10n.tr("Export Cover Art to Mac..."), systemImage: "square.and.arrow.down")
                 }
                 
-                Button("Inspect in Sidebar") {
+                Button(L10n.tr("Inspect in Sidebar")) {
                     onInspectTrack(track)
                 }
 
@@ -816,12 +817,12 @@ public struct LibraryView: View {
                     let toAnalyze = targets.isEmpty ? [track] : targets
                     analyzeTracksSenseMe(toAnalyze)
                 } label: {
-                    Label(selection.count > 1 ? "Analyze \(selection.count) Tracks for SenseMe (12 Tone)..." : "Analyze for SenseMe (12 Tone)...", systemImage: "waveform.path.ecg")
+                    Label(selection.count > 1 ? L10n.tr("Analyze \(selection.count) Tracks for SenseMe (12 Tone)...") : L10n.tr("Analyze for SenseMe (12 Tone)..."), systemImage: "waveform.path.ecg")
                 }
                 
                 Divider()
                 
-                Button("Copy Path") {
+                Button(L10n.tr("Copy Path")) {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(track.fullPath, forType: .string)
                 }
@@ -840,7 +841,7 @@ public struct LibraryView: View {
                         onDeleteTrack?(tr)
                     }
                 } label: {
-                    Label(selection.count > 1 ? "Delete \(selection.count) Songs from Device" : "Delete from Device", systemImage: "trash")
+                    Label(selection.count > 1 ? L10n.tr("Delete \(selection.count) Songs from Device") : L10n.tr("Delete from Device"), systemImage: "trash")
                 }
             }
         } primaryAction: { selection in
@@ -896,6 +897,7 @@ public struct LibraryView: View {
 // FORMAT SEGMENTED BAR VIEW (LIQUID GLASS SLIDING PILL TRANSITION)
 // -----------------------------------------------------------------------------
 private struct FormatSegmentedBarView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let options: [FilterOption]
     @Binding var selectedFilter: String
     let onSelectFilter: (String) -> Void
@@ -946,6 +948,7 @@ private struct FormatSegmentedBarView: View {
 // FORMAT TAB PILL VIEW (ROUND LIQUID GLASS CLICK BOX WITH HOVER & SLIDING PILL)
 // -----------------------------------------------------------------------------
 private struct FormatTabPillView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let option: FilterOption
     let isSelected: Bool
     let namespace: Namespace.ID
@@ -960,7 +963,7 @@ private struct FormatTabPillView: View {
                     Image(systemName: icon)
                         .font(.system(size: 11, weight: isSelected ? .bold : .semibold))
                 }
-                Text(option.title)
+                Text(L10n.lookup(option.title))
                     .font(.system(size: 12.5, weight: isSelected ? .bold : .medium))
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
@@ -1017,6 +1020,7 @@ private struct FormatTabPillView: View {
 // ACTIVE LIQUID GLASS PILL BACKGROUND
 // -----------------------------------------------------------------------------
 private struct ActivePillBackground: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let isHiRes: Bool
     let isHovered: Bool
     
@@ -1060,6 +1064,7 @@ private struct ActivePillBackground: View {
 // HOVER LIQUID GLASS PILL BACKGROUND
 // -----------------------------------------------------------------------------
 private struct HoverPillBackground: View {
+    @ObservedObject private var localization = AppLocalization.shared
     var body: some View {
         ZStack {
             Color.white.opacity(0.09)

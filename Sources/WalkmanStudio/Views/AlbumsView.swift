@@ -32,6 +32,7 @@ public enum AlbumSortOption: String, CaseIterable, Identifiable {
 }
 
 public struct AlbumsView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let tracks: [Track]
     let precomputedAlbums: [AlbumItem]?
     let showToolbar: Bool
@@ -459,7 +460,7 @@ public struct AlbumsView: View {
         }
         .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 19))
         .disabled((displayedAlbums.isEmpty && selectedAlbum == nil) || isPreparingLyricsSheet)
-        .help("LRC Fetcher: Fetch and sync .LRC lyrics for albums")
+        .help(L10n.tr("LRC Fetcher: Fetch and sync .LRC lyrics for albums"))
     }
     
     private var wideToolbarLayout: some View {
@@ -579,9 +580,9 @@ public struct AlbumsView: View {
         ExpandableLiquidGlassSearchBar(
             text: $searchQuery,
             isExpanded: $isSearchExpanded,
-            placeholder: "Search albums or artists...",
+            placeholder: L10n.tr("Search albums or artists..."),
             expandedWidth: 260,
-            helpText: "Search albums"
+            helpText: L10n.tr("Search albums")
         )
     }
     
@@ -611,7 +612,7 @@ public struct AlbumsView: View {
                 .foregroundStyle(WalkmanTheme.silverLight)
                 .lineLimit(1)
         }
-        .help(displayedAlbums.count == 1 ? "1 Album" : "\(displayedAlbums.count.formatted()) Albums")
+        .help(displayedAlbums.count == 1 ? L10n.tr("1 Album") : L10n.tr("\(displayedAlbums.count.formatted()) Albums"))
         .padding(.horizontal, 14)
         .frame(height: 38)
         .background(
@@ -667,13 +668,13 @@ public struct AlbumsView: View {
                     .foregroundStyle(WalkmanTheme.silverMuted)
             }
             
-            Text("No Matching Albums")
+            Text(L10n.tr("No Matching Albums"))
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(.white)
             
             Text(searchQuery.isEmpty
-                 ? "No albums match the selected format filter."
-                 : "No albums match \"\(searchQuery)\" with the selected filter.")
+                 ? L10n.tr("No albums match the selected format filter.")
+                 : L10n.tr("No albums match \"\(searchQuery)\" with the selected filter."))
                 .font(WalkmanFont.callout)
                 .foregroundStyle(Color.secondary)
                 .multilineTextAlignment(.center)
@@ -683,7 +684,7 @@ public struct AlbumsView: View {
                 searchQuery = ""
                 formatFilter = "ALL"
             }) {
-                Text("Reset Filters")
+                Text(L10n.tr("Reset Filters"))
                     .font(WalkmanFont.calloutMedium)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 6)
@@ -702,6 +703,7 @@ public struct AlbumsView: View {
 // FILTER & SORT MENU BUTTON (APPLE-STYLE CIRCULAR FILTER ICON & DROPDOWN)
 // -----------------------------------------------------------------------------
 private struct AlbumFilterSortMenuButton: View {
+    @ObservedObject private var localization = AppLocalization.shared
     @Binding var sortOption: AlbumSortOption
     
     @State private var isHovered = false
@@ -712,9 +714,9 @@ private struct AlbumFilterSortMenuButton: View {
     
     var body: some View {
         Menu {
-            Picker("Sort Options", selection: $sortOption) {
+            Picker(L10n.tr("Sort Options"), selection: $sortOption) {
                 ForEach(AlbumSortOption.allCases) { opt in
-                    Text(opt.rawValue).tag(opt)
+                    Text(L10n.lookup(opt.rawValue)).tag(opt)
                 }
             }
             .pickerStyle(.inline)
@@ -784,7 +786,7 @@ private struct AlbumFilterSortMenuButton: View {
         .menuIndicator(.hidden)
         .buttonStyle(.plain)
         .contentShape(Circle())
-        .help("Sort albums (\(sortOption.rawValue))")
+        .help(L10n.tr("Sort albums (\(L10n.lookup(sortOption.rawValue)))"))
         .onHover { hovering in
             guard isHovered != hovering else { return }
             isHovered = hovering
@@ -808,6 +810,7 @@ private struct AlbumFilterSortMenuButton: View {
 // ALBUM FORMAT SEGMENTED BAR (MATCHED GEOMETRY SLIDING LIQUID GLASS LENS)
 // -----------------------------------------------------------------------------
 private struct AlbumFormatSegmentedBarView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let options: [FilterOption]
     @Binding var selectedFilter: String
     let onSelectFilter: (String) -> Void
@@ -858,6 +861,7 @@ private struct AlbumFormatSegmentedBarView: View {
 // ALBUM FORMAT TAB PILL VIEW (ROUND LIQUID GLASS CLICK BOX WITH HOVER)
 // -----------------------------------------------------------------------------
 private struct AlbumFormatTabPillView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let option: FilterOption
     let isSelected: Bool
     let namespace: Namespace.ID
@@ -872,7 +876,7 @@ private struct AlbumFormatTabPillView: View {
                     Image(systemName: icon)
                         .font(.system(size: 11, weight: isSelected ? .bold : .semibold))
                 }
-                Text(option.title)
+                Text(L10n.lookup(option.title))
                     .font(.system(size: 12.5, weight: isSelected ? .bold : .medium))
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
@@ -926,6 +930,7 @@ private struct AlbumFormatTabPillView: View {
 }
 
 private struct ActiveAlbumPillBackground: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let isHiRes: Bool
     let isHovered: Bool
     
@@ -968,6 +973,7 @@ private struct ActiveAlbumPillBackground: View {
 }
 
 private struct HoverAlbumPillBackground: View {
+    @ObservedObject private var localization = AppLocalization.shared
     var body: some View {
         ZStack {
             Color.white.opacity(0.09)
@@ -997,6 +1003,7 @@ private struct HoverAlbumPillBackground: View {
 // ALBUM GRID CARD (TACTILE HOVER, SMOOTH CURSOR, FLOATING QUICK PLAY)
 // -----------------------------------------------------------------------------
 private struct AlbumGridCard: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let album: AlbumItem
     let onOpen: () -> Void
     var onInspectAlbum: (() -> Void)? = nil
@@ -1069,7 +1076,7 @@ private struct AlbumGridCard: View {
                         .transition(.scale.combined(with: .opacity))
                     } else {
                         if album.isHiRes {
-                            Text("Hi-Res")
+                            Text(L10n.tr("Hi-Res"))
                                 .font(WalkmanFont.badge)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2.5)
@@ -1082,7 +1089,7 @@ private struct AlbumGridCard: View {
                             HStack(spacing: 3.5) {
                                 Image(systemName: "character.book.closed.fill")
                                     .font(.system(size: 8))
-                                Text("Learning")
+                                Text(L10n.tr("Learning"))
                             }
                             .font(WalkmanFont.badge)
                             .padding(.horizontal, 6)
@@ -1112,7 +1119,7 @@ private struct AlbumGridCard: View {
                             Text(album.year)
                             Text("•")
                         }
-                        Text("\(album.trackCount) tracks")
+                        Text(L10n.tr("\(album.trackCount) tracks"))
                     }
                     .font(WalkmanFont.subheadline)
                     .foregroundStyle(WalkmanTheme.silverMuted.opacity(0.80))
@@ -1140,13 +1147,13 @@ private struct AlbumGridCard: View {
                 Button {
                     onTransfer()
                 } label: {
-                    Label("Transfer Album to Walkman", systemImage: "arrow.right.circle.fill")
+                    Label(L10n.tr("Transfer Album to Walkman"), systemImage: "arrow.right.circle.fill")
                 }
                 Divider()
             }
 
             Button(action: onOpen) {
-                Label("View Album Details", systemImage: "music.note.list")
+                Label(L10n.tr("View Album Details"), systemImage: "music.note.list")
             }
             
             Button {
@@ -1158,7 +1165,7 @@ private struct AlbumGridCard: View {
                     player.play(track: first, in: album.tracks)
                 }
             } label: {
-                Label(isAlbumPlaying ? "Pause Album" : "Play Album", systemImage: isAlbumPlaying ? "pause.fill" : "play.fill")
+                Label(isAlbumPlaying ? L10n.tr("Pause Album") : L10n.tr("Play Album"), systemImage: isAlbumPlaying ? "pause.fill" : "play.fill")
             }
             
             Divider()
@@ -1166,19 +1173,19 @@ private struct AlbumGridCard: View {
             Button {
                 onEditAlbum?()
             } label: {
-                Label("Edit Album Metadata...", systemImage: "square.and.pencil")
+                Label(L10n.tr("Edit Album Metadata..."), systemImage: "square.and.pencil")
             }
             
             Button {
                 ArtworkExportService.exportArtwork(for: album)
             } label: {
-                Label("Export Album Artwork to Mac...", systemImage: "square.and.arrow.down")
+                Label(L10n.tr("Export Album Artwork to Mac..."), systemImage: "square.and.arrow.down")
             }
             
             Button {
                 onInspectAlbum?()
             } label: {
-                Label("Inspect in Sidebar", systemImage: "sidebar.trailing")
+                Label(L10n.tr("Inspect in Sidebar"), systemImage: "sidebar.trailing")
             }
             
             if let rep = album.representativeTrack {
@@ -1187,7 +1194,7 @@ private struct AlbumGridCard: View {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(dir, forType: .string)
                 } label: {
-                    Label("Copy Album Folder Path", systemImage: "doc.on.doc")
+                    Label(L10n.tr("Copy Album Folder Path"), systemImage: "doc.on.doc")
                 }
             }
             
@@ -1196,7 +1203,7 @@ private struct AlbumGridCard: View {
             Button(role: .destructive) {
                 onDeleteAlbum?()
             } label: {
-                Label("Delete Album from Device", systemImage: "trash")
+                Label(L10n.tr("Delete Album from Device"), systemImage: "trash")
             }
         }
     }
@@ -1206,6 +1213,7 @@ private struct AlbumGridCard: View {
 // ALBUM DETAIL VIEW (TACTILE AUDIO CONSOLE)
 // -----------------------------------------------------------------------------
 private struct AlbumDetailView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let album: AlbumItem
     let onBack: () -> Void
     let onSelectTrack: (Track) -> Void
@@ -1238,13 +1246,13 @@ private struct AlbumDetailView: View {
     
     private var albumTypeString: String {
         if album.trackCount == 1 {
-            return "SINGLE"
+            return L10n.tr("SINGLE")
         } else if album.trackCount <= 5 {
             return "EP"
         } else if album.artist.localizedCaseInsensitiveContains("various") {
-            return "COMPILATION"
+            return L10n.tr("COMPILATION")
         } else {
-            return "ALBUM"
+            return L10n.tr("ALBUM")
         }
     }
     
@@ -1257,16 +1265,16 @@ private struct AlbumDetailView: View {
     
     private var totalDurationFormatted: String {
         let total = totalDurationSeconds
-        if total <= 0 { return "\(album.trackCount) Songs" }
+        if total <= 0 { return L10n.tr("\(album.trackCount) Songs") }
         let hours = Int(total) / 3600
         let mins = (Int(total) % 3600) / 60
         let secs = Int(total) % 60
         if hours > 0 {
-            return "\(album.trackCount) Songs, \(hours) hr \(mins) min"
+            return L10n.tr("\(album.trackCount) Songs, \(hours) hr \(mins) min")
         } else if mins > 0 {
-            return "\(album.trackCount) Songs, \(mins) min \(secs) sec"
+            return L10n.tr("\(album.trackCount) Songs, \(mins) min \(secs) sec")
         } else {
-            return "\(album.trackCount) Songs, \(secs) sec"
+            return L10n.tr("\(album.trackCount) Songs, \(secs) sec")
         }
     }
     
@@ -1284,7 +1292,7 @@ private struct AlbumDetailView: View {
         if maxBits > 0 && maxSampleRate > 0 {
             let khz = Double(maxSampleRate) / 1000.0
             let khzStr = khz.truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", khz) : String(format: "%.1f", khz)
-            return "\(format) • \(maxBits)-bit / \(khzStr) kHz"
+            return L10n.tr("\(format) • \(maxBits)-bit / \(khzStr) kHz")
         } else if maxSampleRate > 0 {
             let khz = Double(maxSampleRate) / 1000.0
             let khzStr = khz.truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", khz) : String(format: "%.1f", khz)
@@ -1331,7 +1339,7 @@ private struct AlbumDetailView: View {
                             .foregroundStyle(WalkmanTheme.silverMuted)
                             .frame(width: 26, alignment: .trailing)
                         
-                        Text("Title")
+                        Text(L10n.tr("Title"))
                             .font(.caption)
                             .foregroundStyle(WalkmanTheme.silverMuted)
                         
@@ -1465,7 +1473,7 @@ private struct AlbumDetailView: View {
                         HStack(spacing: 4.5) {
                             Image(systemName: "waveform")
                                 .font(.system(size: 9.5, weight: .bold))
-                            Text("Hi-Res Audio")
+                            Text(L10n.tr("Hi-Res Audio"))
                                 .font(WalkmanFont.badge)
                         }
                         .padding(.horizontal, 8)
@@ -1478,7 +1486,7 @@ private struct AlbumDetailView: View {
                         HStack(spacing: 4) {
                             Image(systemName: "character.book.closed.fill")
                                 .font(.system(size: 9))
-                            Text("Language Study")
+                            Text(L10n.tr("Language Study"))
                         }
                         .font(WalkmanFont.badge)
                         .padding(.horizontal, 8)
@@ -1568,19 +1576,19 @@ private struct AlbumDetailView: View {
                 Button {
                     onTransfer()
                 } label: {
-                    Label("Transfer Album to Walkman", systemImage: "arrow.right.circle.fill")
+                    Label(L10n.tr("Transfer Album to Walkman"), systemImage: "arrow.right.circle.fill")
                 }
                 Divider()
             }
             Button {
                 onEditAlbum?()
             } label: {
-                Label("Edit Album Metadata...", systemImage: "square.and.pencil")
+                Label(L10n.tr("Edit Album Metadata..."), systemImage: "square.and.pencil")
             }
             Button {
                 ArtworkExportService.exportArtwork(for: album)
             } label: {
-                Label("Export Album Artwork to Mac...", systemImage: "square.and.arrow.down")
+                Label(L10n.tr("Export Album Artwork to Mac..."), systemImage: "square.and.arrow.down")
             }
             if let rep = album.representativeTrack {
                 Button {
@@ -1588,7 +1596,7 @@ private struct AlbumDetailView: View {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(dir, forType: .string)
                 } label: {
-                    Label("Copy Album Folder Path", systemImage: "doc.on.doc")
+                    Label(L10n.tr("Copy Album Folder Path"), systemImage: "doc.on.doc")
                 }
             }
         }
@@ -1644,7 +1652,7 @@ private struct AlbumDetailView: View {
             HStack(spacing: 6) {
                 Image(systemName: isAlbumPlaying ? "pause.fill" : "play.fill")
                     .font(.system(size: 11, weight: .bold))
-                Text(isAlbumPlaying ? "Pause" : "Play")
+                Text(isAlbumPlaying ? L10n.tr("Pause") : L10n.tr("Play"))
                     .font(.system(size: 13, weight: .semibold))
                     .lineLimit(1)
             }
@@ -1655,7 +1663,7 @@ private struct AlbumDetailView: View {
         }
         .buttonStyle(LiquidGlassButtonStyle(variant: .prominent, cornerRadius: 17))
         .fixedSize(horizontal: true, vertical: false)
-        .help(isAlbumPlaying ? "Pause album playback" : "Play album from the beginning")
+        .help(isAlbumPlaying ? L10n.tr("Pause album playback") : L10n.tr("Play album from the beginning"))
     }
     
     private var shuffleButton: some View {
@@ -1668,7 +1676,7 @@ private struct AlbumDetailView: View {
             HStack(spacing: 5.5) {
                 Image(systemName: "shuffle")
                     .font(.system(size: 11, weight: .semibold))
-                Text("Shuffle")
+                Text(L10n.tr("Shuffle"))
                     .font(.system(size: 13, weight: .medium))
                     .lineLimit(1)
             }
@@ -1679,7 +1687,7 @@ private struct AlbumDetailView: View {
         }
         .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 17))
         .fixedSize(horizontal: true, vertical: false)
-        .help("Shuffle tracks in this album")
+        .help(L10n.tr("Shuffle tracks in this album"))
     }
     
     private var editLabeledButton: some View {
@@ -1687,7 +1695,7 @@ private struct AlbumDetailView: View {
             HStack(spacing: 5.5) {
                 Image(systemName: "square.and.pencil")
                     .font(.system(size: 11, weight: .semibold))
-                Text("Edit Album")
+                Text(L10n.tr("Edit Album"))
                     .font(.system(size: 13, weight: .medium))
                     .lineLimit(1)
             }
@@ -1698,7 +1706,7 @@ private struct AlbumDetailView: View {
         }
         .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 17))
         .fixedSize(horizontal: true, vertical: false)
-        .help("Edit album artwork, tags, and track numbers in a popup window")
+        .help(L10n.tr("Edit album artwork, tags, and track numbers in a popup window"))
     }
     
     @ViewBuilder
@@ -1708,7 +1716,7 @@ private struct AlbumDetailView: View {
                 HStack(spacing: 5.5) {
                     Image(systemName: "info.circle")
                         .font(.system(size: 11, weight: .semibold))
-                    Text("Get Info")
+                    Text(L10n.tr("Get Info"))
                         .font(.system(size: 13, weight: .medium))
                         .lineLimit(1)
                 }
@@ -1719,7 +1727,7 @@ private struct AlbumDetailView: View {
             }
             .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 17))
             .fixedSize(horizontal: true, vertical: false)
-            .help("Inspect album metadata and cover artwork in sidebar")
+            .help(L10n.tr("Inspect album metadata and cover artwork in sidebar"))
         }
     }
     
@@ -1732,7 +1740,7 @@ private struct AlbumDetailView: View {
         }
         .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 17))
         .fixedSize(horizontal: true, vertical: false)
-        .help("Edit album artwork, tags, and track numbers")
+        .help(L10n.tr("Edit album artwork, tags, and track numbers"))
     }
     
     @ViewBuilder
@@ -1746,7 +1754,7 @@ private struct AlbumDetailView: View {
             }
             .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 17))
             .fixedSize(horizontal: true, vertical: false)
-            .help("Inspect album in sidebar")
+            .help(L10n.tr("Inspect album in sidebar"))
         }
     }
     
@@ -1759,7 +1767,7 @@ private struct AlbumDetailView: View {
         }
         .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 17))
         .fixedSize(horizontal: true, vertical: false)
-        .help("Export cover art to Mac")
+        .help(L10n.tr("Export cover art to Mac"))
     }
     
     private var moreMenuButton: some View {
@@ -1767,21 +1775,21 @@ private struct AlbumDetailView: View {
             Button {
                 onEditAlbum?()
             } label: {
-                Label("Edit Album Metadata...", systemImage: "square.and.pencil")
+                Label(L10n.tr("Edit Album Metadata..."), systemImage: "square.and.pencil")
             }
             
             if let rep = album.representativeTrack {
                 Button {
                     onSelectTrack(rep)
                 } label: {
-                    Label("Inspect in Sidebar", systemImage: "sidebar.trailing")
+                    Label(L10n.tr("Inspect in Sidebar"), systemImage: "sidebar.trailing")
                 }
             }
             
             Button {
                 ArtworkExportService.exportArtwork(for: album)
             } label: {
-                Label("Export Album Artwork to Mac...", systemImage: "square.and.arrow.down")
+                Label(L10n.tr("Export Album Artwork to Mac..."), systemImage: "square.and.arrow.down")
             }
             
             if let rep = album.representativeTrack {
@@ -1790,7 +1798,7 @@ private struct AlbumDetailView: View {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(dir, forType: .string)
                 } label: {
-                    Label("Copy Album Folder Path", systemImage: "doc.on.doc")
+                    Label(L10n.tr("Copy Album Folder Path"), systemImage: "doc.on.doc")
                 }
             }
             
@@ -1799,7 +1807,7 @@ private struct AlbumDetailView: View {
             Button(role: .destructive) {
                 onDeleteAlbum?()
             } label: {
-                Label("Delete Album from Device", systemImage: "trash")
+                Label(L10n.tr("Delete Album from Device"), systemImage: "trash")
             }
         } label: {
             Image(systemName: "ellipsis")
@@ -1810,7 +1818,7 @@ private struct AlbumDetailView: View {
         .menuIndicator(.hidden)
         .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 17))
         .fixedSize(horizontal: true, vertical: false)
-        .help("More album options")
+        .help(L10n.tr("More album options"))
     }
 }
 
@@ -1818,6 +1826,7 @@ private struct AlbumDetailView: View {
 // ALBUM DETAIL BACK BUTTON (ROUND PILL WITH HOVER SPRING KINETICS)
 // -----------------------------------------------------------------------------
 private struct AlbumDetailBackButton: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let onBack: () -> Void
     @State private var isHovered = false
     
@@ -1826,7 +1835,7 @@ private struct AlbumDetailBackButton: View {
             HStack(spacing: 6) {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 11, weight: .bold))
-                Text("Albums")
+                Text(L10n.tr("Albums"))
                     .font(WalkmanFont.calloutMedium)
             }
             .padding(.horizontal, 12)
@@ -1875,6 +1884,7 @@ private struct AlbumDetailBackButton: View {
 // ALBUM TRACK ROW VIEW (TACTILE HOVER & AUDIO STATE)
 // -----------------------------------------------------------------------------
 private struct AlbumTrackRowView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let index: Int
     let track: Track
     let album: AlbumItem
@@ -1944,7 +1954,7 @@ private struct AlbumTrackRowView: View {
             Spacer()
             
             if track.bitsPerSample > 16 || track.sampleRate > 48000 {
-                Text("Hi-Res")
+                Text(L10n.tr("Hi-Res"))
                     .font(WalkmanFont.badge)
                     .padding(.horizontal, 5)
                     .padding(.vertical, 2)
@@ -2016,7 +2026,7 @@ private struct AlbumTrackRowView: View {
         }
         .animation(.easeInOut(duration: 0.15), value: isHovered)
         .contextMenu {
-            Button(isPlayingThis ? "Pause" : "Play Track") {
+            Button(isPlayingThis ? L10n.tr("Pause") : L10n.tr("Play Track")) {
                 onPlayToggle()
             }
             Divider()
@@ -2024,30 +2034,30 @@ private struct AlbumTrackRowView: View {
                 Button {
                     onTransfer()
                 } label: {
-                    Label("Transfer to Walkman", systemImage: "arrow.right.circle.fill")
+                    Label(L10n.tr("Transfer to Walkman"), systemImage: "arrow.right.circle.fill")
                 }
                 Divider()
             }
             Button {
                 onEdit?()
             } label: {
-                Label("Edit Song Metadata...", systemImage: "square.and.pencil")
+                Label(L10n.tr("Edit Song Metadata..."), systemImage: "square.and.pencil")
             }
             Button {
                 onTrimCut?()
             } label: {
-                Label("Trim & Cut...", systemImage: "scissors")
+                Label(L10n.tr("Trim & Cut..."), systemImage: "scissors")
             }
             Button {
                 ArtworkExportService.exportArtwork(for: track)
             } label: {
-                Label("Export Cover Art to Mac...", systemImage: "square.and.arrow.down")
+                Label(L10n.tr("Export Cover Art to Mac..."), systemImage: "square.and.arrow.down")
             }
-            Button("Inspect in Sidebar") {
+            Button(L10n.tr("Inspect in Sidebar")) {
                 onSelect()
             }
             Divider()
-            Button("Copy Path") {
+            Button(L10n.tr("Copy Path")) {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(track.fullPath, forType: .string)
             }
@@ -2055,7 +2065,7 @@ private struct AlbumTrackRowView: View {
             Button(role: .destructive) {
                 onDelete?()
             } label: {
-                Label("Delete from Device", systemImage: "trash")
+                Label(L10n.tr("Delete from Device"), systemImage: "trash")
             }
         }
     }

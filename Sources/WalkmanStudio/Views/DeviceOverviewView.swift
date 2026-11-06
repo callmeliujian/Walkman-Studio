@@ -2,6 +2,7 @@ import SwiftUI
 import AppKit
 
 public struct DeviceOverviewView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     var devices: [WalkmanDevice] = []
     let drives: [WalkmanDrive]
     var activeDevice: WalkmanDevice? = nil
@@ -124,7 +125,7 @@ public struct DeviceOverviewView: View {
                 Image(systemName: "hifispeaker.2.fill")
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(WalkmanTheme.hiResGold)
-                Text("CONNECTED WALKMAN PLAYERS (\(devices.count))")
+                Text(L10n.tr("CONNECTED WALKMAN PLAYERS (\(devices.count))"))
                     .font(WalkmanFont.sectionHeader)
                     .foregroundStyle(.secondary)
                     .tracking(0.6)
@@ -182,7 +183,7 @@ public struct DeviceOverviewView: View {
                                 Image(systemName: "cable.connector.horizontal")
                                     .font(.system(size: 10))
                                     .foregroundStyle(Color.white.opacity(0.35))
-                                Text(deviceInfo?.isNonAndroid == false ? "Connected via Storage • Android Walkman OS" : "Connected via USB Mass Storage • Sony OS")
+                                Text(deviceInfo?.isNonAndroid == false ? L10n.tr("Connected via Storage • Android Walkman OS") : L10n.tr("Connected via USB Mass Storage • Sony OS"))
                                     .font(WalkmanFont.callout)
                                     .foregroundStyle(.secondary)
                                     .lineLimit(1)
@@ -208,17 +209,17 @@ public struct DeviceOverviewView: View {
                 // Liquid Stat Chips
                 if isNarrow {
                     LazyVGrid(columns: [GridItem(.flexible(), alignment: .leading), GridItem(.flexible(), alignment: .leading)], spacing: 8) {
-                        LiquidStatChip(title: "\(tracks.count.formatted()) Tracks", icon: "music.note", color: WalkmanTheme.silverLight)
-                        LiquidStatChip(title: "\(effectiveStats.albums.formatted()) Albums", icon: "square.stack.fill", color: Color(red: 200/255, green: 210/255, blue: 235/255))
-                        LiquidStatChip(title: "\(effectiveStats.artists.formatted()) Artists", icon: "music.mic", color: Color(red: 175/255, green: 220/255, blue: 245/255))
-                        LiquidStatChip(title: "\(effectiveStats.hiRes.formatted()) Hi-Res", icon: "waveform.badge.magnifyingglass", color: WalkmanTheme.hiResGoldLight, isGold: true)
+                        LiquidStatChip(title: L10n.tr("\(tracks.count.formatted()) Tracks"), icon: "music.note", color: WalkmanTheme.silverLight)
+                        LiquidStatChip(title: L10n.tr("\(effectiveStats.albums.formatted()) Albums"), icon: "square.stack.fill", color: Color(red: 200/255, green: 210/255, blue: 235/255))
+                        LiquidStatChip(title: L10n.tr("\(effectiveStats.artists.formatted()) Artists"), icon: "music.mic", color: Color(red: 175/255, green: 220/255, blue: 245/255))
+                        LiquidStatChip(title: L10n.tr("\(effectiveStats.hiRes.formatted()) Hi-Res"), icon: "waveform.badge.magnifyingglass", color: WalkmanTheme.hiResGoldLight, isGold: true)
                     }
                 } else {
                     HStack(spacing: 8) {
-                        LiquidStatChip(title: "\(tracks.count.formatted()) Tracks", icon: "music.note", color: WalkmanTheme.silverLight)
-                        LiquidStatChip(title: "\(effectiveStats.albums.formatted()) Albums", icon: "square.stack.fill", color: Color(red: 200/255, green: 210/255, blue: 235/255))
-                        LiquidStatChip(title: "\(effectiveStats.artists.formatted()) Artists", icon: "music.mic", color: Color(red: 175/255, green: 220/255, blue: 245/255))
-                        LiquidStatChip(title: "\(effectiveStats.hiRes.formatted()) Hi-Res", icon: "waveform.badge.magnifyingglass", color: WalkmanTheme.hiResGoldLight, isGold: true)
+                        LiquidStatChip(title: L10n.tr("\(tracks.count.formatted()) Tracks"), icon: "music.note", color: WalkmanTheme.silverLight)
+                        LiquidStatChip(title: L10n.tr("\(effectiveStats.albums.formatted()) Albums"), icon: "square.stack.fill", color: Color(red: 200/255, green: 210/255, blue: 235/255))
+                        LiquidStatChip(title: L10n.tr("\(effectiveStats.artists.formatted()) Artists"), icon: "music.mic", color: Color(red: 175/255, green: 220/255, blue: 245/255))
+                        LiquidStatChip(title: L10n.tr("\(effectiveStats.hiRes.formatted()) Hi-Res"), icon: "waveform.badge.magnifyingglass", color: WalkmanTheme.hiResGoldLight, isGold: true)
                     }
                 }
             }
@@ -250,7 +251,7 @@ public struct DeviceOverviewView: View {
                         Image(systemName: "cable.connector.horizontal")
                             .font(.system(size: 10.5))
                             .foregroundStyle(Color.white.opacity(0.35))
-                        Text(deviceInfo?.isNonAndroid == false ? "Connected via Storage • Android Walkman OS Architecture" : "Connected via USB Mass Storage • Sony OS / Linux Architecture")
+                        Text(deviceInfo?.isNonAndroid == false ? L10n.tr("Connected via Storage • Android Walkman OS Architecture") : L10n.tr("Connected via USB Mass Storage • Sony OS / Linux Architecture"))
                             .font(WalkmanFont.callout)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
@@ -258,10 +259,10 @@ public struct DeviceOverviewView: View {
                     
                     // Liquid Stat Chips Row
                     HStack(spacing: 8) {
-                        LiquidStatChip(title: "\(tracks.count.formatted()) Tracks", icon: "music.note", color: WalkmanTheme.silverLight)
-                        LiquidStatChip(title: "\(effectiveStats.albums.formatted()) Albums", icon: "square.stack.fill", color: Color(red: 200/255, green: 210/255, blue: 235/255))
-                        LiquidStatChip(title: "\(effectiveStats.artists.formatted()) Artists", icon: "music.mic", color: Color(red: 175/255, green: 220/255, blue: 245/255))
-                        LiquidStatChip(title: "\(effectiveStats.hiRes.formatted()) Hi-Res", icon: "waveform.badge.magnifyingglass", color: WalkmanTheme.hiResGoldLight, isGold: true)
+                        LiquidStatChip(title: L10n.tr("\(tracks.count.formatted()) Tracks"), icon: "music.note", color: WalkmanTheme.silverLight)
+                        LiquidStatChip(title: L10n.tr("\(effectiveStats.albums.formatted()) Albums"), icon: "square.stack.fill", color: Color(red: 200/255, green: 210/255, blue: 235/255))
+                        LiquidStatChip(title: L10n.tr("\(effectiveStats.artists.formatted()) Artists"), icon: "music.mic", color: Color(red: 175/255, green: 220/255, blue: 245/255))
+                        LiquidStatChip(title: L10n.tr("\(effectiveStats.hiRes.formatted()) Hi-Res"), icon: "waveform.badge.magnifyingglass", color: WalkmanTheme.hiResGoldLight, isGold: true)
                     }
                     .padding(.top, 4)
                 }
@@ -280,7 +281,7 @@ public struct DeviceOverviewView: View {
         HStack(spacing: 4) {
             Image(systemName: "waveform")
                 .font(.system(size: 8.5, weight: .black))
-            Text("Hi-Res Audio")
+            Text(L10n.tr("Hi-Res Audio"))
                 .font(.system(size: 9.5, weight: .bold, design: .rounded))
         }
         .padding(.horizontal, 8)
@@ -326,7 +327,7 @@ public struct DeviceOverviewView: View {
             Image(systemName: "cpu")
                 .font(.system(size: 8, weight: .semibold))
                 .foregroundStyle(WalkmanTheme.silverMuted)
-            Text("FW v\(version)")
+            Text(L10n.tr("FW v\(version)"))
                 .font(.system(size: 9.5, weight: .bold, design: .monospaced))
                 .foregroundStyle(WalkmanTheme.silverLight)
         }
@@ -365,11 +366,11 @@ public struct DeviceOverviewView: View {
                     ProgressView()
                         .controlSize(.small)
                         .scaleEffect(0.72)
-                    Text("Ejecting...")
+                    Text(L10n.tr("Ejecting..."))
                 } else {
                     Image(systemName: "eject.circle.fill")
                         .font(.system(size: 13, weight: .semibold))
-                    Text("Eject")
+                    Text(L10n.tr("Eject"))
                 }
             }
             .font(.system(size: 12.5, weight: .semibold))
@@ -379,7 +380,7 @@ public struct DeviceOverviewView: View {
         }
         .buttonStyle(LiquidGlassButtonStyle(variant: .prominent, cornerRadius: 18))
         .disabled(isEjecting)
-        .help("Safely unmount device and purge macOS shadow files (.DS_Store / AppleDouble)")
+        .help(L10n.tr("Safely unmount device and purge macOS shadow files (.DS_Store / AppleDouble)"))
     }
     
     private var specularGlassDivider: some View {
@@ -411,7 +412,7 @@ public struct DeviceOverviewView: View {
                 Image(systemName: "internaldrive.fill")
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(WalkmanTheme.silverMuted)
-                Text("STORAGE ALLOCATION")
+                Text(L10n.tr("STORAGE ALLOCATION"))
                     .font(WalkmanFont.sectionHeader)
                     .foregroundStyle(.secondary)
                     .tracking(0.6)
@@ -437,7 +438,7 @@ public struct DeviceOverviewView: View {
             if let d = internalDrive {
                 let isSelected = activeDrive?.mountPoint == d.mountPoint
                 StorageDriveCard(
-                    title: "Internal WALKMAN",
+                    title: L10n.tr("Internal WALKMAN"),
                     subtitle: "/Volumes/\(d.name)",
                     icon: "internaldrive.fill",
                     usedBytes: d.usedBytes,
@@ -450,8 +451,8 @@ public struct DeviceOverviewView: View {
                 )
             } else {
                 StorageDriveCard(
-                    title: "Internal WALKMAN",
-                    subtitle: "Not Mounted",
+                    title: L10n.tr("Internal WALKMAN"),
+                    subtitle: L10n.tr("Not Mounted"),
                     icon: "internaldrive.fill",
                     usedBytes: 0,
                     freeBytes: 0,
@@ -470,7 +471,7 @@ public struct DeviceOverviewView: View {
             if let d = microsdDrive {
                 let isSelected = activeDrive?.mountPoint == d.mountPoint
                 StorageDriveCard(
-                    title: "MicroSD Expansion",
+                    title: L10n.tr("MicroSD Expansion"),
                     subtitle: "/Volumes/\(d.name)",
                     icon: "sdcard.fill",
                     usedBytes: d.usedBytes,
@@ -483,8 +484,8 @@ public struct DeviceOverviewView: View {
                 )
             } else {
                 StorageDriveCard(
-                    title: "MicroSD Expansion",
-                    subtitle: "Slot Empty",
+                    title: L10n.tr("MicroSD Expansion"),
+                    subtitle: L10n.tr("Slot Empty"),
                     icon: "sdcard.fill",
                     usedBytes: 0,
                     freeBytes: 0,
@@ -508,7 +509,7 @@ public struct DeviceOverviewView: View {
                 Image(systemName: "bolt.fill")
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(WalkmanTheme.silverMuted)
-                Text("QUICK WORKFLOWS")
+                Text(L10n.tr("QUICK WORKFLOWS"))
                     .font(WalkmanFont.sectionHeader)
                     .foregroundStyle(.secondary)
                     .tracking(0.6)
@@ -518,8 +519,8 @@ public struct DeviceOverviewView: View {
             if isCompact {
                 VStack(spacing: 10) {
                     ActionCard(
-                        title: "Music Library",
-                        description: "Browse \(tracks.count.formatted()) tracks across \(effectiveStats.albums.formatted()) albums and \(effectiveStats.artists.formatted()) artists.",
+                        title: L10n.tr("Music Library"),
+                        description: L10n.tr("Browse \(tracks.count.formatted()) tracks across \(effectiveStats.albums.formatted()) albums and \(effectiveStats.artists.formatted()) artists."),
                         icon: "music.note.list",
                         iconTint: Color(red: 165/255, green: 180/255, blue: 245/255),
                         isHorizontalRow: true,
@@ -527,8 +528,8 @@ public struct DeviceOverviewView: View {
                     )
                     
                     ActionCard(
-                        title: "Transfer & Convert",
-                        description: "Drag-and-drop audio files from Finder with automatic FFmpeg transcoding.",
+                        title: L10n.tr("Transfer & Convert"),
+                        description: L10n.tr("Drag-and-drop audio files from Finder with automatic FFmpeg transcoding."),
                         icon: "arrow.up.arrow.down.circle.fill",
                         iconTint: Color(red: 130/255, green: 215/255, blue: 245/255),
                         isHorizontalRow: true,
@@ -536,8 +537,8 @@ public struct DeviceOverviewView: View {
                     )
                     
                     ActionCard(
-                        title: "Playlist",
-                        description: "Manage hardware-compliant CRLF POSIX playlists saved in /MUSIC/.",
+                        title: L10n.tr("Playlist"),
+                        description: L10n.tr("Manage hardware-compliant CRLF POSIX playlists saved in /MUSIC/."),
                         icon: "list.bullet.rectangle.portrait.fill",
                         iconTint: Color(red: 150/255, green: 230/255, blue: 200/255),
                         isHorizontalRow: true,
@@ -547,8 +548,8 @@ public struct DeviceOverviewView: View {
             } else {
                 HStack(spacing: 14) {
                     ActionCard(
-                        title: "Music Library",
-                        description: "Browse \(tracks.count.formatted()) tracks across \(effectiveStats.albums.formatted()) albums and \(effectiveStats.artists.formatted()) artists.",
+                        title: L10n.tr("Music Library"),
+                        description: L10n.tr("Browse \(tracks.count.formatted()) tracks across \(effectiveStats.albums.formatted()) albums and \(effectiveStats.artists.formatted()) artists."),
                         icon: "music.note.list",
                         iconTint: Color(red: 165/255, green: 180/255, blue: 245/255),
                         isHorizontalRow: false,
@@ -556,8 +557,8 @@ public struct DeviceOverviewView: View {
                     )
                     
                     ActionCard(
-                        title: "Transfer & Convert",
-                        description: "Drag-and-drop audio files from Finder with automatic FFmpeg transcoding.",
+                        title: L10n.tr("Transfer & Convert"),
+                        description: L10n.tr("Drag-and-drop audio files from Finder with automatic FFmpeg transcoding."),
                         icon: "arrow.up.arrow.down.circle.fill",
                         iconTint: Color(red: 130/255, green: 215/255, blue: 245/255),
                         isHorizontalRow: false,
@@ -565,8 +566,8 @@ public struct DeviceOverviewView: View {
                     )
                     
                     ActionCard(
-                        title: "Playlist",
-                        description: "Manage hardware-compliant CRLF POSIX playlists saved in /MUSIC/.",
+                        title: L10n.tr("Playlist"),
+                        description: L10n.tr("Manage hardware-compliant CRLF POSIX playlists saved in /MUSIC/."),
                         icon: "list.bullet.rectangle.portrait.fill",
                         iconTint: Color(red: 150/255, green: 230/255, blue: 200/255),
                         isHorizontalRow: false,
@@ -589,7 +590,7 @@ public struct DeviceOverviewView: View {
                         Image(systemName: "checkmark.shield.fill")
                             .font(.system(size: 11, weight: .bold))
                             .foregroundStyle(Color.green)
-                        Text(deviceInfo?.isNonAndroid == false ? "SONY ANDROID HARDWARE COMPLIANCE" : "SONY NON-ANDROID HARDWARE COMPLIANCE")
+                        Text(deviceInfo?.isNonAndroid == false ? L10n.tr("SONY ANDROID HARDWARE COMPLIANCE") : L10n.tr("SONY NON-ANDROID HARDWARE COMPLIANCE"))
                             .font(WalkmanFont.sectionHeader)
                             .foregroundStyle(.secondary)
                             .tracking(0.6)
@@ -606,7 +607,7 @@ public struct DeviceOverviewView: View {
                         Image(systemName: "checkmark.shield.fill")
                             .font(.system(size: 11, weight: .bold))
                             .foregroundStyle(Color.green)
-                        Text(deviceInfo?.isNonAndroid == false ? "SONY ANDROID HARDWARE COMPLIANCE" : "SONY NON-ANDROID HARDWARE COMPLIANCE")
+                        Text(deviceInfo?.isNonAndroid == false ? L10n.tr("SONY ANDROID HARDWARE COMPLIANCE") : L10n.tr("SONY NON-ANDROID HARDWARE COMPLIANCE"))
                             .font(WalkmanFont.sectionHeader)
                             .foregroundStyle(.secondary)
                             .tracking(0.6)
@@ -621,7 +622,7 @@ public struct DeviceOverviewView: View {
                             Circle()
                                 .fill(Color.green)
                                 .frame(width: 5, height: 5)
-                            Text("Active & Enforced")
+                            Text(L10n.tr("Active & Enforced"))
                                 .font(WalkmanFont.monoSmall.weight(.bold))
                                 .foregroundStyle(WalkmanTheme.silverMuted)
                         }
@@ -633,10 +634,10 @@ public struct DeviceOverviewView: View {
             // Unified Liquid Glass Panel
             VStack(spacing: 0) {
                 ComplianceRow(
-                    title: "Baseline RGB JPEG Artwork",
+                    title: L10n.tr("Baseline RGB JPEG Artwork"),
                     detail: deviceInfo?.isNonAndroid == false ?
-                        "Non-progressive, no CMYK, max 1280×720 / 800×800 px encoded via Apple ImageIO" :
-                        "Non-progressive, no CMYK, max 800×800 px encoded via Apple ImageIO",
+                        L10n.tr("Non-progressive, no CMYK, max 1280×720 / 800×800 px encoded via Apple ImageIO") :
+                        L10n.tr("Non-progressive, no CMYK, max 800×800 px encoded via Apple ImageIO"),
                     badge: deviceInfo?.isNonAndroid == false ? "RGB • ImageIO" : "800×800 px • ImageIO",
                     isEnforced: true
                 )
@@ -644,10 +645,10 @@ public struct DeviceOverviewView: View {
                 complianceDivider
                 
                 ComplianceRow(
-                    title: "Strict ID3v2.3 (UTF-16) Tagging",
+                    title: L10n.tr("Strict ID3v2.3 (UTF-16) Tagging"),
                     detail: deviceInfo?.isNonAndroid == false ?
-                        "MP3s written with ID3v2.3 encoding=1 for standard Sony Music Player on Android" :
-                        "MP3s written with ID3v2.3 encoding=1 to prevent Sony player freeze bugs",
+                        L10n.tr("MP3s written with ID3v2.3 encoding=1 for standard Sony Music Player on Android") :
+                        L10n.tr("MP3s written with ID3v2.3 encoding=1 to prevent Sony player freeze bugs"),
                     badge: "ID3v2.3 • UTF-16",
                     isEnforced: true
                 )
@@ -655,17 +656,17 @@ public struct DeviceOverviewView: View {
                 complianceDivider
                 
                 ComplianceRow(
-                    title: "FAT32 / exFAT Path Sanitization",
-                    detail: "Illegal characters < > : \" / \\ | ? * and trailing dots stripped automatically",
-                    badge: "FAT32/exFAT • Clean",
+                    title: L10n.tr("FAT32 / exFAT Path Sanitization"),
+                    detail: L10n.tr("Illegal characters < > : \" / \\ | ? * and trailing dots stripped automatically"),
+                    badge: L10n.tr("FAT32/exFAT • Clean"),
                     isEnforced: true
                 )
                 
                 complianceDivider
                 
                 ComplianceRow(
-                    title: "CRLF Relative POSIX Playlists",
-                    detail: "M3U8 playlists formatted with \\r\\n line endings inside /MUSIC/",
+                    title: L10n.tr("CRLF Relative POSIX Playlists"),
+                    detail: L10n.tr("M3U8 playlists formatted with \\r\\n line endings inside /MUSIC/"),
                     badge: "M3U8 • CRLF",
                     isEnforced: true
                 )
@@ -673,10 +674,10 @@ public struct DeviceOverviewView: View {
                 complianceDivider
                 
                 ComplianceRow(
-                    title: "macOS Shadow File Purging",
+                    title: L10n.tr("macOS Shadow File Purging"),
                     detail: deviceInfo?.isNonAndroid == false ?
-                        "dot_clean -m automatically purges ._* / .DS_Store to prevent Android ghost tracks" :
-                        "dot_clean -m automatically merges AppleDouble forks and removes ._* / .DS_Store",
+                        L10n.tr("dot_clean -m automatically purges ._* / .DS_Store to prevent Android ghost tracks") :
+                        L10n.tr("dot_clean -m automatically merges AppleDouble forks and removes ._* / .DS_Store"),
                     badge: "dot_clean • No ._*",
                     isEnforced: true
                 )
@@ -711,7 +712,7 @@ public struct DeviceOverviewView: View {
                 Image(systemName: "info.circle.fill")
                     .font(.system(size: 11))
                     .foregroundStyle(WalkmanTheme.silverLight)
-                Text("About & Supported Devices")
+                Text(L10n.tr("About & Supported Devices"))
                     .font(.system(size: 11.5, weight: .medium))
                     .foregroundStyle(WalkmanTheme.silverLight)
             }
@@ -726,6 +727,7 @@ public struct DeviceOverviewView: View {
 // LIQUID GLASS DEVICE SHOWCASE (ELEVATED PEDESTAL)
 // -----------------------------------------------------------------------------
 private struct LiquidGlassDeviceShowcase: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let size: CGFloat
     let mountPoint: String?
     let deviceInfo: WalkmanDeviceInfo?
@@ -786,6 +788,7 @@ private struct LiquidGlassDeviceShowcase: View {
 // LIQUID GLASS MULTI-DEVICE SEGMENT PILL
 // -----------------------------------------------------------------------------
 private struct DeviceSegmentPill: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let device: WalkmanDevice
     let isSelected: Bool
     let onSelect: () -> Void
@@ -813,7 +816,7 @@ private struct DeviceSegmentPill: View {
                                 Circle()
                                     .fill(WalkmanTheme.hiResGold)
                                     .frame(width: 4, height: 4)
-                                Text("ACTIVE")
+                                Text(L10n.tr("ACTIVE"))
                                     .font(.system(size: 7.5, weight: .black))
                             }
                             .padding(.horizontal, 5)
@@ -829,7 +832,7 @@ private struct DeviceSegmentPill: View {
 
                     let freeGb = Double(device.freeBytes) / (1024 * 1024 * 1024)
                     let totalGb = Double(device.totalBytes) / (1024 * 1024 * 1024)
-                    Text(String(format: "%.1f GB free / %.0f GB", freeGb, totalGb))
+                    Text(String(format: L10n.lookup("%.1f GB free / %.0f GB"), freeGb, totalGb))
                         .font(.system(size: 10.5))
                         .foregroundStyle(isSelected ? WalkmanTheme.silverMuted : .secondary)
                 }
@@ -883,6 +886,7 @@ private struct DeviceSegmentPill: View {
 // LIQUID STAT CHIP (MICRO-CAPSULE)
 // -----------------------------------------------------------------------------
 private struct LiquidStatChip: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let title: String
     let icon: String
     let color: Color
@@ -942,6 +946,7 @@ private struct LiquidStatChip: View {
 // LIQUID GLASS STORAGE DRIVE CARD
 // -----------------------------------------------------------------------------
 private struct StorageDriveCard: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let title: String
     let subtitle: String
     let icon: String
@@ -1004,7 +1009,7 @@ private struct StorageDriveCard: View {
                                     Circle()
                                         .fill(Color(red: 160/255, green: 220/255, blue: 255/255))
                                         .frame(width: 5, height: 5)
-                                    Text("Selected")
+                                    Text(L10n.tr("Selected"))
                                         .font(.system(size: 9.5, weight: .bold))
                                         .foregroundStyle(Color(red: 235/255, green: 245/255, blue: 255/255))
                                 }
@@ -1127,7 +1132,7 @@ private struct StorageDriveCard: View {
                         Circle()
                             .fill(Color.white.opacity(0.4))
                             .frame(width: 4, height: 4)
-                        Text("\(formatBytes(usedBytes)) Used")
+                        Text(L10n.tr("\(formatBytes(usedBytes)) Used"))
                             .font(.system(size: 11.5, weight: .medium))
                             .foregroundStyle(isSelected ? .white.opacity(0.88) : .secondary)
                             .lineLimit(1)
@@ -1135,7 +1140,7 @@ private struct StorageDriveCard: View {
                     
                     Spacer(minLength: 4)
                     
-                    Text("\(formatBytes(freeBytes)) Available")
+                    Text(L10n.tr("\(formatBytes(freeBytes)) Available"))
                         .font(.system(size: 11.5, weight: .semibold))
                         .foregroundStyle(.white)
                         .lineLimit(1)
@@ -1167,6 +1172,7 @@ private struct StorageDriveCard: View {
 // LIQUID GLASS ACTION CARD (INTERACTIVE WORKFLOW TILE)
 // -----------------------------------------------------------------------------
 private struct ActionCard: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let title: String
     let description: String
     let icon: String
@@ -1296,6 +1302,7 @@ private struct ActionCard: View {
 // SONY HARDWARE COMPLIANCE ROW (INSPECTOR STYLE)
 // -----------------------------------------------------------------------------
 private struct ComplianceRow: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let title: String
     let detail: String
     var badge: String? = nil

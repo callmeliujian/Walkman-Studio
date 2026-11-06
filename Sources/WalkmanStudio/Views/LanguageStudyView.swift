@@ -35,12 +35,12 @@ fileprivate enum LanguageStudySortOption: String, CaseIterable, Identifiable {
     
     var title: String {
         switch self {
-        case .titleAZ: return "Title (A–Z)"
-        case .titleZA: return "Title (Z–A)"
-        case .artistAZ: return "Speaker / Artist (A–Z)"
-        case .albumAZ: return "Course / Album (A–Z)"
-        case .durationDesc: return "Duration (Longest First)"
-        case .dateAddedDesc: return "Recently Added First"
+        case .titleAZ: return L10n.tr("Title (A–Z)")
+        case .titleZA: return L10n.tr("Title (Z–A)")
+        case .artistAZ: return L10n.tr("Speaker / Artist (A–Z)")
+        case .albumAZ: return L10n.tr("Course / Album (A–Z)")
+        case .durationDesc: return L10n.tr("Duration (Longest First)")
+        case .dateAddedDesc: return L10n.tr("Recently Added First")
         }
     }
     
@@ -93,6 +93,7 @@ fileprivate struct LanguageStudyFolder: Identifiable, Hashable {
 // MARK: - LanguageStudyView
 
 public struct LanguageStudyView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let tracks: [Track]
     let activeDrive: WalkmanDrive?
     let onSelectTrack: (Track) -> Void
@@ -172,7 +173,7 @@ public struct LanguageStudyView: View {
             let isLearning = path.contains("/LEARNING")
             return LanguageStudyFolder(
                 path: path,
-                displayName: folderName.isEmpty ? "Root" : folderName,
+                displayName: folderName.isEmpty ? L10n.tr("Root") : folderName,
                 isLearningDir: isLearning,
                 tracks: folderTracks.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
             )
@@ -453,9 +454,9 @@ public struct LanguageStudyView: View {
         ExpandableLiquidGlassSearchBar(
             text: $searchQuery,
             isExpanded: $isSearchExpanded,
-            placeholder: "Search lessons, audiobooks, topics...",
+            placeholder: L10n.tr("Search lessons, audiobooks, topics..."),
             expandedWidth: 260,
-            helpText: "Search Language Study"
+            helpText: L10n.tr("Search Language Study")
         )
     }
     
@@ -493,7 +494,7 @@ public struct LanguageStudyView: View {
         }
         .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 19))
         .disabled(displayedTracks.isEmpty || isPreparingLyricsSheet)
-        .help("LRC Fetcher: Fetch transcripts and synchronized lyrics for lessons")
+        .help(L10n.tr("LRC Fetcher: Fetch transcripts and synchronized lyrics for lessons"))
     }
     
     private var isPlayingFromLanguageList: Bool {
@@ -525,7 +526,7 @@ public struct LanguageStudyView: View {
                 HStack(spacing: 6) {
                     Image(systemName: isPlayingFromLanguageList ? "pause.fill" : "play.fill")
                         .font(.system(size: 11, weight: .bold))
-                    Text(isPlayingFromLanguageList ? "Pause" : "Play All")
+                    Text(isPlayingFromLanguageList ? L10n.tr("Pause") : L10n.tr("Play All"))
                         .font(.system(size: 13, weight: .semibold))
                 }
                 .padding(.horizontal, 14)
@@ -535,7 +536,7 @@ public struct LanguageStudyView: View {
             }
             .buttonStyle(LiquidGlassButtonStyle(variant: .prominent, cornerRadius: 19))
             .disabled(displayedTracks.isEmpty)
-            .help(isPlayingFromLanguageList ? "Pause playback" : "Play all visible lessons in order")
+            .help(isPlayingFromLanguageList ? L10n.tr("Pause playback") : L10n.tr("Play all visible lessons in order"))
             
             Button(action: shufflePlaybackLanguage) {
                 Image(systemName: "shuffle")
@@ -545,7 +546,7 @@ public struct LanguageStudyView: View {
             }
             .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 19))
             .disabled(displayedTracks.isEmpty)
-            .help("Shuffle play visible lessons")
+            .help(L10n.tr("Shuffle play visible lessons"))
         }
     }
     
@@ -576,15 +577,15 @@ public struct LanguageStudyView: View {
         let count = statusIndicatorCount
         switch displayMode {
         case .tracks:
-            return count == 1 ? "1 Lesson" : "\(count.formatted()) Lessons"
+            return count == 1 ? L10n.tr("1 Lesson") : L10n.tr("\(count.formatted()) Lessons")
         case .albums:
-            return count == 1 ? "1 Course / Album" : "\(count.formatted()) Courses / Albums"
+            return count == 1 ? L10n.tr("1 Course / Album") : L10n.tr("\(count.formatted()) Courses / Albums")
         case .artists:
-            return count == 1 ? "1 Speaker / Instructor" : "\(count.formatted()) Speakers / Instructors"
+            return count == 1 ? L10n.tr("1 Speaker / Instructor") : L10n.tr("\(count.formatted()) Speakers / Instructors")
         case .recentlyAdded:
-            return count == 1 ? "1 Recent Lesson" : "\(count.formatted()) Recent Lessons"
+            return count == 1 ? L10n.tr("1 Recent Lesson") : L10n.tr("\(count.formatted()) Recent Lessons")
         case .folders:
-            return count == 1 ? "1 Folder" : "\(count.formatted()) Folders"
+            return count == 1 ? L10n.tr("1 Folder") : L10n.tr("\(count.formatted()) Folders")
         }
     }
     
@@ -652,12 +653,12 @@ public struct LanguageStudyView: View {
             }
             .width(min: 26, ideal: 34, max: 44)
             
-            TableColumn("Lesson / Title", value: \.title) { track in
+            TableColumn(L10n.tr("Lesson / Title"), value: \.title) { track in
                 trackTitleCell(track: track, in: displayedTracks)
             }
             .width(min: 160, ideal: 240)
             
-            TableColumn("Speaker / Artist", value: \.artist) { track in
+            TableColumn(L10n.tr("Speaker / Artist"), value: \.artist) { track in
                 Text(track.artist.isEmpty ? "Unknown Speaker" : track.artist)
                     .font(WalkmanFont.callout)
                     .foregroundStyle(Color.white.opacity(0.85))
@@ -665,7 +666,7 @@ public struct LanguageStudyView: View {
             }
             .width(min: 110, ideal: 150)
             
-            TableColumn("Course / Album", value: \.album) { track in
+            TableColumn(L10n.tr("Course / Album"), value: \.album) { track in
                 Text(track.album.isEmpty ? "—" : track.album)
                     .font(WalkmanFont.callout)
                     .foregroundStyle(Color.secondary)
@@ -673,24 +674,24 @@ public struct LanguageStudyView: View {
             }
             .width(min: 110, ideal: 150)
             
-            TableColumn("Location") { track in
+            TableColumn(L10n.tr("Location")) { track in
                 locationBadge(for: track)
             }
             .width(min: 80, ideal: 95, max: 110)
             
-            TableColumn("Format", value: \.format) { track in
+            TableColumn(L10n.tr("Format"), value: \.format) { track in
                 formatBadge(for: track)
             }
             .width(min: 50, ideal: 60, max: 70)
             
-            TableColumn("Duration", value: \.durationSeconds) { track in
+            TableColumn(L10n.tr("Duration"), value: \.durationSeconds) { track in
                 Text(formatDuration(track.durationSeconds))
                     .font(WalkmanFont.monoSmall)
                     .foregroundStyle(Color.white.opacity(0.85))
             }
             .width(min: 50, ideal: 64, max: 80)
             
-            TableColumn("Bitrate", value: \.bitrateKbps) { track in
+            TableColumn(L10n.tr("Bitrate"), value: \.bitrateKbps) { track in
                 Text(track.bitrateKbps > 0 ? "\(track.bitrateKbps)k" : "—")
                     .font(WalkmanFont.monoSmall)
                     .foregroundStyle(Color.secondary)
@@ -718,12 +719,12 @@ public struct LanguageStudyView: View {
             }
             .width(min: 26, ideal: 34, max: 44)
             
-            TableColumn("Lesson / Title", value: \.title) { track in
+            TableColumn(L10n.tr("Lesson / Title"), value: \.title) { track in
                 trackTitleCell(track: track, in: recentlyAddedTracks)
             }
             .width(min: 160, ideal: 240)
             
-            TableColumn("Speaker / Artist", value: \.artist) { track in
+            TableColumn(L10n.tr("Speaker / Artist"), value: \.artist) { track in
                 Text(track.artist.isEmpty ? "Unknown Speaker" : track.artist)
                     .font(WalkmanFont.callout)
                     .foregroundStyle(Color.white.opacity(0.85))
@@ -731,7 +732,7 @@ public struct LanguageStudyView: View {
             }
             .width(min: 110, ideal: 150)
             
-            TableColumn("Course / Album", value: \.album) { track in
+            TableColumn(L10n.tr("Course / Album"), value: \.album) { track in
                 Text(track.album.isEmpty ? "—" : track.album)
                     .font(WalkmanFont.callout)
                     .foregroundStyle(Color.secondary)
@@ -739,31 +740,31 @@ public struct LanguageStudyView: View {
             }
             .width(min: 110, ideal: 150)
             
-            TableColumn("Added") { track in
+            TableColumn(L10n.tr("Added")) { track in
                 Text(formatRelativeDate(track.dateAdded))
                     .font(WalkmanFont.monoSmall)
                     .foregroundStyle(WalkmanTheme.silverLight)
             }
             .width(min: 75, ideal: 95, max: 120)
             
-            TableColumn("Location") { track in
+            TableColumn(L10n.tr("Location")) { track in
                 locationBadge(for: track)
             }
             .width(min: 80, ideal: 95, max: 110)
             
-            TableColumn("Format", value: \.format) { track in
+            TableColumn(L10n.tr("Format"), value: \.format) { track in
                 formatBadge(for: track)
             }
             .width(min: 50, ideal: 60, max: 70)
             
-            TableColumn("Duration", value: \.durationSeconds) { track in
+            TableColumn(L10n.tr("Duration"), value: \.durationSeconds) { track in
                 Text(formatDuration(track.durationSeconds))
                     .font(WalkmanFont.monoSmall)
                     .foregroundStyle(Color.white.opacity(0.85))
             }
             .width(min: 50, ideal: 64, max: 80)
             
-            TableColumn("Bitrate", value: \.bitrateKbps) { track in
+            TableColumn(L10n.tr("Bitrate"), value: \.bitrateKbps) { track in
                 Text(track.bitrateKbps > 0 ? "\(track.bitrateKbps)k" : "—")
                     .font(WalkmanFont.monoSmall)
                     .foregroundStyle(Color.secondary)
@@ -797,7 +798,7 @@ public struct LanguageStudyView: View {
                 TrackCoverThumbnail(track: track, size: 30, isPlaying: isPlayingThis)
             }
             .buttonStyle(.plain)
-            .help(isPlayingThis ? "Pause" : "Play preview")
+            .help(isPlayingThis ? L10n.tr("Pause") : L10n.tr("Play preview"))
             
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 5) {
@@ -809,7 +810,7 @@ public struct LanguageStudyView: View {
                     Image(systemName: "character.book.closed.fill")
                         .font(.system(size: 9))
                         .foregroundStyle(WalkmanTheme.silverMuted)
-                        .help("Language Study Track")
+                        .help(L10n.tr("Language Study Track"))
                 }
                 
                 if !track.artist.isEmpty {
@@ -839,7 +840,7 @@ public struct LanguageStudyView: View {
             Capsule().stroke(Color.white.opacity(isLearningDir ? 0.28 : 0.12), lineWidth: 0.7)
         )
         .foregroundStyle(isLearningDir ? Color.white : WalkmanTheme.silverMuted)
-        .help(isLearningDir ? "Stored in Walkman native /LEARNING/ folder" : "Stored in /MUSIC/ with Language/Audiobook genre")
+        .help(isLearningDir ? L10n.tr("Stored in Walkman native /LEARNING/ folder") : L10n.tr("Stored in /MUSIC/ with Language/Audiobook genre"))
     }
     
     private func formatBadge(for track: Track) -> some View {
@@ -861,7 +862,7 @@ public struct LanguageStudyView: View {
         if let firstId = selection.first, let track = tracks.first(where: { $0.id == firstId }) {
             let isThisPlaying = player.currentTrack?.id == track.id && player.isPlaying
             
-            Button(isThisPlaying ? "Pause Playback" : "Play Preview") {
+            Button(isThisPlaying ? L10n.tr("Pause Playback") : L10n.tr("Play Preview")) {
                 self.selectedTrackId = track.id
                 if isThisPlaying {
                     player.pause()
@@ -882,7 +883,7 @@ public struct LanguageStudyView: View {
                     }
                 }
             } label: {
-                Label(selection.count > 1 ? "Edit Metadata for \(selection.count) Lessons..." : "Edit Metadata...", systemImage: "pencil")
+                Label(selection.count > 1 ? L10n.tr("Edit Metadata for \(selection.count) Lessons...") : L10n.tr("Edit Metadata..."), systemImage: "pencil")
             }
             
             Button {
@@ -891,7 +892,7 @@ public struct LanguageStudyView: View {
                     onTrimCutTrack(first)
                 }
             } label: {
-                Label("Trim / Cut Audio...", systemImage: "scissors")
+                Label(L10n.tr("Trim / Cut Audio..."), systemImage: "scissors")
             }
             
             Divider()
@@ -900,7 +901,7 @@ public struct LanguageStudyView: View {
                 let fileURLs = sourceList.filter { selection.contains($0.id) }.map { URL(fileURLWithPath: $0.fullPath) }
                 NSWorkspace.shared.activateFileViewerSelecting(fileURLs)
             } label: {
-                Label("Reveal in Finder", systemImage: "folder")
+                Label(L10n.tr("Reveal in Finder"), systemImage: "folder")
             }
             
             Button {
@@ -908,7 +909,7 @@ public struct LanguageStudyView: View {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(paths, forType: .string)
             } label: {
-                Label("Copy File Path", systemImage: "doc.on.doc")
+                Label(L10n.tr("Copy File Path"), systemImage: "doc.on.doc")
             }
             
             Divider()
@@ -919,7 +920,7 @@ public struct LanguageStudyView: View {
                     onDeleteTrack?(tr)
                 }
             } label: {
-                Label(selection.count > 1 ? "Delete \(selection.count) Lessons from Walkman" : "Delete from Walkman", systemImage: "trash")
+                Label(selection.count > 1 ? L10n.tr("Delete \(selection.count) Lessons from Walkman") : L10n.tr("Delete from Walkman"), systemImage: "trash")
             }
         }
     }
@@ -934,7 +935,7 @@ public struct LanguageStudyView: View {
         let folderCount = folders.count
         let trackCount = displayedTracks.count
         let suffix = folderCount == 1 ? "" : "s"
-        let subtitleText = "\(folderCount) folder\(suffix) indexed • \(trackCount) total lessons • \(formatBytes(totalFolderBytes)) storage"
+        let subtitleText = L10n.tr("\(folderCount) folder\(suffix) indexed • \(trackCount) total lessons • \(formatBytes(totalFolderBytes)) storage")
 
         return ScrollView {
             VStack(spacing: 12) {
@@ -950,7 +951,7 @@ public struct LanguageStudyView: View {
                     }
                     
                     VStack(alignment: .leading, spacing: 3) {
-                        Text("Language Study Folders on Walkman")
+                        Text(L10n.tr("Language Study Folders on Walkman"))
                             .font(.system(size: 14.5, weight: .bold))
                             .foregroundStyle(.white)
                         Text(subtitleText)
@@ -971,7 +972,7 @@ public struct LanguageStudyView: View {
                         }) {
                             HStack(spacing: 6) {
                                 Image(systemName: "folder")
-                                Text("Open in Finder")
+                                Text(L10n.tr("Open in Finder"))
                             }
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(.white)
@@ -1032,11 +1033,11 @@ public struct LanguageStudyView: View {
             }
             
             VStack(spacing: 6) {
-                Text("No Language Study Tracks Found")
+                Text(L10n.tr("No Language Study Tracks Found"))
                     .font(WalkmanFont.title2)
                     .foregroundStyle(Color.white)
                 
-                Text("Sony Walkman devices feature a dedicated Language Study player mode with quick replay (-3s, +10s), A-B repeat, and speed control.\n\nTracks transferred to the Walkman's root /LEARNING folder or tagged with Language, Audiobook, or Podcast genres will appear here.")
+                Text(L10n.tr("Sony Walkman devices feature a dedicated Language Study player mode with quick replay (-3s, +10s), A-B repeat, and speed control.\n\nTracks transferred to the Walkman's root /LEARNING folder or tagged with Language, Audiobook, or Podcast genres will appear here."))
                     .font(WalkmanFont.bodyMedium)
                     .foregroundStyle(WalkmanTheme.silverMuted)
                     .multilineTextAlignment(.center)
@@ -1048,7 +1049,7 @@ public struct LanguageStudyView: View {
                     Button(action: onNavigateToTransfer) {
                         HStack(spacing: 6) {
                             Image(systemName: "arrow.right.circle.fill")
-                            Text("Transfer Audiobooks & Lessons...")
+                            Text(L10n.tr("Transfer Audiobooks & Lessons..."))
                         }
                         .font(WalkmanFont.calloutMedium)
                         .padding(.horizontal, 16)
@@ -1068,7 +1069,7 @@ public struct LanguageStudyView: View {
                     }) {
                         HStack(spacing: 6) {
                             Image(systemName: "folder")
-                            Text("Open /LEARNING in Finder")
+                            Text(L10n.tr("Open /LEARNING in Finder"))
                         }
                         .font(WalkmanFont.calloutMedium)
                         .padding(.horizontal, 16)
@@ -1093,11 +1094,11 @@ public struct LanguageStudyView: View {
                 .font(.system(size: 32))
                 .foregroundStyle(WalkmanTheme.silverMuted)
             
-            Text("No Lessons Match Filters")
+            Text(L10n.tr("No Lessons Match Filters"))
                 .font(WalkmanFont.title3)
                 .foregroundStyle(Color.white)
             
-            Text("Try clearing the search query or selecting \"All Lessons\" in the filter menu.")
+            Text(L10n.tr("Try clearing the search query or selecting \"All Lessons\" in the filter menu."))
                 .font(WalkmanFont.subheadline)
                 .foregroundStyle(WalkmanTheme.silverMuted)
             
@@ -1105,7 +1106,7 @@ public struct LanguageStudyView: View {
                 searchQuery = ""
                 formatFilter = "ALL"
             }) {
-                Text("Clear Search & Filters")
+                Text(L10n.tr("Clear Search & Filters"))
                     .font(WalkmanFont.calloutMedium)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 6)
@@ -1144,6 +1145,7 @@ public struct LanguageStudyView: View {
 // MARK: - Liquid Glass Display Mode Segmented Control
 
 private struct LanguageStudyDisplayModeSegmentedControl: View {
+    @ObservedObject private var localization = AppLocalization.shared
     @Binding var displayMode: LanguageStudyDisplayMode
     @Namespace private var highlightNamespace
     @State private var activeHighlightId: LanguageStudyDisplayMode = .tracks
@@ -1184,6 +1186,7 @@ private struct LanguageStudyDisplayModeSegmentedControl: View {
 }
 
 private struct LanguageStudyDisplayModePillView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let mode: LanguageStudyDisplayMode
     let isSelected: Bool
     let namespace: Namespace.ID
@@ -1196,7 +1199,7 @@ private struct LanguageStudyDisplayModePillView: View {
             HStack(spacing: 6) {
                 Image(systemName: mode.icon)
                     .font(.system(size: 11.5, weight: isSelected ? .bold : .medium))
-                Text(mode.rawValue)
+                Text(L10n.lookup(mode.rawValue))
                     .font(.system(size: 12.5, weight: isSelected ? .semibold : .regular))
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
@@ -1245,6 +1248,7 @@ private struct LanguageStudyDisplayModePillView: View {
 // MARK: - Liquid Glass Filter & Sort Dropdown
 
 private struct LanguageStudyFilterDropdown: View {
+    @ObservedObject private var localization = AppLocalization.shared
     @Binding var formatFilter: String
     @Binding var sortOption: LanguageStudySortOption
     let filterOptions: [FilterOption]
@@ -1269,7 +1273,7 @@ private struct LanguageStudyFilterDropdown: View {
     
     var body: some View {
         Menu {
-            Section("Format & Category") {
+            Section(L10n.tr("Format & Category")) {
                 ForEach(filterOptions) { opt in
                     Button {
                         formatFilter = opt.id
@@ -1288,7 +1292,7 @@ private struct LanguageStudyFilterDropdown: View {
                 }
             }
             
-            Section("Sort By") {
+            Section(L10n.tr("Sort By")) {
                 ForEach(LanguageStudySortOption.allCases) { opt in
                     Button {
                         sortOption = opt
@@ -1309,7 +1313,7 @@ private struct LanguageStudyFilterDropdown: View {
                     formatFilter = "ALL"
                     sortOption = .titleAZ
                 } label: {
-                    Label("Reset Filter & Sort", systemImage: "arrow.counterclockwise")
+                    Label(L10n.tr("Reset Filter & Sort"), systemImage: "arrow.counterclockwise")
                 }
             }
         } label: {
@@ -1378,7 +1382,7 @@ private struct LanguageStudyFilterDropdown: View {
         .menuIndicator(.hidden)
         .buttonStyle(.plain)
         .contentShape(Circle())
-        .help("Filter & Sort: \(activeFilterTitle) • \(sortOption.title)")
+        .help(L10n.tr("Filter & Sort: \(activeFilterTitle) • \(sortOption.title)"))
         .onHover { hovering in
             guard isHovered != hovering else { return }
             isHovered = hovering
@@ -1402,6 +1406,7 @@ private struct LanguageStudyFilterDropdown: View {
 // MARK: - Folder Row Card Subview
 
 fileprivate struct LanguageStudyFolderCard: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let folder: LanguageStudyFolder
     let onPlay: () -> Void
     let onViewLessons: () -> Void
@@ -1437,7 +1442,7 @@ fileprivate struct LanguageStudyFolderCard: View {
                     }
                 }
                 
-                Text("\(folder.trackCount) lesson\(folder.trackCount == 1 ? "" : "s") • \(formatDuration(folder.totalDuration)) • \(formatBytes(folder.totalBytes))")
+                Text(L10n.tr("\(folder.trackCount) lesson\(L10n.pluralSuffix(folder.trackCount)) • \(formatDuration(folder.totalDuration)) • \(formatBytes(folder.totalBytes))"))
                     .font(.system(size: 11.5))
                     .foregroundStyle(WalkmanTheme.silverMuted)
                 
@@ -1454,7 +1459,7 @@ fileprivate struct LanguageStudyFolderCard: View {
                     HStack(spacing: 5) {
                         Image(systemName: "play.fill")
                             .font(.system(size: 10))
-                        Text("Play Folder")
+                        Text(L10n.tr("Play Folder"))
                     }
                     .font(.system(size: 11.5, weight: .semibold))
                     .foregroundStyle(Color(red: 20/255, green: 20/255, blue: 24/255))
@@ -1466,7 +1471,7 @@ fileprivate struct LanguageStudyFolderCard: View {
                 .buttonStyle(.plain)
                 
                 Button(action: onViewLessons) {
-                    Text("View Lessons")
+                    Text(L10n.tr("View Lessons"))
                         .font(.system(size: 11.5, weight: .medium))
                         .foregroundStyle(WalkmanTheme.silverLight)
                         .padding(.horizontal, 10)
@@ -1486,7 +1491,7 @@ fileprivate struct LanguageStudyFolderCard: View {
                         .clipShape(Circle())
                 }
                 .buttonStyle(.plain)
-                .help("Reveal in Finder")
+                .help(L10n.tr("Reveal in Finder"))
             }
         }
         .padding(.horizontal, 14)

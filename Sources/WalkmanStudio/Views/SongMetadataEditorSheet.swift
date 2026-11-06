@@ -2,6 +2,7 @@ import SwiftUI
 import AppKit
 
 public struct SongMetadataEditorSheet: View {
+    @ObservedObject private var localization = AppLocalization.shared
     @State private var track: Track
     @State private var trackList: [Track]
     let onSaved: () -> Void
@@ -63,7 +64,8 @@ public struct SongMetadataEditorSheet: View {
     @State private var isSaving: Bool = false
     @State private var statusMessage: String? = nil
     @State private var isError: Bool = false
-    @State private var isFetchingOnlineInfo: Bool = false
+    @StateObject private var metadataLookup = OnlineMetadataLookup()
+    private var isFetchingOnlineInfo: Bool { metadataLookup.isSearching }
     @State private var showTrimCutSheet: Bool = false
     @State private var showPermissionSheet: Bool = false
     @State private var isPermissionError: Bool = false
@@ -207,7 +209,7 @@ public struct SongMetadataEditorSheet: View {
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
         panel.allowedContentTypes = [.image, .jpeg, .png]
-        panel.prompt = "Choose Artwork"
+        panel.prompt = L10n.tr("Choose Artwork")
         if panel.runModal() == .OK, let url = panel.url, let data = try? Data(contentsOf: url) {
             handleNewImageData(data)
         }
@@ -250,10 +252,10 @@ public struct SongMetadataEditorSheet: View {
             } else {
                 await MainActor.run {
                     self.isFetchingOnlineArt = false
-                    self.statusMessage = "No online artwork found"
+                    self.statusMessage = L10n.tr("No online artwork found")
                     self.isError = true
                     DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                        if self.statusMessage == "No online artwork found" { self.statusMessage = nil }
+                        if self.statusMessage == L10n.tr("No online artwork found") { self.statusMessage = nil }
                     }
                 }
             }
@@ -262,48 +264,26 @@ public struct SongMetadataEditorSheet: View {
 
     private func fetchOnlineMetadataInfo() {
         guard !isFetchingOnlineInfo else { return }
-        isFetchingOnlineInfo = true
-
         let searchTitle = title.isEmpty ? track.title : title
         let searchArtist = artist.isEmpty ? track.artist : artist
         let searchAlbum = album.isEmpty ? track.album : album
         let filename = track.filename
-
-        Task {
-            if let meta = await OnlineMetadataService.shared.fetchMetadata(
-                filename: filename,
-                currentTitle: searchTitle,
-                currentArtist: searchArtist,
-                currentAlbum: searchAlbum
-            ) {
-                await MainActor.run {
-                    if !meta.title.isEmpty { self.title = meta.title }
-                    if !meta.artist.isEmpty { self.artist = meta.artist }
-                    if !meta.album.isEmpty { self.album = meta.album }
-                    if !meta.trackNumber.isEmpty && self.trackNumber.isEmpty { self.trackNumber = meta.trackNumber }
-                    if !meta.year.isEmpty { self.year = meta.year }
-                    if !meta.genre.isEmpty { self.genre = meta.genre }
-                    if let artData = meta.artworkData, self.coverData == nil || self.coverData?.isEmpty == true {
-                        self.handleNewImageData(artData)
-                    }
-                    self.isFetchingOnlineInfo = false
-                    self.statusMessage = "Metadata matched from \(meta.source)"
-                    self.isError = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
-                        if self.statusMessage?.contains("matched from") == true { self.statusMessage = nil }
-                    }
-                }
-            } else {
-                await MainActor.run {
-                    self.isFetchingOnlineInfo = false
-                    self.statusMessage = "No online metadata found"
-                    self.isError = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                        if self.statusMessage == "No online metadata found" { self.statusMessage = nil }
-                    }
-                }
+        metadataLookup.search(filename: filename, title: searchTitle, artist: searchArtist, album: searchAlbum, onMatch: { meta in
+            if !meta.title.isEmpty { self.title = meta.title }
+            if !meta.artist.isEmpty { self.artist = meta.artist }
+            if !meta.album.isEmpty { self.album = meta.album }
+            if !meta.trackNumber.isEmpty && self.trackNumber.isEmpty { self.trackNumber = meta.trackNumber }
+            if !meta.year.isEmpty { self.year = meta.year }
+            if !meta.genre.isEmpty { self.genre = meta.genre }
+            if let artData = meta.artworkData, self.coverData == nil || self.coverData?.isEmpty == true {
+                self.handleNewImageData(artData)
             }
-        }
+            self.statusMessage = L10n.tr("Metadata matched from \(meta.source)")
+            self.isError = false
+        }, onNotFound: {
+            self.statusMessage = L10n.tr("No online metadata found")
+            self.isError = true
+        })
     }
 
     private func fetchLyricsOnline() {
@@ -331,7 +311,7 @@ public struct SongMetadataEditorSheet: View {
                     self.lyrics = result.lyrics
                     self.isLyricsModified = true
                     self.isFetchingLyrics = false
-                    self.lyricsStatusMessage = result.synced ? "Synced .LRC found!" : "Lyrics found!"
+                    self.lyricsStatusMessage = result.synced ? L10n.tr("Synced .LRC found!") : L10n.tr("Lyrics found!")
 
                     DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
                         self.lyricsStatusMessage = nil
@@ -340,7 +320,7 @@ public struct SongMetadataEditorSheet: View {
             } catch {
                 await MainActor.run {
                     self.isFetchingLyrics = false
-                    self.lyricsErrorMessage = "No lyrics found online"
+                    self.lyricsErrorMessage = L10n.tr("No lyrics found online")
 
                     DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
                         self.lyricsErrorMessage = nil
@@ -353,7 +333,7 @@ public struct SongMetadataEditorSheet: View {
     private func analyzeSongSenseMe() {
         guard !isAnalyzingSenseMe else { return }
         isAnalyzingSenseMe = true
-        statusMessage = "Analyzing 12 Tone acoustic features..."
+        statusMessage = L10n.tr("Analyzing 12 Tone acoustic features...")
         isError = false
         let url = URL(fileURLWithPath: track.fullPath)
 
@@ -365,7 +345,7 @@ public struct SongMetadataEditorSheet: View {
                     self.senseMeInfo = info
                     self.isSenseMeAnalyzed = true
                     self.isAnalyzingSenseMe = false
-                    self.statusMessage = "12 Tone metadata injected successfully!"
+                    self.statusMessage = L10n.tr("12 Tone metadata injected successfully!")
                     self.isError = false
                     
                     var updatedTrack = self.track
@@ -384,7 +364,7 @@ public struct SongMetadataEditorSheet: View {
                     )
 
                     DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
-                        if self.statusMessage == "12 Tone metadata injected successfully!" {
+                        if self.statusMessage == L10n.tr("12 Tone metadata injected successfully!") {
                             self.statusMessage = nil
                         }
                     }
@@ -392,7 +372,7 @@ public struct SongMetadataEditorSheet: View {
             } catch {
                 await MainActor.run {
                     self.isAnalyzingSenseMe = false
-                    self.statusMessage = "SenseMe analysis failed: \(error.localizedDescription)"
+                    self.statusMessage = L10n.tr("SenseMe analysis failed: \(error.localizedDescription)")
                     self.isError = true
                 }
             }
@@ -402,7 +382,7 @@ public struct SongMetadataEditorSheet: View {
     private func saveAllChanges(dismissOnSuccess: Bool = true, onCompletion: (() -> Void)? = nil) {
         guard !isSaving else { return }
         isSaving = true
-        statusMessage = "Saving tags & artwork to Walkman..."
+        statusMessage = L10n.tr("Saving tags & artwork to Walkman...")
         isError = false
 
         let currentTrack = self.track
@@ -488,7 +468,7 @@ public struct SongMetadataEditorSheet: View {
 
                 await MainActor.run {
                     self.isSaving = false
-                    self.statusMessage = "Saved successfully!"
+                    self.statusMessage = L10n.tr("Saved successfully!")
                     self.isError = false
                     self.track = updatedTrack
                     if let idx = self.trackList.firstIndex(where: { $0.id == updatedTrack.id }) {
@@ -517,10 +497,10 @@ public struct SongMetadataEditorSheet: View {
                     let isPerm = WalkmanStoragePermissionHelper.isPermissionError(error)
                     self.isPermissionError = isPerm
                     if isPerm {
-                        self.statusMessage = "Storage permission required to edit file."
+                        self.statusMessage = L10n.tr("Storage permission required to edit file.")
                         self.showPermissionSheet = true
                     } else {
-                        self.statusMessage = "Error saving: \(error.localizedDescription)"
+                        self.statusMessage = L10n.tr("Error saving: \(error.localizedDescription)")
                     }
                     self.isError = true
                 }
@@ -585,6 +565,7 @@ public struct SongMetadataEditorSheet: View {
         }
         .frame(minWidth: 960, idealWidth: 1040, maxWidth: 1160, minHeight: 660, idealHeight: 740, maxHeight: 860)
         .modalGlassChassis(cornerRadius: 16)
+        .onlineMetadataPicker(metadataLookup, identity: track.id)
         .sheet(isPresented: $showTrimCutSheet) {
             TrimAndCutSheet(
                 track: track,
@@ -625,12 +606,12 @@ public struct SongMetadataEditorSheet: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 8) {
-                    Text("Song Metadata Editor")
+                    Text(L10n.tr("Song Metadata Editor"))
                         .font(WalkmanFont.title3)
                         .foregroundStyle(.white)
 
                     if trackList.count > 1 {
-                        Text("\(currentIndex + 1) of \(trackList.count)")
+                        Text(L10n.tr("\(currentIndex + 1) of \(trackList.count)"))
                             .font(.system(size: 11, weight: .semibold, design: .monospaced))
                             .foregroundStyle(WalkmanTheme.silverLight)
                             .padding(.horizontal, 8)
@@ -717,7 +698,7 @@ public struct SongMetadataEditorSheet: View {
                     Text("•")
                         .foregroundStyle(Color.white.opacity(0.20))
 
-                    Text(track.bitrateKbps > 0 ? "\(track.bitrateKbps) kbps" : "Lossless")
+                    Text(track.bitrateKbps > 0 ? "\(track.bitrateKbps) kbps" : L10n.tr("Lossless"))
                         .font(WalkmanFont.monoSmall)
                         .foregroundStyle(WalkmanTheme.silverMuted)
                 }
@@ -738,7 +719,7 @@ public struct SongMetadataEditorSheet: View {
                     HStack(spacing: 6) {
                         Image(systemName: isThisPlaying ? "pause.fill" : "play.fill")
                             .font(.system(size: 11.5, weight: .bold))
-                        Text(isThisPlaying ? "Playing" : "Preview")
+                        Text(isThisPlaying ? L10n.tr("Playing") : L10n.tr("Preview"))
                             .font(WalkmanFont.calloutBold)
                     }
                     .foregroundStyle(isThisPlaying ? Color(red: 20/255, green: 20/255, blue: 24/255) : WalkmanTheme.silverLight)
@@ -751,7 +732,7 @@ public struct SongMetadataEditorSheet: View {
                     HStack(spacing: 6) {
                         Image(systemName: "scissors")
                             .font(.system(size: 11.5, weight: .bold))
-                        Text("Trim & Cut...")
+                        Text(L10n.tr("Trim & Cut..."))
                             .font(WalkmanFont.calloutBold)
                     }
                     .foregroundStyle(WalkmanTheme.silverLight)
@@ -773,7 +754,7 @@ public struct SongMetadataEditorSheet: View {
             // Song Tags & Metadata Card
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    Text("SONG TAGS & METADATA")
+                    Text(L10n.tr("SONG TAGS & METADATA"))
                         .font(WalkmanFont.sectionHeader)
                         .foregroundStyle(.tertiary)
 
@@ -781,26 +762,26 @@ public struct SongMetadataEditorSheet: View {
 
                     LiquidGlassActionButton(
                         icon: isFetchingOnlineInfo ? "arrow.triangle.2.circlepath" : "sparkles",
-                        label: isFetchingOnlineInfo ? "Matching..." : "Auto-Fill Online Info",
+                        label: isFetchingOnlineInfo ? L10n.tr("Matching...") : L10n.tr("Auto-Fill Online Info"),
                         isDisabled: isFetchingOnlineInfo,
                         action: fetchOnlineMetadataInfo
                     )
-                    .help("Query iTunes and Deezer databases to auto-populate title, artist, album, year, and genre")
+                    .help(L10n.tr("Query iTunes and Deezer databases to auto-populate title, artist, album, year, and genre"))
                 }
 
                 // Input Fields Grid
                 VStack(spacing: 10) {
-                    EditorField(label: "Title", text: $title)
+                    EditorField(label: L10n.tr("Title"), text: $title)
 
                     HStack(spacing: 12) {
-                        EditorField(label: "Artist", text: $artist)
-                        EditorField(label: "Album", text: $album)
+                        EditorField(label: L10n.tr("Artist"), text: $artist)
+                        EditorField(label: L10n.tr("Album"), text: $album)
                     }
 
                     HStack(spacing: 12) {
-                        EditorField(label: "Track #", text: $trackNumber)
-                        EditorField(label: "Year", text: $year)
-                        EditorField(label: "Genre", text: $genre)
+                        EditorField(label: L10n.tr("Track #"), text: $trackNumber)
+                        EditorField(label: L10n.tr("Year"), text: $year)
+                        EditorField(label: L10n.tr("Genre"), text: $genre)
                     }
                 }
             }
@@ -819,11 +800,11 @@ public struct SongMetadataEditorSheet: View {
 
                     LiquidGlassActionButton(
                         icon: isAnalyzingSenseMe ? "arrow.triangle.2.circlepath" : "waveform.path.ecg",
-                        label: isAnalyzingSenseMe ? "Analyzing..." : (isSenseMeAnalyzed ? "Re-Analyze SenseMe" : "Analyze SenseMe (12 Tone)"),
+                        label: isAnalyzingSenseMe ? L10n.tr("Analyzing...") : (isSenseMeAnalyzed ? L10n.tr("Re-Analyze SenseMe") : L10n.tr("Analyze SenseMe (12 Tone)")),
                         isDisabled: isAnalyzingSenseMe,
                         action: analyzeSongSenseMe
                     )
-                    .help("Extract 12-Tone chroma, tempo, mood, and channels, then embed hardware-compatible SenseMe metadata")
+                    .help(L10n.tr("Extract 12-Tone chroma, tempo, mood, and channels, then embed hardware-compatible SenseMe metadata"))
                 }
 
                 HStack(spacing: 12) {
@@ -837,10 +818,10 @@ public struct SongMetadataEditorSheet: View {
                     }
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(isSenseMeAnalyzed ? "SenseMe Analyzed" : (isAnalyzingSenseMe ? "Analyzing Acoustic Features..." : "Not Analyzed"))
+                        Text(isSenseMeAnalyzed ? L10n.tr("SenseMe Analyzed") : (isAnalyzingSenseMe ? L10n.tr("Analyzing Acoustic Features...") : L10n.tr("Not Analyzed")))
                             .font(WalkmanFont.bodyBold)
                             .foregroundStyle(isSenseMeAnalyzed ? Color.white : Color.secondary)
-                        Text(isSenseMeAnalyzed ? "12 Tone acoustic metadata is embedded in audio file" : "No 12 Tone metadata embedded in file")
+                        Text(isSenseMeAnalyzed ? L10n.tr("12 Tone acoustic metadata is embedded in audio file") : L10n.tr("No 12 Tone metadata embedded in file"))
                             .font(WalkmanFont.subheadline)
                             .foregroundStyle(isSenseMeAnalyzed ? WalkmanTheme.silverMuted : Color.white.opacity(0.35))
                     }
@@ -860,7 +841,7 @@ public struct SongMetadataEditorSheet: View {
                         .overlay(Capsule().stroke(Color.white.opacity(0.20), lineWidth: 0.8))
                         .foregroundStyle(WalkmanTheme.silverLight)
                     } else if !isAnalyzingSenseMe {
-                        Text("NOT ANALYZED")
+                        Text(L10n.tr("NOT ANALYZED"))
                             .font(WalkmanFont.badge)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
@@ -874,7 +855,7 @@ public struct SongMetadataEditorSheet: View {
 
             // Audio Specs Card
             VStack(alignment: .leading, spacing: 8) {
-                Text("AUDIO PROPERTIES & HARDWARE TAGS")
+                Text(L10n.tr("AUDIO PROPERTIES & HARDWARE TAGS"))
                     .font(WalkmanFont.sectionHeader)
                     .foregroundStyle(.tertiary)
                     .padding(.top, 4)
@@ -882,16 +863,16 @@ public struct SongMetadataEditorSheet: View {
                 VStack(spacing: 8) {
                     HStack(alignment: .top, spacing: 20) {
                         VStack(spacing: 6) {
-                            specLine(label: "Audio Format", value: "\(track.format) (\(track.bitsPerSample)-bit / \(track.sampleRate) Hz)")
-                            specLine(label: "Bitrate", value: track.bitrateKbps > 0 ? "\(track.bitrateKbps) kbps" : "Lossless")
-                            specLine(label: "Duration", value: formatDuration(track.durationSeconds))
+                            specLine(label: L10n.tr("Audio Format"), value: "\(track.format) (\(track.bitsPerSample)-bit / \(track.sampleRate) Hz)")
+                            specLine(label: L10n.tr("Bitrate"), value: track.bitrateKbps > 0 ? "\(track.bitrateKbps) kbps" : "Lossless")
+                            specLine(label: L10n.tr("Duration"), value: formatDuration(track.durationSeconds))
                         }
                         .frame(maxWidth: .infinity)
 
                         VStack(spacing: 6) {
-                            specLine(label: "File Size", value: formatSize(track.sizeBytes))
-                            specLine(label: "Hardware Tags", value: track.format == "MP3" ? "Strict ID3v2.3 (UTF-16)" : "Vorbis Comments")
-                            specLine(label: "File Path", value: track.fullPath, canCopy: true)
+                            specLine(label: L10n.tr("File Size"), value: formatSize(track.sizeBytes))
+                            specLine(label: L10n.tr("Hardware Tags"), value: track.format == "MP3" ? "Strict ID3v2.3 (UTF-16)" : "Vorbis Comments")
+                            specLine(label: L10n.tr("File Path"), value: track.fullPath, canCopy: true)
                         }
                         .frame(maxWidth: .infinity)
                     }
@@ -905,7 +886,7 @@ public struct SongMetadataEditorSheet: View {
     // MARK: - Artwork Tab
     private var artworkTab: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("ALBUM ARTWORK")
+            Text(L10n.tr("ALBUM ARTWORK"))
                 .font(WalkmanFont.sectionHeader)
                 .foregroundStyle(.tertiary)
 
@@ -936,10 +917,10 @@ public struct SongMetadataEditorSheet: View {
                                     Image(systemName: "photo.badge.plus")
                                         .font(.system(size: 38))
                                         .foregroundStyle(WalkmanTheme.silverMuted)
-                                    Text("Drop Artwork Here")
+                                    Text(L10n.tr("Drop Artwork Here"))
                                         .font(WalkmanFont.calloutMedium)
                                         .foregroundStyle(.secondary)
-                                    Text("Or click to select image")
+                                    Text(L10n.tr("Or click to select image"))
                                         .font(WalkmanFont.subheadline)
                                         .foregroundStyle(.tertiary)
                                 }
@@ -961,24 +942,24 @@ public struct SongMetadataEditorSheet: View {
                         }
                         return true
                     }
-                    .help("Click or drag-and-drop to choose album cover art")
+                    .help(L10n.tr("Click or drag-and-drop to choose album cover art"))
                     .contextMenu {
                         if coverImage != nil || coverData != nil {
                             Button(action: exportArtworkToMac) {
-                                Label("Export Cover Art to Mac...", systemImage: "square.and.arrow.down")
+                                Label(L10n.tr("Export Cover Art to Mac..."), systemImage: "square.and.arrow.down")
                             }
                             Divider()
                         }
                         Button(action: selectArtworkFile) {
-                            Label("Choose Image File...", systemImage: "folder")
+                            Label(L10n.tr("Choose Image File..."), systemImage: "folder")
                         }
                         Button(action: fetchOnlineArtwork) {
-                            Label("Fetch Online Cover Art", systemImage: "arrow.down.circle")
+                            Label(L10n.tr("Fetch Online Cover Art"), systemImage: "arrow.down.circle")
                         }
                         if coverImage != nil {
                             Divider()
                             Button(role: .destructive, action: removeArtwork) {
-                                Label("Remove Artwork", systemImage: "trash")
+                                Label(L10n.tr("Remove Artwork"), systemImage: "trash")
                             }
                         }
                     }
@@ -1000,11 +981,11 @@ public struct SongMetadataEditorSheet: View {
                 // Artwork Actions & Information
                 VStack(alignment: .leading, spacing: 12) {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Walkman Hardware Artwork Engine")
+                        Text(L10n.tr("Walkman Hardware Artwork Engine"))
                             .font(WalkmanFont.bodyBold)
                             .foregroundStyle(.white)
 
-                        Text("Sony Walkman display chips require Baseline RGB JPEG format with a maximum resolution of 800×800. Progressive JPEGs and CMYK color profiles freeze the Walkman screen. Walkman Studio automatically converts imported artwork into strict Baseline RGB JPEG.")
+                        Text(L10n.tr("Sony Walkman display chips require Baseline RGB JPEG format with a maximum resolution of 800×800. Progressive JPEGs and CMYK color profiles freeze the Walkman screen. Walkman Studio automatically converts imported artwork into strict Baseline RGB JPEG."))
                             .font(WalkmanFont.callout)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -1016,13 +997,13 @@ public struct SongMetadataEditorSheet: View {
                     VStack(alignment: .leading, spacing: 8) {
                         LiquidGlassActionButton(
                             icon: "folder",
-                            label: "Choose Image File...",
+                            label: L10n.tr("Choose Image File..."),
                             action: selectArtworkFile
                         )
 
                         LiquidGlassActionButton(
                             icon: isFetchingOnlineArt ? "arrow.triangle.2.circlepath" : "arrow.down.circle",
-                            label: isFetchingOnlineArt ? "Searching Online..." : "Fetch Online Cover Art",
+                            label: isFetchingOnlineArt ? L10n.tr("Searching Online...") : L10n.tr("Fetch Online Cover Art"),
                             isDisabled: isFetchingOnlineArt,
                             action: fetchOnlineArtwork
                         )
@@ -1030,7 +1011,7 @@ public struct SongMetadataEditorSheet: View {
                         if coverImage != nil || coverData != nil {
                             LiquidGlassActionButton(
                                 icon: "square.and.arrow.down",
-                                label: "Export Cover Art to Mac...",
+                                label: L10n.tr("Export Cover Art to Mac..."),
                                 action: exportArtworkToMac
                             )
                         }
@@ -1038,7 +1019,7 @@ public struct SongMetadataEditorSheet: View {
                         if coverImage != nil {
                             LiquidGlassActionButton(
                                 icon: "trash",
-                                label: "Remove Artwork",
+                                label: L10n.tr("Remove Artwork"),
                                 isDestructive: true,
                                 action: removeArtwork
                             )
@@ -1047,7 +1028,7 @@ public struct SongMetadataEditorSheet: View {
                         if isCoverArtModified {
                             LiquidGlassActionButton(
                                 icon: "arrow.uturn.backward",
-                                label: "Revert to Original",
+                                label: L10n.tr("Revert to Original"),
                                 action: revertArtwork
                             )
                         }
@@ -1061,7 +1042,7 @@ public struct SongMetadataEditorSheet: View {
     private var lyricsTab: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("SONY WALKMAN .LRC LYRICS")
+                Text(L10n.tr("SONY WALKMAN .LRC LYRICS"))
                     .font(WalkmanFont.sectionHeader)
                     .foregroundStyle(.tertiary)
 
@@ -1076,7 +1057,7 @@ public struct SongMetadataEditorSheet: View {
                         .font(WalkmanFont.monoSmall)
                         .foregroundStyle(Color.orange)
                 } else if !lyricsDraft.isEmpty {
-                    Text(lyricsDraft.contains("[") ? "Synced .LRC" : "Plain Lyrics")
+                    Text(lyricsDraft.contains("[") ? L10n.tr("Synced .LRC") : L10n.tr("Plain Lyrics"))
                         .font(WalkmanFont.badge)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
@@ -1087,7 +1068,7 @@ public struct SongMetadataEditorSheet: View {
 
                 LiquidGlassActionButton(
                     icon: isFetchingLyrics ? "arrow.triangle.2.circlepath" : "arrow.down.circle",
-                    label: isFetchingLyrics ? "Fetching..." : "Fetch Online Lyrics",
+                    label: isFetchingLyrics ? L10n.tr("Fetching...") : L10n.tr("Fetch Online Lyrics"),
                     isDisabled: isFetchingLyrics,
                     action: fetchLyricsOnline
                 )
@@ -1095,7 +1076,7 @@ public struct SongMetadataEditorSheet: View {
                 if !lyricsDraft.isEmpty {
                     LiquidGlassActionButton(
                         icon: "trash",
-                        label: "Clear",
+                        label: L10n.tr("Clear"),
                         isDestructive: true,
                         action: {
                             lyricsDraft = ""
@@ -1124,7 +1105,7 @@ public struct SongMetadataEditorSheet: View {
                 Image(systemName: "info.circle")
                     .font(.system(size: 11))
                     .foregroundStyle(.tertiary)
-                Text("Walkman non-Android OS reads synchronized [mm:ss.xx] lines from .LRC files next to the music file.")
+                Text(L10n.tr("Walkman non-Android OS reads synchronized [mm:ss.xx] lines from .LRC files next to the music file."))
                     .font(WalkmanFont.subheadline)
                     .foregroundStyle(.tertiary)
             }
@@ -1162,7 +1143,7 @@ public struct SongMetadataEditorSheet: View {
                         HStack(spacing: 5) {
                             Image(systemName: "chevron.left")
                                 .font(.system(size: 11, weight: .bold))
-                            Text("Previous")
+                            Text(L10n.tr("Previous"))
                                 .font(WalkmanFont.calloutMedium)
                         }
                         .foregroundStyle(canGoPrevious ? WalkmanTheme.silverLight : WalkmanTheme.silverMuted.opacity(0.35))
@@ -1172,12 +1153,12 @@ public struct SongMetadataEditorSheet: View {
                     .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 18))
                     .disabled(!canGoPrevious || isSaving)
                     .opacity(canGoPrevious ? 1.0 : 0.45)
-                    .help(canGoPrevious ? "Previous Track (⌘[)" : "First Track in Album")
+                    .help(canGoPrevious ? L10n.tr("Previous Track (⌘[)") : L10n.tr("First Track in Album"))
                     .keyboardShortcut("[", modifiers: [.command])
 
                     Button(action: goToNextTrack) {
                         HStack(spacing: 5) {
-                            Text("Next")
+                            Text(L10n.tr("Next"))
                                 .font(WalkmanFont.calloutMedium)
                             Image(systemName: "chevron.right")
                                 .font(.system(size: 11, weight: .bold))
@@ -1189,10 +1170,10 @@ public struct SongMetadataEditorSheet: View {
                     .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 18))
                     .disabled(!canGoNext || isSaving)
                     .opacity(canGoNext ? 1.0 : 0.45)
-                    .help(canGoNext ? "Next Track (⌘])" : "Last Track in Album")
+                    .help(canGoNext ? L10n.tr("Next Track (⌘])") : L10n.tr("Last Track in Album"))
                     .keyboardShortcut("]", modifiers: [.command])
 
-                    Text("\(currentIndex + 1) of \(trackList.count)")
+                    Text(L10n.tr("\(currentIndex + 1) of \(trackList.count)"))
                         .font(.system(size: 11, weight: .semibold, design: .monospaced))
                         .foregroundStyle(WalkmanTheme.silverLight)
                         .padding(.horizontal, 9)
@@ -1224,7 +1205,7 @@ public struct SongMetadataEditorSheet: View {
 
                     if isPermissionError {
                         Button(action: { showPermissionSheet = true }) {
-                            Text("Grant Permission...")
+                            Text(L10n.tr("Grant Permission..."))
                                 .font(WalkmanFont.captionBold)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 3)
@@ -1241,7 +1222,7 @@ public struct SongMetadataEditorSheet: View {
             Spacer()
 
             Button(action: onDismiss) {
-                Text("Cancel")
+                Text(L10n.tr("Cancel"))
                     .font(WalkmanFont.calloutBold)
                     .foregroundStyle(WalkmanTheme.silverLight)
                     .padding(.horizontal, 22)
@@ -1258,11 +1239,11 @@ public struct SongMetadataEditorSheet: View {
                             .controlSize(.small)
                             .scaleEffect(0.65)
                             .frame(width: 14, height: 14)
-                        Text("Saving...")
+                        Text(L10n.tr("Saving..."))
                     } else {
                         Image(systemName: "checkmark")
                             .font(.system(size: 12, weight: .bold))
-                        Text("Save Metadata")
+                        Text(L10n.tr("Save Metadata"))
                     }
                 }
                 .font(WalkmanFont.headline)
@@ -1282,6 +1263,7 @@ public struct SongMetadataEditorSheet: View {
 // MARK: - Subviews & Controls
 
 private struct EditorSegmentedBar: View {
+    @ObservedObject private var localization = AppLocalization.shared
     @Binding var selectedTab: SongMetadataEditorSheet.EditorTab
     @Namespace private var tabNamespace
 
@@ -1311,6 +1293,7 @@ private struct EditorSegmentedBar: View {
 }
 
 private struct EditorTabButton: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let tab: SongMetadataEditorSheet.EditorTab
     let isSelected: Bool
     let namespace: Namespace.ID
@@ -1323,7 +1306,7 @@ private struct EditorTabButton: View {
             HStack(spacing: 6) {
                 Image(systemName: tab.icon)
                     .font(.system(size: 11.5, weight: isSelected ? .bold : .medium))
-                Text(tab.rawValue)
+                Text(L10n.lookup(tab.rawValue))
                     .font(.system(size: 12.5, weight: isSelected ? .bold : .medium))
                     .lineLimit(1)
             }
@@ -1404,6 +1387,7 @@ private struct EditorTabButton: View {
 }
 
 private struct EditorField: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let label: String
     @Binding var text: String
     @State private var isHovered: Bool = false
@@ -1468,6 +1452,7 @@ private struct EditorField: View {
 }
 
 private struct LiquidGlassActionButton: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let icon: String
     let label: String
     var isProminent: Bool = false
@@ -1502,6 +1487,7 @@ private struct LiquidGlassActionButton: View {
 }
 
 private struct SheetCloseButton: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let action: () -> Void
 
     var body: some View {
@@ -1513,11 +1499,12 @@ private struct SheetCloseButton: View {
         }
         .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 14))
         .keyboardShortcut(.cancelAction)
-        .help("Close")
+        .help(L10n.tr("Close"))
     }
 }
 
 private struct CopySpecButton: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let value: String
     @State private var copied: Bool = false
     @State private var isHovered: Bool = false
@@ -1539,7 +1526,7 @@ private struct CopySpecButton: View {
                 Image(systemName: copied ? "checkmark" : "doc.on.doc")
                     .font(.system(size: 9.5))
                 if copied {
-                    Text("Copied")
+                    Text(L10n.tr("Copied"))
                         .font(.system(size: 9.5, weight: .medium))
                 }
             }
@@ -1550,7 +1537,7 @@ private struct CopySpecButton: View {
             .clipShape(RoundedRectangle(cornerRadius: 4))
         }
         .buttonStyle(.plain)
-        .help("Copy to clipboard")
+        .help(L10n.tr("Copy to clipboard"))
         .onHover { h in
             isHovered = h
             if h { NSCursor.pointingHand.set() } else { NSCursor.arrow.set() }

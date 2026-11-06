@@ -37,6 +37,9 @@ else
 fi
 chmod +x "$MACOS_DIR/WalkmanStudio"
 
+# Bundle interface translations for packaged launches (including releases).
+cp -R "$DIR/Sources/WalkmanStudio/Resources/Localization" "$RESOURCES_DIR/Localization"
+
 # Copy App Icon & Device Assets
 if [ -f "$DIR/assets/AppIcon.icns" ]; then
     cp "$DIR/assets/AppIcon.icns" "$RESOURCES_DIR/AppIcon.icns"
@@ -88,6 +91,13 @@ cat << EOF > "$APP_BUNDLE/Contents/Info.plist"
     <string>com.sony.walkmanstudio</string>
     <key>CFBundleName</key>
     <string>Walkman Studio</string>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleLocalizations</key>
+    <array>
+        <string>en</string>
+        <string>zh-Hans</string>
+    </array>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>

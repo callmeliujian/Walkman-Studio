@@ -2,6 +2,7 @@ import SwiftUI
 import AppKit
 
 public struct TrackPreviewBar: View {
+    @ObservedObject private var localization = AppLocalization.shared
     @ObservedObject var player = AudioPlayerService.shared
     var libraryTracks: [Track] = []
     var isInspectorPresented: Bool = false
@@ -95,7 +96,7 @@ public struct TrackPreviewBar: View {
                 systemName: "shuffle",
                 size: 13,
                 isActive: player.isShuffle,
-                helpText: player.isShuffle ? "Shuffle: On" : "Shuffle: Off",
+                helpText: player.isShuffle ? L10n.tr("Shuffle: On") : L10n.tr("Shuffle: Off"),
                 action: { player.isShuffle.toggle() }
             )
 
@@ -105,7 +106,7 @@ public struct TrackPreviewBar: View {
                 size: 14.5,
                 isActive: false,
                 isDisabled: player.currentTrack == nil && libraryTracks.isEmpty && player.effectiveQueue.isEmpty,
-                helpText: "Previous track (F7 or Cmd+Left)",
+                helpText: L10n.tr("Previous track (F7 or Cmd+Left)"),
                 action: { player.playPrevious() }
             )
 
@@ -128,7 +129,7 @@ public struct TrackPreviewBar: View {
                 size: 14.5,
                 isActive: false,
                 isDisabled: player.currentTrack == nil && libraryTracks.isEmpty && player.effectiveQueue.isEmpty,
-                helpText: "Next track (F9 or Cmd+Right)",
+                helpText: L10n.tr("Next track (F9 or Cmd+Right)"),
                 action: { player.playNext() }
             )
 
@@ -137,7 +138,7 @@ public struct TrackPreviewBar: View {
                 systemName: "repeat",
                 size: 13,
                 isActive: player.isRepeat,
-                helpText: player.isRepeat ? "Repeat: On" : "Repeat: Off",
+                helpText: player.isRepeat ? L10n.tr("Repeat: On") : L10n.tr("Repeat: Off"),
                 action: { player.isRepeat.toggle() }
             )
         }
@@ -214,7 +215,7 @@ public struct TrackPreviewBar: View {
                 .animation(.spring(response: 0.22, dampingFraction: 0.72), value: isArtworkHovered)
             }
             .buttonStyle(.plain)
-            .help("Click to view full metadata details & artwork")
+            .help(L10n.tr("Click to view full metadata details & artwork"))
             .onHover { h in
                 isArtworkHovered = h
                 if h { NSCursor.pointingHand.set() } else { NSCursor.arrow.set() }
@@ -339,7 +340,7 @@ public struct TrackPreviewBar: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(TactilePlayerButtonStyle())
-        .help("Full Screen Player (Artwork & Live Lyrics)")
+        .help(L10n.tr("Full Screen Player (Artwork & Live Lyrics)"))
         .onHover { h in
             isEnlargeHovered = h
             if h { NSCursor.pointingHand.set() } else { NSCursor.arrow.set() }
@@ -415,8 +416,8 @@ public struct TrackPreviewBar: View {
             .buttonStyle(TactilePlayerButtonStyle())
             .help(
                 isVolumeExpanded
-                    ? (player.volume <= 0.001 ? "Unmute" : "Close Volume Slider (⌥+Click to Mute)")
-                    : "Adjust Volume (Click to expand, ⌥+Click to Mute)"
+                    ? (player.volume <= 0.001 ? L10n.tr("Unmute") : L10n.tr("Close Volume Slider (⌥+Click to Mute)"))
+                    : L10n.tr("Adjust Volume (Click to expand, ⌥+Click to Mute)")
             )
             .onHover { h in
                 isVolumeSpeakerHovered = h
@@ -495,6 +496,7 @@ struct TactilePlayerButtonStyle: ButtonStyle {
 }
 
 private struct VolumeCapsuleSlider: View {
+    @ObservedObject private var localization = AppLocalization.shared
     @Binding var volume: Float
     let totalWidth: CGFloat = 82
     let trackHeight: CGFloat = 6
@@ -539,6 +541,7 @@ private struct VolumeCapsuleSlider: View {
 }
 
 private struct LiquidGlassPlayerButton: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let systemName: String
     let size: CGFloat
     let isActive: Bool
@@ -604,6 +607,7 @@ private struct LiquidGlassPlayerButton: View {
 }
 
 private struct PlayPauseCircleButton: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let isPlaying: Bool
     let isEnabled: Bool
     let action: () -> Void
@@ -656,7 +660,7 @@ private struct PlayPauseCircleButton: View {
         .buttonStyle(TactilePlayerButtonStyle())
         .disabled(!isEnabled)
         .keyboardShortcut(.space, modifiers: [])
-        .help(isPlaying ? "Pause (Space)" : "Play (Space)")
+        .help(isPlaying ? L10n.tr("Pause (Space)") : L10n.tr("Play (Space)"))
         .onHover { h in
             guard isEnabled else { return }
             isHovered = h
@@ -673,6 +677,7 @@ private struct PlayPauseCircleButton: View {
 
 // MARK: - Isolated High-Frequency Scrubber Row
 private struct TrackScrubberRow: View {
+    @ObservedObject private var localization = AppLocalization.shared
     @ObservedObject var progress = AudioPlayerService.shared.progress
     let isHiRes: Bool
     let onSeek: (Double) -> Void

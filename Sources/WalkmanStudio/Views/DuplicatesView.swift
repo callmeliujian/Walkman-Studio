@@ -11,6 +11,7 @@ public enum DuplicateSortOption: String, CaseIterable, Identifiable {
 }
 
 public struct DuplicatesView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let drives: [WalkmanDrive]
     var onEditTrack: ((Track) -> Void)? = nil
     var onLibraryChanged: (() -> Void)? = nil
@@ -117,7 +118,7 @@ public struct DuplicatesView: View {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundStyle(Color.orange)
                         .font(.system(size: 13))
-                    Text("Cross-Album Mode: Tracks appearing across different releases (Studio Albums, Singles, Greatest Hits, Compilations) are displayed. Deleting tracks may result in incomplete albums.")
+                    Text(L10n.tr("Cross-Album Mode: Tracks appearing across different releases (Studio Albums, Singles, Greatest Hits, Compilations) are displayed. Deleting tracks may result in incomplete albums."))
                         .font(WalkmanFont.callout)
                         .foregroundStyle(WalkmanTheme.silver)
                     Spacer()
@@ -209,7 +210,7 @@ public struct DuplicatesView: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 8) {
-                    Text("Duplicate Tracks")
+                    Text(L10n.tr("Duplicate Tracks"))
                         .font(WalkmanFont.title1)
                         .foregroundStyle(.white)
                         .lineLimit(1)
@@ -219,7 +220,7 @@ public struct DuplicatesView: View {
                             Image(systemName: "square.stack.3d.down.right.fill")
                                 .font(.system(size: 10, weight: .semibold))
                                 .foregroundStyle(WalkmanTheme.silverMuted)
-                            Text(finder.duplicateGroups.count == 1 ? "1 Group" : "\(finder.duplicateGroups.count) Groups")
+                            Text(finder.duplicateGroups.count == 1 ? L10n.tr("1 Group") : L10n.tr("\(finder.duplicateGroups.count) Groups"))
                                 .font(.system(size: 11.5, weight: .medium, design: .monospaced))
                                 .foregroundStyle(WalkmanTheme.silverLight)
                                 .lineLimit(1)
@@ -250,7 +251,7 @@ public struct DuplicatesView: View {
                     }
                 }
 
-                Text("Detect and clean redundant duplicate tracks on the same storage.")
+                Text(L10n.tr("Detect and clean redundant duplicate tracks on the same storage."))
                     .font(WalkmanFont.callout)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
@@ -263,7 +264,7 @@ public struct DuplicatesView: View {
             // Recoverable space metric
             MetricPill(
                 icon: "internaldrive.badge.arrow.down",
-                label: "Recoverable",
+                label: L10n.tr("Recoverable"),
                 value: formatBytes(finder.totalRecoverableBytes),
                 accentColor: finder.totalRecoverableBytes > 0 ? Color.green : WalkmanTheme.silverMuted
             )
@@ -279,7 +280,7 @@ public struct DuplicatesView: View {
                         .font(.system(size: 13, weight: .bold))
                         .rotationEffect(.degrees(finder.isScanning ? 360 : 0))
                         .animation(finder.isScanning ? Animation.linear(duration: 1).repeatForever(autoreverses: false) : .default, value: finder.isScanning)
-                    Text(finder.isScanning ? "Scanning..." : "Rescan")
+                    Text(finder.isScanning ? L10n.tr("Scanning...") : L10n.tr("Rescan"))
                         .font(.system(size: 13, weight: .bold))
                         .lineLimit(1)
                 }
@@ -300,13 +301,13 @@ public struct DuplicatesView: View {
         [
             DuplicateFilterItem(
                 filter: .sameDrive,
-                title: "Same Storage",
+                title: L10n.tr("Same Storage"),
                 count: finder.duplicateGroups.count,
                 tint: nil
             ),
             DuplicateFilterItem(
                 filter: .qualityDifference,
-                title: "Quality Diff",
+                title: L10n.tr("Quality Diff"),
                 count: finder.qualityDifferenceCount,
                 tint: Color.cyan
             )
@@ -443,11 +444,11 @@ public struct DuplicatesView: View {
                 .tint(WalkmanTheme.silver)
 
             VStack(spacing: 6) {
-                Text("Analyzing Library for Duplicates")
+                Text(L10n.tr("Analyzing Library for Duplicates"))
                     .font(WalkmanFont.title3)
                     .foregroundStyle(.white)
 
-                Text("Comparing audio tags, duration, and file sizes across Internal Flash and MicroSD expansion...")
+                Text(L10n.tr("Comparing audio tags, duration, and file sizes across Internal Flash and MicroSD expansion..."))
                     .font(WalkmanFont.callout)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -472,11 +473,11 @@ public struct DuplicatesView: View {
             }
 
             VStack(spacing: 6) {
-                Text("No Duplicates Found")
+                Text(L10n.tr("No Duplicates Found"))
                     .font(WalkmanFont.title2)
                     .foregroundStyle(.white)
 
-                Text("Your Sony Walkman library is completely clean. No duplicate tracks detected across Internal Storage and MicroSD expansion.")
+                Text(L10n.tr("Your Sony Walkman library is completely clean. No duplicate tracks detected across Internal Storage and MicroSD expansion."))
                     .font(WalkmanFont.callout)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -494,15 +495,15 @@ public struct DuplicatesView: View {
                 .font(.system(size: 36))
                 .foregroundStyle(.secondary)
 
-            Text("No Duplicates Match Current Filter")
+            Text(L10n.tr("No Duplicates Match Current Filter"))
                 .font(WalkmanFont.title3)
                 .foregroundStyle(.white)
 
-            Text("Try selecting a different filter tab above.")
+            Text(L10n.tr("Try selecting a different filter tab above."))
                 .font(WalkmanFont.callout)
                 .foregroundStyle(.secondary)
 
-            Button("Reset Filters") {
+            Button(L10n.tr("Reset Filters")) {
                 selectedFilter = .all
             }
             .font(WalkmanFont.calloutMedium)
@@ -550,6 +551,7 @@ public struct DuplicatesView: View {
 
 // MARK: - Duplicate Group Card
 private struct DuplicateGroupCard: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let group: DuplicateGroup
     let onPreview: (DuplicateTrackItem) -> Void
     let onKeepOnly: (DuplicateTrackItem) -> Void
@@ -730,12 +732,12 @@ private struct DuplicateGroupCard: View {
 
     private var groupCopyCountView: some View {
         VStack(alignment: .trailing, spacing: 2) {
-            Text("\(group.items.count) copies")
+            Text(L10n.tr("\(group.items.count) copies"))
                 .font(WalkmanFont.pillCounter)
                 .foregroundStyle(WalkmanTheme.silverLight)
                 .lineLimit(1)
             if group.recoverableBytes > 0 {
-                Text("+\(formatBytes(group.recoverableBytes)) freeable")
+                Text(L10n.tr("+\(formatBytes(group.recoverableBytes)) freeable"))
                     .font(WalkmanFont.monoSmall)
                     .foregroundStyle(Color.green.opacity(0.95))
                     .lineLimit(1)
@@ -764,11 +766,11 @@ private struct DuplicateGroupCard: View {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 11, weight: .bold))
                         if group.hasQualityDifference {
-                            Text("Keep Best Quality")
+                            Text(L10n.tr("Keep Best Quality"))
                         } else if group.isCrossDrive {
-                            Text("Keep on SD Card")
+                            Text(L10n.tr("Keep on SD Card"))
                         } else {
-                            Text("Keep Best Copy")
+                            Text(L10n.tr("Keep Best Copy"))
                         }
                     }
                     .font(WalkmanFont.calloutBold)
@@ -778,7 +780,7 @@ private struct DuplicateGroupCard: View {
                     .frame(height: 28)
                 }
                 .buttonStyle(LiquidGlassButtonStyle(variant: .prominent, cornerRadius: 8))
-                .help("Keeps this recommended copy and deletes all other duplicate copies in this group")
+                .help(L10n.tr("Keeps this recommended copy and deletes all other duplicate copies in this group"))
                 .fixedSize(horizontal: true, vertical: false)
             }
         }
@@ -788,7 +790,7 @@ private struct DuplicateGroupCard: View {
         HStack(spacing: 4.5) {
             Image(systemName: reason.icon)
                 .font(.system(size: 10, weight: .semibold))
-            Text(reason.rawValue)
+            Text(L10n.lookup(reason.rawValue))
                 .font(WalkmanFont.badge)
                 .lineLimit(1)
         }
@@ -834,7 +836,7 @@ private struct DuplicateGroupCard: View {
         HStack(spacing: 4.5) {
             Image(systemName: "arrow.triangle.2.circlepath")
                 .font(.system(size: 10, weight: .semibold))
-            Text("Cross-Drive")
+            Text(L10n.tr("Cross-Drive"))
                 .font(WalkmanFont.badge)
                 .lineLimit(1)
         }
@@ -880,7 +882,7 @@ private struct DuplicateGroupCard: View {
         HStack(spacing: 4.5) {
             Image(systemName: "sparkles")
                 .font(.system(size: 10, weight: .semibold))
-            Text("Quality Mismatch")
+            Text(L10n.tr("Quality Mismatch"))
                 .font(WalkmanFont.badge)
                 .lineLimit(1)
         }
@@ -934,6 +936,7 @@ private struct DuplicateGroupCard: View {
 
 // MARK: - Duplicate Track Row
 private struct DuplicateTrackRow: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let item: DuplicateTrackItem
     let isSuggested: Bool
     let groupCount: Int
@@ -972,7 +975,7 @@ private struct DuplicateTrackRow: View {
                     .frame(width: 28, height: 28)
             }
             .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 14))
-            .help(isPlayingThis ? "Pause preview" : "Preview playback")
+            .help(isPlayingThis ? L10n.tr("Pause preview") : L10n.tr("Preview playback"))
 
             // Storage Drive Badge (24pt Liquid Glass Capsule)
             storageBadge
@@ -1038,7 +1041,7 @@ private struct DuplicateTrackRow: View {
                 HStack(spacing: 4.5) {
                     Image(systemName: "star.fill")
                         .font(.system(size: 9, weight: .bold))
-                    Text("Recommended")
+                    Text(L10n.tr("Recommended"))
                         .font(WalkmanFont.badge)
                         .lineLimit(1)
                 }
@@ -1087,7 +1090,7 @@ private struct DuplicateTrackRow: View {
                     HStack(spacing: 4.5) {
                         Image(systemName: "checkmark")
                             .font(.system(size: 11, weight: .bold))
-                        Text("Keep This")
+                        Text(L10n.tr("Keep This"))
                             .font(WalkmanFont.calloutBold)
                             .lineLimit(1)
                     }
@@ -1096,7 +1099,7 @@ private struct DuplicateTrackRow: View {
                     .frame(height: 28)
                 }
                 .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 8))
-                .help("Keep this file and delete all other copies in this group")
+                .help(L10n.tr("Keep this file and delete all other copies in this group"))
 
                 // Reveal in Finder
                 Button(action: onRevealInFinder) {
@@ -1106,7 +1109,7 @@ private struct DuplicateTrackRow: View {
                         .frame(width: 28, height: 28)
                 }
                 .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 8))
-                .help("Reveal file in Finder")
+                .help(L10n.tr("Reveal file in Finder"))
 
                 // Edit Metadata
                 Button(action: onEditMetadata) {
@@ -1116,7 +1119,7 @@ private struct DuplicateTrackRow: View {
                         .frame(width: 28, height: 28)
                 }
                 .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 8))
-                .help("Edit tags for this copy")
+                .help(L10n.tr("Edit tags for this copy"))
 
                 // Delete Single Copy
                 Button(action: onDelete) {
@@ -1126,7 +1129,7 @@ private struct DuplicateTrackRow: View {
                         .frame(width: 28, height: 28)
                 }
                 .buttonStyle(LiquidGlassButtonStyle(variant: .destructive, cornerRadius: 8))
-                .help("Delete this copy from device")
+                .help(L10n.tr("Delete this copy from device"))
             }
             .fixedSize(horizontal: true, vertical: false)
         }
@@ -1149,7 +1152,7 @@ private struct DuplicateTrackRow: View {
             if item.isInternal {
                 driveBadgePill(
                     icon: "internaldrive.fill",
-                    text: "Internal",
+                    text: L10n.tr("Internal"),
                     color: Color(red: 200/255, green: 160/255, blue: 255/255)
                 )
             } else if item.isMicroSD {
@@ -1161,7 +1164,7 @@ private struct DuplicateTrackRow: View {
             } else {
                 driveBadgePill(
                     icon: "folder.fill",
-                    text: item.driveName.isEmpty ? "Local" : item.driveName,
+                    text: item.driveName.isEmpty ? L10n.tr("Local") : item.driveName,
                     color: Color(red: 120/255, green: 230/255, blue: 210/255)
                 )
             }
@@ -1217,6 +1220,7 @@ private struct DuplicateTrackRow: View {
 
 // MARK: - Metric Pill (38pt Liquid Glass)
 private struct MetricPill: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let icon: String
     let label: String
     let value: String
@@ -1281,6 +1285,7 @@ private struct MetricPill: View {
 
 // MARK: - Duplicate Scope Segmented Bar View (Liquid Glass Matched Geometry)
 private struct DuplicateScopeSegmentedBarView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     @Binding var selectedScope: DuplicateDetectionScope
     let onSelectScope: (DuplicateDetectionScope) -> Void
 
@@ -1327,6 +1332,7 @@ private struct DuplicateScopeSegmentedBarView: View {
 }
 
 private struct DuplicateScopeTabPillView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let scope: DuplicateDetectionScope
     let isSelected: Bool
     let namespace: Namespace.ID
@@ -1339,7 +1345,7 @@ private struct DuplicateScopeTabPillView: View {
             HStack(spacing: 5.5) {
                 Image(systemName: scope == .exactSameAlbum ? "checkmark.shield.fill" : "square.stack.3d.down.right.fill")
                     .font(.system(size: 11, weight: isSelected ? .bold : .semibold))
-                Text(scope.label)
+                Text(L10n.lookup(scope.label))
                     .font(.system(size: 12.5, weight: isSelected ? .bold : .medium))
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
@@ -1370,7 +1376,7 @@ private struct DuplicateScopeTabPillView: View {
         }
         .buttonStyle(.plain)
         .contentShape(Capsule())
-        .help(scope.description)
+        .help(L10n.lookup(scope.description))
         .onHover { hovering in
             guard isHovered != hovering else { return }
             isHovered = hovering
@@ -1401,6 +1407,7 @@ private struct DuplicateFilterItem: Identifiable {
 }
 
 private struct DuplicateFilterSegmentedBarView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let items: [DuplicateFilterItem]
     @Binding var selectedFilter: DuplicateFilter
     let onSelectFilter: (DuplicateFilter) -> Void
@@ -1448,6 +1455,7 @@ private struct DuplicateFilterSegmentedBarView: View {
 }
 
 private struct DuplicateFilterTabPillView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let item: DuplicateFilterItem
     let isSelected: Bool
     let namespace: Namespace.ID
@@ -1455,55 +1463,69 @@ private struct DuplicateFilterTabPillView: View {
 
     @State private var isHovered = false
 
+    private var countBackgroundColor: Color {
+        if isSelected {
+            return item.tint?.opacity(0.28) ?? Color.white.opacity(0.20)
+        }
+        return Color.white.opacity(isHovered ? 0.12 : 0.06)
+    }
+
+    private var countForegroundColor: Color {
+        if isSelected { return item.tint ?? Color.white }
+        return isHovered ? Color.white : WalkmanTheme.silverMuted
+    }
+
+    private var labelForegroundColor: Color {
+        if isSelected { return item.tint ?? Color.white }
+        return isHovered ? Color.white : Color.white.opacity(0.70)
+    }
+
+    private var countBadge: some View {
+        Text("\(item.count)")
+            .font(.system(size: 11, weight: .semibold, design: .monospaced))
+            .lineLimit(1)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 1.5)
+            .background(countBackgroundColor)
+            .foregroundStyle(countForegroundColor)
+            .clipShape(Capsule())
+    }
+
+    private var pillBackground: some View {
+        ZStack {
+            if isSelected {
+                ActiveDuplicatePillBackground(tint: item.tint, isHovered: isHovered)
+                    .matchedGeometryEffect(id: "activeDuplicateFilterHighlight", in: namespace)
+            } else if isHovered {
+                HoverDuplicatePillBackground()
+            } else {
+                Color.white.opacity(0.001)
+            }
+        }
+    }
+
+    private var pillLabel: some View {
+        HStack(spacing: 6) {
+            Text(item.title)
+                .font(.system(size: 12.5, weight: isSelected ? .bold : .medium))
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+
+            countBadge
+        }
+        .padding(.horizontal, 11)
+        .padding(.vertical, 7)
+        .frame(height: 32)
+        .fixedSize(horizontal: true, vertical: false)
+        .foregroundStyle(labelForegroundColor)
+        .background(pillBackground)
+        .scaleEffect(isHovered ? 1.03 : 1.0)
+        .contentShape(Capsule())
+    }
+
     var body: some View {
         Button(action: onSelect) {
-            HStack(spacing: 6) {
-                Text(item.title)
-                    .font(.system(size: 12.5, weight: isSelected ? .bold : .medium))
-                    .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
-
-                // Count pill inside the tab
-                Text("\(item.count)")
-                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                    .lineLimit(1)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 1.5)
-                    .background(
-                        isSelected ?
-                            (item.tint?.opacity(0.28) ?? Color.white.opacity(0.20)) :
-                            (isHovered ? Color.white.opacity(0.12) : Color.white.opacity(0.06))
-                    )
-                    .foregroundStyle(
-                        isSelected ?
-                            (item.tint ?? Color.white) :
-                            (isHovered ? Color.white : WalkmanTheme.silverMuted)
-                    )
-                    .clipShape(Capsule())
-            }
-            .padding(.horizontal, 11)
-            .padding(.vertical, 7)
-            .frame(height: 32)
-            .fixedSize(horizontal: true, vertical: false)
-            .foregroundStyle(
-                isSelected ?
-                    (item.tint ?? Color.white) :
-                    (isHovered ? Color.white : Color.white.opacity(0.70))
-            )
-            .background(
-                ZStack {
-                    if isSelected {
-                        ActiveDuplicatePillBackground(tint: item.tint, isHovered: isHovered)
-                            .matchedGeometryEffect(id: "activeDuplicateFilterHighlight", in: namespace)
-                    } else if isHovered {
-                        HoverDuplicatePillBackground()
-                    } else {
-                        Color.white.opacity(0.001)
-                    }
-                }
-            )
-            .scaleEffect(isHovered ? 1.03 : 1.0)
-            .contentShape(Capsule())
+            pillLabel
         }
         .buttonStyle(.plain)
         .contentShape(Capsule())
@@ -1528,6 +1550,7 @@ private struct DuplicateFilterTabPillView: View {
 
 // MARK: - Active & Hover Pill Backgrounds (Liquid Glass Sliding Lens)
 private struct ActiveDuplicatePillBackground: View {
+    @ObservedObject private var localization = AppLocalization.shared
     var tint: Color? = nil
     var isHovered: Bool = false
 
@@ -1574,6 +1597,7 @@ private struct ActiveDuplicatePillBackground: View {
 }
 
 private struct HoverDuplicatePillBackground: View {
+    @ObservedObject private var localization = AppLocalization.shared
     var body: some View {
         ZStack {
             Color.white.opacity(0.09)
@@ -1601,6 +1625,7 @@ private struct HoverDuplicatePillBackground: View {
 
 // MARK: - Duplicate Sort Menu Button (38x38 Circular Liquid Glass)
 private struct DuplicateSortMenuButton: View {
+    @ObservedObject private var localization = AppLocalization.shared
     @Binding var sortOption: DuplicateSortOption
 
     @State private var isHovered = false
@@ -1611,9 +1636,9 @@ private struct DuplicateSortMenuButton: View {
 
     var body: some View {
         Menu {
-            Picker("Sort Options", selection: $sortOption) {
+            Picker(L10n.tr("Sort Options"), selection: $sortOption) {
                 ForEach(DuplicateSortOption.allCases) { opt in
-                    Text(opt.rawValue).tag(opt)
+                    Text(L10n.lookup(opt.rawValue)).tag(opt)
                 }
             }
             .pickerStyle(.inline)
@@ -1683,7 +1708,7 @@ private struct DuplicateSortMenuButton: View {
         .menuIndicator(.hidden)
         .buttonStyle(.plain)
         .contentShape(Circle())
-        .help("Sort duplicates (\(sortOption.rawValue))")
+        .help(L10n.tr("Sort duplicates (\(L10n.lookup(sortOption.rawValue)))"))
         .fixedSize(horizontal: true, vertical: false)
         .onHover { hovering in
             guard isHovered != hovering else { return }
@@ -1706,6 +1731,7 @@ private struct DuplicateSortMenuButton: View {
 
 // MARK: - Duplicate Auto-Resolve Button (38pt Liquid Glass Cyan)
 private struct DuplicateAutoResolveButton: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let action: () -> Void
     @State private var isHovered = false
 
@@ -1714,7 +1740,7 @@ private struct DuplicateAutoResolveButton: View {
             HStack(spacing: 6) {
                 Image(systemName: "sparkles")
                     .font(.system(size: 12, weight: .bold))
-                Text("Auto-Resolve Quality")
+                Text(L10n.tr("Auto-Resolve Quality"))
                     .font(.system(size: 12.5, weight: .semibold))
                     .lineLimit(1)
             }
@@ -1802,6 +1828,7 @@ public enum DuplicateModalAction: Identifiable {
 
 // MARK: - Duplicate Resolution Sheet (Liquid Glass)
 public struct DuplicateResolutionSheet: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let action: DuplicateModalAction
     let onConfirm: () -> Void
     let onCancel: () -> Void
@@ -1929,11 +1956,11 @@ public struct DuplicateResolutionSheet: View {
 
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 8) {
-                        Text("Keep This Copy")
+                        Text(L10n.tr("Keep This Copy"))
                             .font(WalkmanFont.title1)
                             .foregroundStyle(.primary)
 
-                        Text("Safe Resolution")
+                        Text(L10n.tr("Safe Resolution"))
                             .font(WalkmanFont.badge)
                             .foregroundStyle(Color.green)
                             .padding(.horizontal, 7)
@@ -1946,7 +1973,7 @@ public struct DuplicateResolutionSheet: View {
                             )
                     }
 
-                    Text("Retain selected copy on \(item.driveName) and delete \(otherCount) duplicate copy(ies) to reclaim storage.")
+                    Text(L10n.tr("Retain selected copy on \(item.driveName) and delete \(otherCount) duplicate copy(ies) to reclaim storage."))
                         .font(WalkmanFont.callout)
                         .foregroundStyle(.secondary)
                         .lineLimit(2)
@@ -1973,11 +2000,11 @@ public struct DuplicateResolutionSheet: View {
 
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 8) {
-                        Text("Auto-Resolve Quality Discrepancies")
+                        Text(L10n.tr("Auto-Resolve Quality Discrepancies"))
                             .font(WalkmanFont.title1)
                             .foregroundStyle(.primary)
 
-                        Text("\(groups.count) Songs")
+                        Text(L10n.tr("\(groups.count) Songs"))
                             .font(WalkmanFont.badge)
                             .foregroundStyle(Color.cyan)
                             .padding(.horizontal, 7)
@@ -1990,7 +2017,7 @@ public struct DuplicateResolutionSheet: View {
                             )
                     }
 
-                    Text("Automatically keep highest resolution copies (FLAC/Hi-Res) and remove lower quality encodes, recovering ~\(formatBytes(totalSaved)).")
+                    Text(L10n.tr("Automatically keep highest resolution copies (FLAC/Hi-Res) and remove lower quality encodes, recovering ~\(formatBytes(totalSaved))."))
                         .font(WalkmanFont.callout)
                         .foregroundStyle(.secondary)
                         .lineLimit(2)
@@ -2016,11 +2043,11 @@ public struct DuplicateResolutionSheet: View {
 
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 8) {
-                        Text("Delete Duplicate Copy")
+                        Text(L10n.tr("Delete Duplicate Copy"))
                             .font(WalkmanFont.title1)
                             .foregroundStyle(.primary)
 
-                        Text("Permanent Delete")
+                        Text(L10n.tr("Permanent Delete"))
                             .font(WalkmanFont.badge)
                             .foregroundStyle(Color.red)
                             .padding(.horizontal, 7)
@@ -2033,7 +2060,7 @@ public struct DuplicateResolutionSheet: View {
                             )
                     }
 
-                    Text("Are you sure you want to delete this specific duplicate copy from \(item.driveName)?")
+                    Text(L10n.tr("Are you sure you want to delete this specific duplicate copy from \(item.driveName)?"))
                         .font(WalkmanFont.callout)
                         .foregroundStyle(.secondary)
                         .lineLimit(2)
@@ -2066,19 +2093,19 @@ public struct DuplicateResolutionSheet: View {
             HStack(spacing: 10) {
                 MetricChip(
                     icon: "internaldrive.badge.arrow.down",
-                    label: "Space Freeable",
+                    label: L10n.tr("Space Freeable"),
                     value: "+\(formatBytes(savedBytes))",
                     accentColor: .green
                 )
                 MetricChip(
                     icon: "trash",
-                    label: "Copies Removed",
+                    label: L10n.tr("Copies Removed"),
                     value: "\(otherItems.count)",
                     accentColor: WalkmanTheme.silverMuted
                 )
                 MetricChip(
                     icon: item.isMicroSD ? "sdcard" : "internaldrive",
-                    label: "Keep Drive",
+                    label: L10n.tr("Keep Drive"),
                     value: item.driveName,
                     accentColor: item.isMicroSD ? Color.blue : WalkmanTheme.silverLight
                 )
@@ -2088,7 +2115,7 @@ public struct DuplicateResolutionSheet: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 6) {
                     Circle().fill(Color.green).frame(width: 6, height: 6)
-                    Text("COPY TO KEEP")
+                    Text(L10n.tr("COPY TO KEEP"))
                         .font(WalkmanFont.sectionHeader)
                         .foregroundStyle(Color.green)
                 }
@@ -2146,7 +2173,7 @@ public struct DuplicateResolutionSheet: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 6) {
                     Circle().fill(Color.red).frame(width: 6, height: 6)
-                    Text("COPIES TO DELETE (\(otherItems.count))")
+                    Text(L10n.tr("COPIES TO DELETE (\(otherItems.count))"))
                         .font(WalkmanFont.sectionHeader)
                         .foregroundStyle(.secondary)
                 }
@@ -2204,27 +2231,27 @@ public struct DuplicateResolutionSheet: View {
             HStack(spacing: 10) {
                 MetricChip(
                     icon: "sparkles",
-                    label: "Songs Upgraded",
+                    label: L10n.tr("Songs Upgraded"),
                     value: "\(groups.count)",
                     accentColor: .cyan
                 )
                 MetricChip(
                     icon: "internaldrive.badge.arrow.down",
-                    label: "Recoverable Storage",
+                    label: L10n.tr("Recoverable Storage"),
                     value: "+\(formatBytes(totalSaved))",
                     accentColor: .green
                 )
                 MetricChip(
                     icon: "waveform.badge.magnifyingglass",
-                    label: "Engine Standard",
-                    value: "FLAC / Hi-Res Priority",
+                    label: L10n.tr("Engine Standard"),
+                    value: L10n.tr("FLAC / Hi-Res Priority"),
                     accentColor: WalkmanTheme.hiResGold
                 )
             }
 
             // Preview list of affected groups
             VStack(alignment: .leading, spacing: 6) {
-                Text("DISCREPANCIES TO BE RESOLVED (\(groups.count))")
+                Text(L10n.tr("DISCREPANCIES TO BE RESOLVED (\(groups.count))"))
                     .font(WalkmanFont.sectionHeader)
                     .foregroundStyle(.tertiary)
 
@@ -2254,7 +2281,7 @@ public struct DuplicateResolutionSheet: View {
                                     HStack(spacing: 6) {
                                         // Keep Pill
                                         HStack(spacing: 4) {
-                                            Text("Keep:")
+                                            Text(L10n.tr("Keep:"))
                                                 .font(WalkmanFont.monoSmall)
                                                 .foregroundStyle(Color.green)
                                             FormatPill(track: best.track)
@@ -2271,7 +2298,7 @@ public struct DuplicateResolutionSheet: View {
                                         // Discard Pill
                                         if let firstDiscard = discarded.first {
                                             HStack(spacing: 4) {
-                                                Text("Remove:")
+                                                Text(L10n.tr("Remove:"))
                                                     .font(WalkmanFont.monoSmall)
                                                     .foregroundStyle(Color.red.opacity(0.8))
                                                 FormatPill(track: firstDiscard.track)
@@ -2309,7 +2336,7 @@ public struct DuplicateResolutionSheet: View {
                 Image(systemName: "checkmark.shield.fill")
                     .font(.system(size: 13))
                     .foregroundStyle(Color.cyan)
-                Text("Safe Operation: Walkman Studio preserves the highest-fidelity copy of each track. Companion lyrics (.lrc) and AppleDouble ghost files for deleted copies are removed cleanly.")
+                Text(L10n.tr("Safe Operation: Walkman Studio preserves the highest-fidelity copy of each track. Companion lyrics (.lrc) and AppleDouble ghost files for deleted copies are removed cleanly."))
                     .font(WalkmanFont.subheadline)
                     .foregroundStyle(.secondary)
                 Spacer()
@@ -2374,7 +2401,7 @@ public struct DuplicateResolutionSheet: View {
 
             // Path card
             VStack(alignment: .leading, spacing: 4) {
-                Text("FILE LOCATION ON DEVICE")
+                Text(L10n.tr("FILE LOCATION ON DEVICE"))
                     .font(WalkmanFont.sectionHeader)
                     .foregroundStyle(.tertiary)
                 Text(item.track.fullPath)
@@ -2397,7 +2424,7 @@ public struct DuplicateResolutionSheet: View {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(.system(size: 13))
                     .foregroundStyle(Color.red)
-                Text("This action permanently removes this duplicate audio file and its matching .lrc lyrics file from your Walkman. Other copies of this track in your library will remain intact.")
+                Text(L10n.tr("This action permanently removes this duplicate audio file and its matching .lrc lyrics file from your Walkman. Other copies of this track in your library will remain intact."))
                     .font(WalkmanFont.subheadline)
                     .foregroundStyle(.secondary)
                 Spacer()
@@ -2415,7 +2442,7 @@ public struct DuplicateResolutionSheet: View {
     // MARK: - Footer
     private var footerBar: some View {
         HStack(alignment: .center) {
-            Text("Changes are written directly to your Sony Walkman storage.")
+            Text(L10n.tr("Changes are written directly to your Sony Walkman storage."))
                 .font(WalkmanFont.monoSmall)
                 .foregroundStyle(.tertiary)
                 .lineLimit(1)
@@ -2424,7 +2451,7 @@ public struct DuplicateResolutionSheet: View {
 
             // Cancel Button
             Button(action: onCancel) {
-                Text("Cancel")
+                Text(L10n.tr("Cancel"))
                     .font(WalkmanFont.calloutMedium)
                     .foregroundStyle(WalkmanTheme.silverLight)
                     .padding(.horizontal, 18)
@@ -2459,7 +2486,7 @@ public struct DuplicateResolutionSheet: View {
                 HStack(spacing: 6) {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 12, weight: .bold))
-                    Text("Keep & Delete Others")
+                    Text(L10n.tr("Keep & Delete Others"))
                         .font(WalkmanFont.calloutBold)
                 }
                 .foregroundStyle(Color(red: 20 / 255, green: 20 / 255, blue: 24 / 255))
@@ -2488,7 +2515,7 @@ public struct DuplicateResolutionSheet: View {
                 HStack(spacing: 6) {
                     Image(systemName: "sparkles")
                         .font(.system(size: 12, weight: .bold))
-                    Text("Auto-Resolve All")
+                    Text(L10n.tr("Auto-Resolve All"))
                         .font(WalkmanFont.calloutBold)
                 }
                 .foregroundStyle(Color.white)
@@ -2526,7 +2553,7 @@ public struct DuplicateResolutionSheet: View {
                 HStack(spacing: 6) {
                     Image(systemName: "trash.fill")
                         .font(.system(size: 12, weight: .bold))
-                    Text("Delete Copy")
+                    Text(L10n.tr("Delete Copy"))
                         .font(WalkmanFont.calloutBold)
                 }
                 .foregroundStyle(Color.white)
@@ -2564,6 +2591,7 @@ public struct DuplicateResolutionSheet: View {
 
 // MARK: - Metric Chip
 private struct MetricChip: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let icon: String
     let label: String
     let value: String
@@ -2599,6 +2627,7 @@ private struct MetricChip: View {
 
 // MARK: - Drive Badge View
 private struct DriveBadgeView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let isMicroSD: Bool
     let driveName: String
 
@@ -2619,6 +2648,7 @@ private struct DriveBadgeView: View {
 
 // MARK: - Format Pill
 private struct FormatPill: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let track: Track
 
     var body: some View {
@@ -2646,6 +2676,7 @@ private struct FormatPill: View {
 
 // MARK: - Sheet Close Button
 private struct SheetCloseButton: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let action: () -> Void
     @State private var isHovered: Bool = false
 
@@ -2668,7 +2699,7 @@ private struct SheetCloseButton: View {
         }
         .buttonStyle(.plain)
         .keyboardShortcut(.cancelAction)
-        .help("Close")
+        .help(L10n.tr("Close"))
         .onHover { h in
             withAnimation(.spring(response: 0.20, dampingFraction: 0.70)) {
                 isHovered = h

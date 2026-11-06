@@ -12,10 +12,10 @@ public enum AboutTab: Int, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .hardware: return "Hardware"
-        case .supportedDAPs: return "Supported DAPs"
-        case .engineRules: return "Engine Rules"
-        case .developerSupport: return "Developer & Support"
+        case .hardware: return L10n.tr("Hardware")
+        case .supportedDAPs: return L10n.tr("Supported DAPs")
+        case .engineRules: return L10n.tr("Engine Rules")
+        case .developerSupport: return L10n.tr("Developer & Support")
         }
     }
 
@@ -30,6 +30,7 @@ public enum AboutTab: Int, CaseIterable, Identifiable {
 }
 
 public struct AboutWalkmanStudioView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let currentDeviceInfo: WalkmanDeviceInfo?
     let onDismiss: () -> Void
     
@@ -72,6 +73,16 @@ public struct AboutWalkmanStudioView: View {
         VStack(spacing: 0) {
             // Dismiss button on top right
             HStack {
+                Picker(selection: $localization.language) {
+                    ForEach(AppLanguage.allCases) { language in
+                        Text(language.displayName).tag(language)
+                    }
+                } label: {
+                    Label(L10n.tr("Language"), systemImage: "globe")
+                }
+                .pickerStyle(.menu)
+                .frame(width: 240)
+                .help(L10n.tr("Changes apply immediately."))
                 Spacer()
                 SheetCloseButton(action: onDismiss)
             }
@@ -103,7 +114,7 @@ public struct AboutWalkmanStudioView: View {
                     .font(WalkmanFont.title1)
                     .foregroundStyle(.primary)
                 
-                Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "3.1.0") • Universal (Apple Silicon & Intel)")
+                Text(L10n.tr("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "3.1.0") • Universal (Apple Silicon & Intel)"))
                     .font(WalkmanFont.calloutMedium)
                     .foregroundStyle(.secondary)
                 
@@ -111,7 +122,7 @@ public struct AboutWalkmanStudioView: View {
                     Circle()
                         .fill(Color.green)
                         .frame(width: 6, height: 6)
-                    Text("Universal Sony Walkman Architecture • Sony OS & Android DAP")
+                    Text(L10n.tr("Universal Sony Walkman Architecture • Sony OS & Android DAP"))
                         .font(WalkmanFont.badge)
                         .foregroundStyle(WalkmanTheme.silver)
                 }
@@ -153,7 +164,7 @@ public struct AboutWalkmanStudioView: View {
             
             // Bottom Action Footer
             HStack(alignment: .center) {
-                Text("Sony & Walkman are registered trademarks of Sony Group Corporation.")
+                Text(L10n.tr("Sony & Walkman are registered trademarks of Sony Group Corporation."))
                     .font(WalkmanFont.monoSmall)
                     .foregroundStyle(.tertiary)
                     .lineLimit(1)
@@ -224,7 +235,7 @@ public struct AboutWalkmanStudioView: View {
                             
                             HStack(spacing: 5) {
                                 Circle().fill(Color.green).frame(width: 5.5, height: 5.5)
-                                Text("Verified")
+                                Text(L10n.tr("Verified"))
                                     .font(WalkmanFont.badge.weight(.bold))
                                     .foregroundStyle(Color.green)
                             }
@@ -238,7 +249,7 @@ public struct AboutWalkmanStudioView: View {
                             )
                         }
                         
-                        Text("Connected via USB Mass Storage • S-Master HX DAC")
+                        Text(L10n.tr("Connected via USB Mass Storage • S-Master HX DAC"))
                             .font(WalkmanFont.subheadlineMedium)
                             .foregroundStyle(.secondary)
                     }
@@ -255,12 +266,12 @@ public struct AboutWalkmanStudioView: View {
                 
                 // Specifications Grid
                 VStack(spacing: 1) {
-                    SpecRow(label: "Hardware Model", value: dev.modelRaw)
-                    SpecRow(label: "Firmware Version", value: "v\(dev.firmwareVersion)")
-                    SpecRow(label: "Screen Engine", value: "\(dev.displayResolution) (Baseline RGB)")
-                    SpecRow(label: "Internal Flash", value: String(format: "%.1f GB", dev.internalCapacityGb))
-                    SpecRow(label: "Audio Pipeline", value: "S-Master HX, DSEE HX, Vinyl")
-                    SpecRow(label: "Tag Standard", value: "Strict ID3v2.3 (UTF-16) & Vorbis")
+                    SpecRow(label: L10n.tr("Hardware Model"), value: dev.modelRaw)
+                    SpecRow(label: L10n.tr("Firmware Version"), value: "v\(dev.firmwareVersion)")
+                    SpecRow(label: L10n.tr("Screen Engine"), value: "\(dev.displayResolution) (Baseline RGB)")
+                    SpecRow(label: L10n.tr("Internal Flash"), value: String(format: "%.1f GB", dev.internalCapacityGb))
+                    SpecRow(label: L10n.tr("Audio Pipeline"), value: "S-Master HX, DSEE HX, Vinyl")
+                    SpecRow(label: L10n.tr("Tag Standard"), value: "Strict ID3v2.3 (UTF-16) & Vorbis")
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 .overlay(
@@ -274,11 +285,11 @@ public struct AboutWalkmanStudioView: View {
                         .font(.system(size: 34))
                         .foregroundStyle(WalkmanTheme.silverMuted)
                     
-                    Text("No Walkman Connected")
+                    Text(L10n.tr("No Walkman Connected"))
                         .font(WalkmanFont.headline)
                         .foregroundStyle(.primary)
                     
-                    Text("Connect your Sony Walkman via USB in Mass Storage mode to inspect hardware specifications.")
+                    Text(L10n.tr("Connect your Sony Walkman via USB in Mass Storage mode to inspect hardware specifications."))
                         .font(WalkmanFont.callout)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -302,7 +313,7 @@ public struct AboutWalkmanStudioView: View {
             VStack(alignment: .leading, spacing: 14) {
                 ForEach(WalkmanDeviceDetector.supportedSeriesCategories, id: \.category) { cat in
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(cat.category.uppercased())
+                        Text(L10n.lookup(cat.category).uppercased())
                             .font(WalkmanFont.sectionHeader)
                             .foregroundStyle(.tertiary)
                             .padding(.leading, 4)
@@ -320,7 +331,7 @@ public struct AboutWalkmanStudioView: View {
                                         Text(m.modelCode)
                                             .font(WalkmanFont.bodyMedium)
                                             .foregroundStyle(.primary)
-                                        Text(m.description)
+                                        Text(L10n.lookup(m.description))
                                             .font(WalkmanFont.subheadline)
                                             .foregroundStyle(.secondary)
                                             .lineLimit(1)
@@ -349,7 +360,7 @@ public struct AboutWalkmanStudioView: View {
                     Image(systemName: "checkmark.seal.fill")
                         .font(.system(size: 13))
                         .foregroundStyle(Color.green)
-                    Text("Fully supports both classic Sony OS (Linux DAP) and modern Android-based Walkmans (NW-A100, NW-A300, NW-ZX500, NW-ZX700, NW-WM1M2).")
+                    Text(L10n.tr("Fully supports both classic Sony OS (Linux DAP) and modern Android-based Walkmans (NW-A100, NW-A300, NW-ZX500, NW-ZX700, NW-WM1M2)."))
                         .font(WalkmanFont.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -371,23 +382,23 @@ public struct AboutWalkmanStudioView: View {
         VStack(spacing: 10) {
             RuleCard(
                 icon: "photo.artframe",
-                title: "Baseline RGB JPEG Artwork",
-                detail: "Strips progressive passes, CMYK color spaces, and limits resolution to 800×800 to prevent display engine freezes."
+                title: L10n.tr("Baseline RGB JPEG Artwork"),
+                detail: L10n.tr("Strips progressive passes, CMYK color spaces, and limits resolution to 800×800 to prevent display engine freezes.")
             )
             RuleCard(
                 icon: "tag",
-                title: "Strict ID3v2.3 (UTF-16)",
-                detail: "Enforces UTF-16 with BOM (encoding=1) and binary ID3v2.3 tags, avoiding ID3v2.4 database corruption."
+                title: L10n.tr("Strict ID3v2.3 (UTF-16)"),
+                detail: L10n.tr("Enforces UTF-16 with BOM (encoding=1) and binary ID3v2.3 tags, avoiding ID3v2.4 database corruption.")
             )
             RuleCard(
                 icon: "list.bullet.rectangle",
-                title: "CRLF Relative .M3U8 Playlists",
-                detail: "Writes Windows-compliant CRLF (\\r\\n) line endings and relative POSIX paths directly into /MUSIC/."
+                title: L10n.tr("CRLF Relative .M3U8 Playlists"),
+                detail: L10n.tr("Writes Windows-compliant CRLF (\\r\\n) line endings and relative POSIX paths directly into /MUSIC/.")
             )
             RuleCard(
                 icon: "sparkles",
-                title: "macOS Shadow File Purge",
-                detail: "Merges AppleDouble forks with dot_clean -m and removes ._* and .DS_Store ghost files before safe eject."
+                title: L10n.tr("macOS Shadow File Purge"),
+                detail: L10n.tr("Merges AppleDouble forks with dot_clean -m and removes ._* and .DS_Store ghost files before safe eject.")
             )
         }
     }
@@ -428,7 +439,7 @@ public struct AboutWalkmanStudioView: View {
                                     .font(WalkmanFont.title2)
                                     .foregroundStyle(.primary)
                                 
-                                Text("Creator")
+                                Text(L10n.tr("Creator"))
                                     .font(WalkmanFont.badge)
                                     .foregroundStyle(WalkmanTheme.hiResGold)
                                     .padding(.horizontal, 7)
@@ -441,7 +452,7 @@ public struct AboutWalkmanStudioView: View {
                                     )
                             }
                             
-                            Text("GitHub: @Jhay-EL • UX/UI Designer & Software Developer")
+                            Text(L10n.tr("GitHub: @Jhay-EL • UX/UI Designer & Software Developer"))
                                 .font(WalkmanFont.subheadlineMedium)
                                 .foregroundStyle(.secondary)
                         }
@@ -449,7 +460,7 @@ public struct AboutWalkmanStudioView: View {
                         Spacer()
                     }
                     
-                    Text("Walkman Studio was designed and engineered from the ground up to solve the challenges of using modern macOS with Sony Walkman digital audio players. It automates strict ID3v2.3 & FLAC tagging, Baseline RGB JPEG cover art conversion, Sony 12 Tone / SenseMe acoustic analysis, synchronized .LRC lyrics, batch metadata editing, dual-partition storage routing, and AppleDouble ghost file cleanup.")
+                    Text(L10n.tr("Walkman Studio was designed and engineered from the ground up to solve the challenges of using modern macOS with Sony Walkman digital audio players. It automates strict ID3v2.3 & FLAC tagging, Baseline RGB JPEG cover art conversion, Sony 12 Tone / SenseMe acoustic analysis, synchronized .LRC lyrics, batch metadata editing, dual-partition storage routing, and AppleDouble ghost file cleanup."))
                         .font(WalkmanFont.callout)
                         .foregroundStyle(.secondary)
                         .lineSpacing(2)
@@ -471,7 +482,7 @@ public struct AboutWalkmanStudioView: View {
                                 .font(.system(size: 13, weight: .bold))
                                 .foregroundStyle(WalkmanTheme.silverLight)
                             
-                            Text("GitHub Profile")
+                            Text(L10n.tr("GitHub Profile"))
                                 .font(WalkmanFont.headline)
                                 .foregroundStyle(.primary)
                             
@@ -482,7 +493,7 @@ public struct AboutWalkmanStudioView: View {
                                 .foregroundStyle(.tertiary)
                         }
                         
-                        Text("Follow @Jhay-EL on GitHub to view open-source projects, releases, and development activity.")
+                        Text(L10n.tr("Follow @Jhay-EL on GitHub to view open-source projects, releases, and development activity."))
                             .font(WalkmanFont.subheadline)
                             .foregroundStyle(.secondary)
                             .lineLimit(2)
@@ -511,7 +522,7 @@ public struct AboutWalkmanStudioView: View {
                                 .font(.system(size: 13, weight: .semibold))
                                 .foregroundStyle(WalkmanTheme.silverLight)
                             
-                            Text("Project Repository")
+                            Text(L10n.tr("Project Repository"))
                                 .font(WalkmanFont.headline)
                                 .foregroundStyle(.primary)
                             
@@ -522,7 +533,7 @@ public struct AboutWalkmanStudioView: View {
                                 .foregroundStyle(.tertiary)
                         }
                         
-                        Text("Star Walkman Studio on GitHub, report issues, contribute features, and read source documentation.")
+                        Text(L10n.tr("Star Walkman Studio on GitHub, report issues, contribute features, and read source documentation."))
                             .font(WalkmanFont.subheadline)
                             .foregroundStyle(.secondary)
                             .lineLimit(2)
@@ -559,11 +570,11 @@ public struct AboutWalkmanStudioView: View {
                     
                     VStack(alignment: .leading, spacing: 3) {
                         HStack(spacing: 7) {
-                            Text("Support Walkman Studio Development")
+                            Text(L10n.tr("Support Walkman Studio Development"))
                                 .font(WalkmanFont.bodyBold)
                                 .foregroundStyle(.primary)
                             
-                            Text("Buy Me a Coffee")
+                            Text(L10n.tr("Buy Me a Coffee"))
                                 .font(WalkmanFont.badge)
                                 .foregroundStyle(Color(red: 255 / 255, green: 221 / 255, blue: 0 / 255))
                                 .padding(.horizontal, 7)
@@ -576,7 +587,7 @@ public struct AboutWalkmanStudioView: View {
                                 )
                         }
                         
-                        Text("If Walkman Studio enhances your music listening experience, consider buying a coffee to support maintenance and hardware testing.")
+                        Text(L10n.tr("If Walkman Studio enhances your music listening experience, consider buying a coffee to support maintenance and hardware testing."))
                             .font(WalkmanFont.subheadline)
                             .foregroundStyle(.secondary)
                             .lineLimit(2)
@@ -585,7 +596,7 @@ public struct AboutWalkmanStudioView: View {
                     Spacer()
                     
                     TactileLinkButton(
-                        title: "Support",
+                        title: L10n.tr("Support"),
                         icon: "cup.and.saucer.fill",
                         url: "https://www.buymeacoffee.com/jhayel",
                         isAccent: true
@@ -605,7 +616,7 @@ public struct AboutWalkmanStudioView: View {
                         Image(systemName: "envelope.fill")
                             .font(.system(size: 12))
                             .foregroundStyle(.secondary)
-                        Text("Contact:")
+                        Text(L10n.tr("Contact:"))
                             .font(WalkmanFont.subheadline)
                             .foregroundStyle(.secondary)
                         Button(action: {
@@ -628,7 +639,7 @@ public struct AboutWalkmanStudioView: View {
                         Image(systemName: "doc.plaintext")
                             .font(.system(size: 12))
                             .foregroundStyle(.secondary)
-                        Text("License: MIT (Free & Open Source)")
+                        Text(L10n.tr("License: MIT (Free & Open Source)"))
                             .font(WalkmanFont.subheadline)
                             .foregroundStyle(.tertiary)
                     }
@@ -643,6 +654,7 @@ public struct AboutWalkmanStudioView: View {
 
 // MARK: - Liquid Glass Segmented Pill Bar
 private struct AboutSegmentedBar: View {
+    @ObservedObject private var localization = AppLocalization.shared
     @Binding var selectedTab: AboutTab
     @Namespace private var tabNamespace
     
@@ -672,6 +684,7 @@ private struct AboutSegmentedBar: View {
 }
 
 private struct AboutTabButton: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let tab: AboutTab
     let isSelected: Bool
     let namespace: Namespace.ID
@@ -745,6 +758,7 @@ private struct AboutTabButton: View {
 
 // MARK: - Tactile Link Button
 private struct TactileLinkButton: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let title: String
     let icon: String
     let url: String
@@ -806,12 +820,13 @@ private struct TactileLinkButton: View {
 
 // MARK: - Primary Done Button
 private struct PrimaryDoneButton: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let action: () -> Void
     @State private var isHovered: Bool = false
     
     var body: some View {
         Button(action: action) {
-            Text("Done")
+            Text(L10n.tr("Done"))
                 .font(WalkmanFont.calloutBold)
                 .foregroundStyle(Color(red: 20 / 255, green: 20 / 255, blue: 24 / 255))
                 .padding(.horizontal, 24)
@@ -838,6 +853,7 @@ private struct PrimaryDoneButton: View {
 
 // MARK: - Sheet Close Button
 private struct SheetCloseButton: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let action: () -> Void
     @State private var isHovered: Bool = false
     
@@ -860,7 +876,7 @@ private struct SheetCloseButton: View {
         }
         .buttonStyle(.plain)
         .keyboardShortcut(.cancelAction)
-        .help("Close")
+        .help(L10n.tr("Close"))
         .onHover { h in
             withAnimation(.spring(response: 0.20, dampingFraction: 0.70)) {
                 isHovered = h
@@ -872,6 +888,7 @@ private struct SheetCloseButton: View {
 
 // MARK: - Subviews
 private struct SpecRow: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let label: String
     let value: String
     
@@ -892,6 +909,7 @@ private struct SpecRow: View {
 }
 
 private struct RuleCard: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let icon: String
     let title: String
     let detail: String

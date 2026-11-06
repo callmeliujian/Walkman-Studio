@@ -38,6 +38,7 @@ public enum NavigationTab: String, CaseIterable, Identifiable, Hashable {
 }
 
 public struct SidebarView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     @Binding var selectedTab: NavigationTab
     var devices: [WalkmanDevice] = []
     let drives: [WalkmanDrive]
@@ -79,7 +80,7 @@ public struct SidebarView: View {
             // DEVICE Section
             // -----------------------------------------------------------------
             if !isWalkmanConnected {
-                Section(header: sidebarSectionHeader("Device")) {
+                Section(header: sidebarSectionHeader(L10n.tr("Device"))) {
                     DeviceDisconnectedSidebarRow(
                         selectedTab: $selectedTab
                     )
@@ -87,7 +88,7 @@ public struct SidebarView: View {
                     .listRowInsets(EdgeInsets(top: 3.5, leading: 10, bottom: 3.5, trailing: 10))
                 }
             } else if devices.count > 1 {
-                Section(header: sidebarSectionHeader("Connected Devices (\(devices.count))")) {
+                Section(header: sidebarSectionHeader(L10n.tr("Connected Devices (\(devices.count))"))) {
                     ForEach(devices) { device in
                         let isDeviceActive = (activeDevice?.id == device.id)
                         let isOverviewSelected = (selectedTab == .overview && isDeviceActive)
@@ -120,7 +121,7 @@ public struct SidebarView: View {
                     }
                 }
             } else {
-                Section(header: sidebarSectionHeader("Device")) {
+                Section(header: sidebarSectionHeader(L10n.tr("Device"))) {
                     DeviceConnectedSidebarRow(
                         selectedTab: $selectedTab,
                         deviceInfo: deviceInfo,
@@ -146,11 +147,11 @@ public struct SidebarView: View {
             // -----------------------------------------------------------------
             // LOCAL MUSIC LIBRARY Section
             // -----------------------------------------------------------------
-            Section(header: sidebarSectionHeader("Local Music Library")) {
+            Section(header: sidebarSectionHeader(L10n.tr("Local Music Library"))) {
                 SidebarRow(
                     tab: .localLibrary,
                     selectedTab: $selectedTab,
-                    title: "Local Library",
+                    title: L10n.tr("Local Library"),
                     icon: "folder.badge.gearshape",
                     badge: localTrackCount > 0 ? "\(localTrackCount.formatted())" : nil
                 )
@@ -160,7 +161,7 @@ public struct SidebarView: View {
                 SidebarRow(
                     tab: .senseMe,
                     selectedTab: $selectedTab,
-                    title: "SenseMe™ Channels",
+                    title: L10n.tr("SenseMe™ Channels"),
                     icon: "waveform.path.ecg.rectangle.fill",
                     badge: nil
                 )
@@ -172,11 +173,11 @@ public struct SidebarView: View {
             // WALKMAN LIBRARY Section (Only when Walkman is connected)
             // -----------------------------------------------------------------
             if isWalkmanConnected {
-                Section(header: sidebarSectionHeader("Walkman Library")) {
+                Section(header: sidebarSectionHeader(L10n.tr("Walkman Library"))) {
                     SidebarRow(
                         tab: .library,
                         selectedTab: $selectedTab,
-                        title: "All Songs",
+                        title: L10n.tr("All Songs"),
                         icon: "music.note.list",
                         badge: trackCount > 0 ? "\(trackCount.formatted())" : nil
                     )
@@ -186,7 +187,7 @@ public struct SidebarView: View {
                     SidebarRow(
                         tab: .recentlyAdded,
                         selectedTab: $selectedTab,
-                        title: "Recently Added",
+                        title: L10n.tr("Recently Added"),
                         icon: "clock.arrow.circlepath",
                         badge: recentlyAddedCount > 0 ? "\(recentlyAddedCount.formatted())" : nil
                     )
@@ -196,7 +197,7 @@ public struct SidebarView: View {
                     SidebarRow(
                         tab: .albums,
                         selectedTab: $selectedTab,
-                        title: "Albums",
+                        title: L10n.tr("Albums"),
                         icon: "square.stack.fill",
                         badge: albumCount > 0 ? "\(albumCount.formatted())" : nil
                     )
@@ -206,7 +207,7 @@ public struct SidebarView: View {
                     SidebarRow(
                         tab: .artists,
                         selectedTab: $selectedTab,
-                        title: "Artists",
+                        title: L10n.tr("Artists"),
                         icon: "music.mic",
                         badge: artistCount > 0 ? "\(artistCount.formatted())" : nil
                     )
@@ -216,7 +217,7 @@ public struct SidebarView: View {
                     SidebarRow(
                         tab: .hiRes,
                         selectedTab: $selectedTab,
-                        title: "Hi-Res Audio",
+                        title: L10n.tr("Hi-Res Audio"),
                         icon: "waveform.badge.magnifyingglass",
                         badge: hiResCount > 0 ? "\(hiResCount.formatted())" : nil
                     )
@@ -226,7 +227,7 @@ public struct SidebarView: View {
                     SidebarRow(
                         tab: .languageStudy,
                         selectedTab: $selectedTab,
-                        title: "Language Study",
+                        title: L10n.tr("Language Study"),
                         icon: "character.book.closed.fill",
                         badge: languageStudyCount > 0 ? "\(languageStudyCount.formatted())" : nil
                     )
@@ -236,7 +237,7 @@ public struct SidebarView: View {
                     SidebarRow(
                         tab: .playlists,
                         selectedTab: $selectedTab,
-                        title: "Playlists",
+                        title: L10n.tr("Playlists"),
                         icon: "list.bullet.rectangle.portrait.fill",
                         badge: nil
                     )
@@ -248,11 +249,11 @@ public struct SidebarView: View {
             // -----------------------------------------------------------------
             // TOOLS Section
             // -----------------------------------------------------------------
-            Section(header: sidebarSectionHeader("Tools")) {
+            Section(header: sidebarSectionHeader(L10n.tr("Tools"))) {
                 SidebarRow(
                     tab: .duplicates,
                     selectedTab: $selectedTab,
-                    title: "Duplicates",
+                    title: L10n.tr("Duplicates"),
                     icon: "doc.on.doc.fill",
                     badge: duplicateCount > 0 ? "\(duplicateCount.formatted())" : nil
                 )
@@ -262,7 +263,7 @@ public struct SidebarView: View {
                 SidebarRow(
                     tab: .transfer,
                     selectedTab: $selectedTab,
-                    title: "Transfer & Convert",
+                    title: L10n.tr("Transfer & Convert"),
                     icon: "arrow.up.arrow.down.circle.fill",
                     badge: queueCount > 0 ? "\(queueCount)" : nil
                 )
@@ -272,13 +273,13 @@ public struct SidebarView: View {
                 SidebarRow(
                     tab: .backupRestore,
                     selectedTab: $selectedTab,
-                    title: "Backup & Restore",
+                    title: L10n.tr("Backup & Restore"),
                     icon: "arrow.triangle.2.circlepath.circle.fill",
                     badge: nil,
                     isDisabled: !isWalkmanConnected
                 )
                 .opacity(isWalkmanConnected ? 1.0 : 0.35)
-                .help(isWalkmanConnected ? "Backup and restore Walkman flash storage" : "Backup & Restore requires a connected Sony Walkman DAP")
+                .help(isWalkmanConnected ? L10n.tr("Backup and restore Walkman flash storage") : L10n.tr("Backup & Restore requires a connected Sony Walkman DAP"))
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets(top: 3.5, leading: 10, bottom: 3.5, trailing: 10))
             }
@@ -315,6 +316,7 @@ public struct SidebarView: View {
 // ABOUT SIDEBAR BUTTON (LIQUID GLASS CAPSULE)
 // -----------------------------------------------------------------------------
 private struct AboutSidebarButton: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let action: () -> Void
     @State private var isHovered = false
 
@@ -326,7 +328,7 @@ private struct AboutSidebarButton: View {
                     .foregroundStyle(isHovered ? WalkmanTheme.silverLight : WalkmanTheme.silverMuted)
                     .frame(width: 22, alignment: .center)
 
-                Text("About Walkman Studio")
+                Text(L10n.tr("About Walkman Studio"))
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(isHovered ? .white : WalkmanTheme.silverLight)
 
@@ -385,6 +387,7 @@ private struct AboutSidebarButton: View {
 // MULTI-DEVICE SIDEBAR CARD
 // -----------------------------------------------------------------------------
 private struct DeviceMultiSidebarCard: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let device: WalkmanDevice
     let isDeviceActive: Bool
     let isOverviewSelected: Bool
@@ -412,7 +415,7 @@ private struct DeviceMultiSidebarCard: View {
                             .lineLimit(1)
 
                         if isDeviceActive {
-                            Text("ACTIVE")
+                            Text(L10n.tr("ACTIVE"))
                                 .font(.system(size: 7.5, weight: .black))
                                 .padding(.horizontal, 4)
                                 .padding(.vertical, 1)
@@ -427,7 +430,7 @@ private struct DeviceMultiSidebarCard: View {
 
                     let freeGb = Double(device.freeBytes) / (1024 * 1024 * 1024)
                     let totalGb = Double(device.totalBytes) / (1024 * 1024 * 1024)
-                    Text(String(format: "%.1f GB free / %.0f GB", freeGb, totalGb))
+                    Text(String(format: L10n.lookup("%.1f GB free / %.0f GB"), freeGb, totalGb))
                         .font(.system(size: 10.5, design: .monospaced))
                         .foregroundStyle(isDeviceActive ? WalkmanTheme.silverMuted : .secondary)
                         .lineLimit(1)
@@ -490,7 +493,7 @@ private struct DeviceMultiSidebarCard: View {
         .onDisappear {
             if isHovered { isHovered = false; NSCursor.pop() }
         }
-        .help("Select \(device.displayName) as active Walkman")
+        .help(L10n.tr("Select \(device.displayName) as active Walkman"))
     }
 }
 
@@ -498,6 +501,7 @@ private struct DeviceMultiSidebarCard: View {
 // DRIVE SIDEBAR ROW (LIQUID GLASS GAUGED)
 // -----------------------------------------------------------------------------
 private struct DriveSidebarRow: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let drive: WalkmanDrive
     let isCurrent: Bool
     var isIndented: Bool = false
@@ -530,7 +534,7 @@ private struct DriveSidebarRow: View {
                         .layoutPriority(1)
 
                     let freeGb = Double(drive.freeBytes) / (1024 * 1024 * 1024)
-                    Text(String(format: "%.1f GB free", freeGb))
+                    Text(String(format: L10n.lookup("%.1f GB free"), freeGb))
                         .font(.system(size: 10.5, design: .monospaced))
                         .foregroundStyle(.secondary)
                 }
@@ -600,7 +604,7 @@ private struct DriveSidebarRow: View {
         .onDisappear {
             if isHovered { isHovered = false; NSCursor.pop() }
         }
-        .help("Select \(drive.name) as active library drive")
+        .help(L10n.tr("Select \(drive.name) as active library drive"))
     }
 }
 
@@ -608,6 +612,7 @@ private struct DriveSidebarRow: View {
 // DEVICE CONNECTED SIDEBAR ROW (LIQUID GLASS OVERVIEW TILE)
 // -----------------------------------------------------------------------------
 private struct DeviceConnectedSidebarRow: View {
+    @ObservedObject private var localization = AppLocalization.shared
     @Binding var selectedTab: NavigationTab
     let deviceInfo: WalkmanDeviceInfo?
     let mountPoint: String?
@@ -641,7 +646,7 @@ private struct DeviceConnectedSidebarRow: View {
                         Image(systemName: "hifispeaker.fill")
                             .font(.system(size: 9))
                             .foregroundStyle(isSelected ? WalkmanTheme.hiResGold : WalkmanTheme.silverMuted)
-                        Text("Device Overview")
+                        Text(L10n.tr("Device Overview"))
                             .font(.system(size: 11))
                             .foregroundStyle(isSelected ? WalkmanTheme.silverLight : .secondary)
                             .lineLimit(1)
@@ -712,7 +717,7 @@ private struct DeviceConnectedSidebarRow: View {
         .onDisappear {
             if isHovered { isHovered = false; NSCursor.pop() }
         }
-        .help("View Sony Walkman hardware specs, storage breakdown, and system status")
+        .help(L10n.tr("View Sony Walkman hardware specs, storage breakdown, and system status"))
     }
 }
 
@@ -720,6 +725,7 @@ private struct DeviceConnectedSidebarRow: View {
 // SIDEBAR ROW (LIQUID GLASS SELECTION)
 // -----------------------------------------------------------------------------
 private struct SidebarRow: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let tab: NavigationTab
     @Binding var selectedTab: NavigationTab
     let title: String
@@ -893,6 +899,7 @@ private struct SidebarRow: View {
 // DEVICE DISCONNECTED SIDEBAR ROW (LIQUID GLASS DISCONNECTED TILE)
 // -----------------------------------------------------------------------------
 private struct DeviceDisconnectedSidebarRow: View {
+    @ObservedObject private var localization = AppLocalization.shared
     @Binding var selectedTab: NavigationTab
     @State private var isHovered = false
 
@@ -922,7 +929,7 @@ private struct DeviceDisconnectedSidebarRow: View {
                         Circle()
                             .fill(Color.secondary.opacity(0.6))
                             .frame(width: 5, height: 5)
-                        Text("Not Connected")
+                        Text(L10n.tr("Not Connected"))
                             .font(.system(size: 10.5))
                             .foregroundStyle(.secondary)
                     }
@@ -951,6 +958,6 @@ private struct DeviceDisconnectedSidebarRow: View {
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
-        .help("View Sony Walkman connection setup and supported models")
+        .help(L10n.tr("View Sony Walkman connection setup and supported models"))
     }
 }

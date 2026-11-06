@@ -324,6 +324,7 @@ public final class SenseMeArtworkResolver: @unchecked Sendable {
 // =============================================================================
 
 public struct EqualizerLiveBars: View {
+    @ObservedObject private var localization = AppLocalization.shared
     var color: Color = WalkmanTheme.hiResGold
     var barCount: Int = 4
     @State private var heights: [CGFloat] = [0.35, 0.75, 0.50, 0.85]
@@ -356,6 +357,7 @@ public struct EqualizerLiveBars: View {
 // =============================================================================
 
 public struct SenseMeChannelsView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     @ObservedObject private var localLibrary = LocalMusicLibraryService.shared
     @ObservedObject private var player = AudioPlayerService.shared
 
@@ -491,14 +493,14 @@ public struct SenseMeChannelsView: View {
                 .font(.system(size: 14))
                 .foregroundStyle(WalkmanTheme.hiResGold)
 
-            Text("\(unanalyzedTracks.count) track\(unanalyzedTracks.count == 1 ? "" : "s") in your Local Music Library have not been analyzed for 12 Tone Acoustics yet.")
+            Text(L10n.tr("\(unanalyzedTracks.count) track\(L10n.pluralSuffix(unanalyzedTracks.count)) in your Local Music Library have not been analyzed for 12 Tone Acoustics yet."))
                 .font(.system(size: 12))
                 .foregroundStyle(WalkmanTheme.silverLight)
 
             Spacer()
 
             Button(action: startBatchAnalysis) {
-                Text("Analyze Now")
+                Text(L10n.tr("Analyze Now"))
                     .font(.system(size: 11.5, weight: .semibold))
                     .foregroundStyle(WalkmanTheme.hiResGold)
                     .padding(.horizontal, 10)
@@ -778,11 +780,11 @@ public struct SenseMeChannelsView: View {
                         .font(.system(size: 13, weight: .bold))
                         .foregroundStyle(WalkmanTheme.hiResGold)
 
-                    Text(selectedChannel.name)
+                    Text(L10n.lookup(selectedChannel.name))
                         .font(.system(size: 14, weight: .bold))
                         .foregroundStyle(Color.white)
 
-                    Text("• \(currentTracks.count) Songs")
+                    Text(L10n.tr("• \(currentTracks.count) Songs"))
                         .font(.system(size: 12))
                         .foregroundStyle(WalkmanTheme.silverMuted)
                 }
@@ -806,11 +808,11 @@ public struct SenseMeChannelsView: View {
                         .font(.system(size: 40))
                         .foregroundStyle(WalkmanTheme.silverMuted)
 
-                    Text("No Tracks in \"\(selectedChannel.name)\"")
+                    Text(L10n.tr("No Tracks in \"\(L10n.lookup(selectedChannel.name))\""))
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(Color.white)
 
-                    Text("Music playback was stopped. There are no tracks in your library matching this channel's 12-Tone acoustic mood, speed, or energy parameters.")
+                    Text(L10n.tr("Music playback was stopped. There are no tracks in your library matching this channel's 12-Tone acoustic mood, speed, or energy parameters."))
                         .font(.system(size: 12.5))
                         .foregroundStyle(WalkmanTheme.silverMuted)
                         .multilineTextAlignment(.center)
@@ -850,11 +852,11 @@ public struct SenseMeChannelsView: View {
             }
 
             VStack(spacing: 8) {
-                Text("Your Local Music Library")
+                Text(L10n.tr("Your Local Music Library"))
                     .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(.white)
 
-                Text("Import music folders to organize, play, and transfer tracks to your Sony Walkman.")
+                Text(L10n.tr("Import music folders to organize, play, and transfer tracks to your Sony Walkman."))
                     .font(.system(size: 13))
                     .foregroundStyle(WalkmanTheme.silverMuted)
                     .multilineTextAlignment(.center)
@@ -865,7 +867,7 @@ public struct SenseMeChannelsView: View {
                 Button(action: openFolderPicker) {
                     HStack(spacing: 7) {
                         Image(systemName: "plus.circle.fill")
-                        Text("Import Music Folders...")
+                        Text(L10n.tr("Import Music Folders..."))
                     }
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Color(red: 20/255, green: 20/255, blue: 24/255))
@@ -877,7 +879,7 @@ public struct SenseMeChannelsView: View {
                 }
                 .buttonStyle(.plain)
 
-                Text("or drag & drop folders here from Finder")
+                Text(L10n.tr("or drag & drop folders here from Finder"))
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }
@@ -904,11 +906,11 @@ public struct SenseMeChannelsView: View {
             }
 
             VStack(spacing: 8) {
-                Text("12 Tone Acoustic Analysis Required")
+                Text(L10n.tr("12 Tone Acoustic Analysis Required"))
                     .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(Color.white)
 
-                Text("Sony SensMe™ Channels analyzes speed (BPM), mood (valence), and energy (arousal) to automatically group your tracks into tailored listening channels.")
+                Text(L10n.tr("Sony SensMe™ Channels analyzes speed (BPM), mood (valence), and energy (arousal) to automatically group your tracks into tailored listening channels."))
                     .font(.system(size: 13))
                     .foregroundStyle(WalkmanTheme.silverMuted)
                     .multilineTextAlignment(.center)
@@ -919,7 +921,7 @@ public struct SenseMeChannelsView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "waveform.badge.magnifyingglass")
                         .font(.system(size: 13, weight: .bold))
-                    Text("Analyze Local Tracks (\(localLibrary.tracks.count) Songs)")
+                    Text(L10n.tr("Analyze Local Tracks (\(localLibrary.tracks.count) Songs)"))
                         .font(.system(size: 13, weight: .bold))
                 }
                 .foregroundStyle(Color.black)
@@ -948,22 +950,22 @@ public struct SenseMeChannelsView: View {
                     .font(.system(size: 32))
                     .foregroundStyle(WalkmanTheme.hiResGold)
 
-                Text("12 Tone Acoustic Analysis")
+                Text(L10n.tr("12 Tone Acoustic Analysis"))
                     .font(.system(size: 16, weight: .bold))
                     .foregroundStyle(Color.white)
 
-                Text("Extracting speed, valence, and arousal for Sony SensMe™ Channels...")
+                Text(L10n.tr("Extracting speed, valence, and arousal for Sony SensMe™ Channels..."))
                     .font(.system(size: 12))
                     .foregroundStyle(WalkmanTheme.silverMuted)
             }
 
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text("Progress")
+                    Text(L10n.tr("Progress"))
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(WalkmanTheme.silverMuted)
                     Spacer()
-                    Text("\(analysisCurrent) of \(analysisTotal)")
+                    Text(L10n.tr("\(analysisCurrent) of \(analysisTotal)"))
                         .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(WalkmanTheme.hiResGold)
                 }
@@ -972,7 +974,7 @@ public struct SenseMeChannelsView: View {
                 ProgressView(value: fraction)
                     .tint(WalkmanTheme.hiResGold)
 
-                Text(analysisTrackName.isEmpty ? "Preparing..." : analysisTrackName)
+                Text(analysisTrackName.isEmpty ? L10n.tr("Preparing...") : analysisTrackName)
                     .font(.system(size: 11))
                     .foregroundStyle(WalkmanTheme.silverLight)
                     .lineLimit(1)
@@ -984,7 +986,7 @@ public struct SenseMeChannelsView: View {
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
             HStack {
-                Button("Stop Analysis") {
+                Button(L10n.tr("Stop Analysis")) {
                     analysisTask?.cancel()
                     showAnalysisSheet = false
                     isAnalyzing = false
@@ -996,7 +998,7 @@ public struct SenseMeChannelsView: View {
                 Spacer()
 
                 if !isAnalyzing {
-                    Button("Done") {
+                    Button(L10n.tr("Done")) {
                         showAnalysisSheet = false
                     }
                     .buttonStyle(.plain)
@@ -1268,8 +1270,8 @@ public struct SenseMeChannelsView: View {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = true
-        panel.prompt = "Import Folders"
-        panel.message = "Choose one or more music folders to add to your Local Music Library"
+        panel.prompt = L10n.tr("Import Folders")
+        panel.message = L10n.tr("Choose one or more music folders to add to your Local Music Library")
         panel.canCreateDirectories = false
 
         if panel.runModal() == .OK {
@@ -1314,6 +1316,7 @@ public struct SenseMeChannelsView: View {
 // =============================================================================
 
 private struct SenseMeStackedCard: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let channel: SenseMeChannel
     let tracks: [Track]
     let relativeIndex: CGFloat
@@ -1337,14 +1340,14 @@ private struct SenseMeStackedCard: View {
     }
 
     private var durationLabel: String {
-        if totalDurationSec <= 0 { return "0 min" }
+        if totalDurationSec <= 0 { return L10n.tr("0 min") }
         let mins = Int(totalDurationSec) / 60
         if mins >= 60 {
             let hours = mins / 60
             let remMins = mins % 60
-            return "\(hours) hr \(remMins) min"
+            return L10n.tr("\(hours) hr \(remMins) min")
         }
-        return "\(mins) min"
+        return L10n.tr("\(mins) min")
     }
 
     private var cleanSubtitle: String {
@@ -1381,7 +1384,7 @@ private struct SenseMeStackedCard: View {
                 // Card Footer Info (52pt)
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
-                        Text(channel.name)
+                        Text(L10n.lookup(channel.name))
                             .font(.system(size: 15, weight: isFront ? .heavy : .bold))
                             .foregroundStyle(isFront ? Color.white : (isHovered ? WalkmanTheme.silverLight : WalkmanTheme.silverMuted))
                             .lineLimit(1)
@@ -1395,7 +1398,7 @@ private struct SenseMeStackedCard: View {
                         HStack(spacing: 3) {
                             Image(systemName: "music.note")
                                 .font(.system(size: 9.5))
-                            Text("\(tracks.count) Songs")
+                            Text(L10n.tr("\(tracks.count) Songs"))
                                 .font(.system(size: 10.5, weight: .semibold))
                         }
                         .foregroundStyle(WalkmanTheme.silverMuted)
@@ -1570,7 +1573,7 @@ private struct SenseMeStackedCard: View {
                         .foregroundStyle(Color.white.opacity(0.92))
                         .shadow(color: Color.black.opacity(0.4), radius: 3, x: 0, y: 1)
 
-                    Text(channel.name.uppercased())
+                    Text(L10n.lookup(channel.name).uppercased())
                         .font(.system(size: 11, weight: .heavy))
                         .tracking(1.4)
                         .foregroundStyle(Color.white.opacity(0.95))
@@ -1586,6 +1589,7 @@ private struct SenseMeStackedCard: View {
 // =============================================================================
 
 private struct SenseMeChannelTableView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let tracks: [Track]
     let allChannelTracks: [Track]
     var onInspectTrack: ((Track) -> Void)? = nil
@@ -1636,7 +1640,7 @@ private struct SenseMeChannelTableView: View {
             }
             .width(min: 24, ideal: 30, max: 36)
 
-            TableColumn("Title") { track in
+            TableColumn(L10n.tr("Title")) { track in
                 let isCurrent = player.currentTrack?.id == track.id
                 let isPlayingThis = isCurrent && player.isPlaying
 
@@ -1653,7 +1657,7 @@ private struct SenseMeChannelTableView: View {
                             HStack(spacing: 3) {
                                 Image(systemName: "sparkles")
                                     .font(.system(size: 8, weight: .bold))
-                                Text("Chorus Highlight (\(formatTime(hl)))")
+                                Text(L10n.tr("Chorus Highlight (\(formatTime(hl)))"))
                                     .font(.system(size: 9.5, weight: .medium, design: .monospaced))
                             }
                             .foregroundStyle(WalkmanTheme.hiResGold.opacity(0.85))
@@ -1663,7 +1667,7 @@ private struct SenseMeChannelTableView: View {
             }
             .width(min: 160, ideal: 240)
 
-            TableColumn("Artist") { track in
+            TableColumn(L10n.tr("Artist")) { track in
                 Text(track.artist.isEmpty ? "Unknown Artist" : track.artist)
                     .font(WalkmanFont.bodyMedium)
                     .foregroundStyle(WalkmanTheme.silverLight)
@@ -1671,7 +1675,7 @@ private struct SenseMeChannelTableView: View {
             }
             .width(min: 120, ideal: 180)
 
-            TableColumn("Album") { track in
+            TableColumn(L10n.tr("Album")) { track in
                 Text(track.album.isEmpty ? "Unknown Album" : track.album)
                     .font(WalkmanFont.callout)
                     .foregroundStyle(WalkmanTheme.silverMuted)
@@ -1679,7 +1683,7 @@ private struct SenseMeChannelTableView: View {
             }
             .width(min: 110, ideal: 160)
 
-            TableColumn("Speed") { track in
+            TableColumn(L10n.tr("Speed")) { track in
                 if let bpm = track.senseMeBpm, bpm > 0 {
                     Text("\(Int(bpm.rounded())) BPM")
                         .font(WalkmanFont.monoSmall)
@@ -1692,7 +1696,7 @@ private struct SenseMeChannelTableView: View {
             }
             .width(min: 60, ideal: 75, max: 90)
 
-            TableColumn("Time") { track in
+            TableColumn(L10n.tr("Time")) { track in
                 Text(track.durationFormatted)
                     .font(WalkmanFont.monoSmall)
                     .foregroundStyle(WalkmanTheme.silverMuted)
@@ -1701,28 +1705,28 @@ private struct SenseMeChannelTableView: View {
         }
         .contextMenu(forSelectionType: String.self) { selection in
             if let id = selection.first, let tr = tracks.first(where: { $0.id == id }) {
-                Button("Play Now") {
+                Button(L10n.tr("Play Now")) {
                     playTrackInChannel(tr)
                 }
-                Button("Play from Beginning") {
+                Button(L10n.tr("Play from Beginning")) {
                     playTrackInChannel(tr, forceBeginning: true)
                 }
                 let highlight = tr.senseMeHighlightSec ?? (tr.durationSeconds > 25.0 ? min(max(15.0, tr.durationSeconds * 0.35), 90.0) : 0.0)
                 if highlight > 0 {
-                    Button("Play Chorus Highlight (\(formatTime(highlight)))") {
+                    Button(L10n.tr("Play Chorus Highlight (\(formatTime(highlight)))")) {
                         self.selectedTrackId = tr.id
                         onInspectTrack?(tr)
                         player.play(track: tr, in: allChannelTracks, startTime: highlight)
                     }
                 }
                 Divider()
-                Button("Inspect Track Metadata") {
+                Button(L10n.tr("Inspect Track Metadata")) {
                     onInspectTrack?(tr)
                 }
-                Button("Edit Song Metadata...") {
+                Button(L10n.tr("Edit Song Metadata...")) {
                     onEditTrack?(tr)
                 }
-                Button("Trim & Cut...") {
+                Button(L10n.tr("Trim & Cut...")) {
                     onTrimCutTrack?(tr)
                 }
                 if let onTransfer = onGoToTransfer {
@@ -1733,11 +1737,11 @@ private struct SenseMeChannelTableView: View {
                         TransferQueueService.shared.enqueue(tracks: toQueue)
                         onTransfer()
                     } label: {
-                        Label("Send to Transfer & Convert...", systemImage: "arrow.up.arrow.down.circle")
+                        Label(L10n.tr("Send to Transfer & Convert..."), systemImage: "arrow.up.arrow.down.circle")
                     }
                 }
                 Divider()
-                Button("Reveal in Finder") {
+                Button(L10n.tr("Reveal in Finder")) {
                     NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: tr.fullPath)])
                 }
             }

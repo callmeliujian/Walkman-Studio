@@ -3,6 +3,7 @@ import AppKit
 
 // MARK: - Batch Lyrics Generator Sheet
 public struct BatchLyricsGeneratorSheet: View {
+    @ObservedObject private var localization = AppLocalization.shared
     public enum TabContext: Equatable {
         case allSongs
         case recentlyAdded
@@ -100,7 +101,7 @@ public struct BatchLyricsGeneratorSheet: View {
     @State private var currentTrackTitle: String = ""
     @State private var currentTrackArtist: String = ""
     @State private var currentTrackStage: String = ""
-    @State private var etaString: String = "Estimating..."
+    @State private var etaString: String = L10n.tr("Estimating...")
     @State private var generationTask: Task<Void, Never>? = nil
     @State private var startTime: Date? = nil
 
@@ -426,7 +427,7 @@ public struct BatchLyricsGeneratorSheet: View {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(Color.orange)
-                Text("Large Library")
+                Text(L10n.tr("Large Library"))
                     .font(WalkmanFont.badge)
                     .foregroundStyle(Color.orange)
             }
@@ -450,12 +451,12 @@ public struct BatchLyricsGeneratorSheet: View {
                         .font(.system(size: 14, weight: .bold))
                         .foregroundStyle(Color.orange)
 
-                    Text("Large Library Notice (\(candidateTracks.count) Tracks)")
+                    Text(L10n.tr("Large Library Notice (\(candidateTracks.count) Tracks)"))
                         .font(WalkmanFont.calloutBold)
                         .foregroundStyle(Color.orange)
                 }
 
-                Text("Fetching lyrics for over 100 tracks involves individual API searches and may take several minutes. Walkman Studio uses parallel multi-worker concurrent requests (5 simultaneous threads) to maximize performance while adhering to public API limits.")
+                Text(L10n.tr("Fetching lyrics for over 100 tracks involves individual API searches and may take several minutes. Walkman Studio uses parallel multi-worker concurrent requests (5 simultaneous threads) to maximize performance while adhering to public API limits."))
                     .font(WalkmanFont.caption)
                     .foregroundStyle(WalkmanTheme.silverLight.opacity(0.90))
                     .fixedSize(horizontal: false, vertical: true)
@@ -467,7 +468,7 @@ public struct BatchLyricsGeneratorSheet: View {
                     .background(.ultraThinMaterial)
             )
         }
-        .help("Large Library Notice: Fetching lyrics for over 100 tracks involves individual API searches and may take several minutes.")
+        .help(L10n.tr("Large Library Notice: Fetching lyrics for over 100 tracks involves individual API searches and may take several minutes."))
     }
 
     private var infoIconButton: some View {
@@ -490,12 +491,12 @@ public struct BatchLyricsGeneratorSheet: View {
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Color.blue)
 
-                    Text("How Walkman Studio Lyrics Work")
+                    Text(L10n.tr("How Walkman Studio Lyrics Work"))
                         .font(WalkmanFont.calloutBold)
                         .foregroundStyle(WalkmanTheme.silverLight)
                 }
 
-                Text("This tool queries online databases (preferring timestamped synchronized .LRC from LRCLIB, with Lyrics.ovh as fallback) and creates companion .lrc files alongside your music files. The Sony Walkman OS and Android Walkman Music Player automatically read companion .lrc files during playback.")
+                Text(L10n.tr("This tool queries online databases (preferring timestamped synchronized .LRC from LRCLIB, with Lyrics.ovh as fallback) and creates companion .lrc files alongside your music files. The Sony Walkman OS and Android Walkman Music Player automatically read companion .lrc files during playback."))
                     .font(WalkmanFont.caption)
                     .foregroundStyle(WalkmanTheme.silverLight.opacity(0.90))
                     .fixedSize(horizontal: false, vertical: true)
@@ -507,17 +508,17 @@ public struct BatchLyricsGeneratorSheet: View {
                     .background(.ultraThinMaterial)
             )
         }
-        .help("How Walkman Studio Lyrics Work: Queries online databases and creates companion .lrc files alongside music files.")
+        .help(L10n.tr("How Walkman Studio Lyrics Work: Queries online databases and creates companion .lrc files alongside music files."))
     }
 
     private var sheetTitle: String {
         switch sheetState {
         case .configure:
-            return "LRC Fetcher"
+            return L10n.tr("LRC Fetcher")
         case .running:
-            return "Fetching .LRC Lyrics..."
+            return L10n.tr("Fetching .LRC Lyrics...")
         case .completed:
-            return "LRC Fetch Complete"
+            return L10n.tr("LRC Fetch Complete")
         }
     }
 
@@ -526,14 +527,14 @@ public struct BatchLyricsGeneratorSheet: View {
         case .configure:
             switch tabContext {
             case .playlist(let name, _):
-                return "Batch search online databases for synchronized .lrc lyrics for playlist '\(name)' and sync them to your Sony Walkman storage."
+                return L10n.tr("Batch search online databases for synchronized .lrc lyrics for playlist '\(name)' and sync them to your Sony Walkman storage.")
             default:
-                return "Batch search online databases for synchronized .lrc lyrics and sync them directly to your Sony Walkman storage."
+                return L10n.tr("Batch search online databases for synchronized .lrc lyrics and sync them directly to your Sony Walkman storage.")
             }
         case .running:
-            return "Parallel multi-track fetching active. Searching LRCLIB and Lyrics.ovh for timestamped .LRC lyrics..."
+            return L10n.tr("Parallel multi-track fetching active. Searching LRCLIB and Lyrics.ovh for timestamped .LRC lyrics...")
         case .completed:
-            return "Finished scanning and saving .lrc companion files to your Walkman library."
+            return L10n.tr("Finished scanning and saving .lrc companion files to your Walkman library.")
         }
     }
 
@@ -542,7 +543,7 @@ public struct BatchLyricsGeneratorSheet: View {
         VStack(spacing: 16) {
             // Scope Selection
             VStack(alignment: .leading, spacing: 8) {
-                Text("FETCH SCOPE")
+                Text(L10n.tr("FETCH SCOPE"))
                     .font(WalkmanFont.sectionHeader)
                     .foregroundStyle(.tertiary)
 
@@ -557,8 +558,8 @@ public struct BatchLyricsGeneratorSheet: View {
                     // Option 2: Pre-selected tracks (if user had selected items)
                     if !selectedTracks.isEmpty {
                         scopeOptionRow(
-                            title: "Selected Track\(selectedTracks.count > 1 ? "s" : "") Only",
-                            subtitle: "\(selectedTracks.count) currently selected audio track\(selectedTracks.count > 1 ? "s" : "")",
+                            title: L10n.tr("Selected Track\(selectedTracks.count > 1 ? "s" : "") Only"),
+                            subtitle: L10n.tr("\(selectedTracks.count) currently selected audio track\(selectedTracks.count > 1 ? "s" : "")"),
                             scope: .selectedOnly
                         )
                     }
@@ -568,16 +569,16 @@ public struct BatchLyricsGeneratorSheet: View {
                     case .albums(let name, let count):
                         if let albumName = name {
                             scopeOptionRow(
-                                title: "Current Album: \(albumName)",
-                                subtitle: "\(count) tracks in this album",
+                                title: L10n.tr("Current Album: \(albumName)"),
+                                subtitle: L10n.tr("\(count) tracks in this album"),
                                 scope: .contextOnly
                             )
                         }
                     case .artists(let name, let count):
                         if let artistName = name {
                             scopeOptionRow(
-                                title: "Current Artist: \(artistName)",
-                                subtitle: "\(count) tracks by this artist",
+                                title: L10n.tr("Current Artist: \(artistName)"),
+                                subtitle: L10n.tr("\(count) tracks by this artist"),
                                 scope: .contextOnly
                             )
                         }
@@ -602,7 +603,7 @@ public struct BatchLyricsGeneratorSheet: View {
 
             // Filter Toggles
             VStack(alignment: .leading, spacing: 8) {
-                Text("OPTIMIZATION & CACHE")
+                Text(L10n.tr("OPTIMIZATION & CACHE"))
                     .font(WalkmanFont.sectionHeader)
                     .foregroundStyle(.tertiary)
 
@@ -615,7 +616,7 @@ public struct BatchLyricsGeneratorSheet: View {
                             .foregroundStyle(onlyMissingLyrics ? Color.white : WalkmanTheme.silverMuted)
 
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Only fetch for tracks missing lyrics (Recommended)")
+                            Text(L10n.tr("Only fetch for tracks missing lyrics (Recommended)"))
                                 .font(WalkmanFont.calloutMedium)
                                 .foregroundStyle(WalkmanTheme.silverLight)
                             if isScanningLyrics {
@@ -623,14 +624,14 @@ public struct BatchLyricsGeneratorSheet: View {
                                     ProgressView()
                                         .controlSize(.small)
                                         .scaleEffect(0.7)
-                                    Text("Analyzing library for existing lyrics...")
+                                    Text(L10n.tr("Analyzing library for existing lyrics..."))
                                         .font(WalkmanFont.caption)
                                         .foregroundStyle(WalkmanTheme.silverMuted)
                                 }
                             } else {
                                 Text(onlyMissingLyrics
-                                     ? "Skips \(tracksWithLyricsCount) tracks that already have .LRC files; fetches for \(targetTracks.count) tracks."
-                                     : "Will re-fetch and overwrite .lrc files for all \(candidateTracks.count) tracks.")
+                                     ? L10n.tr("Skips \(tracksWithLyricsCount) tracks that already have .LRC files; fetches for \(targetTracks.count) tracks.")
+                                     : L10n.tr("Will re-fetch and overwrite .lrc files for all \(candidateTracks.count) tracks."))
                                     .font(WalkmanFont.caption)
                                     .foregroundStyle(WalkmanTheme.silverMuted)
                             }
@@ -657,43 +658,43 @@ public struct BatchLyricsGeneratorSheet: View {
     private var allInTabTitle: String {
         switch tabContext {
         case .allSongs:
-            return "All Songs in Library"
+            return L10n.tr("All Songs in Library")
         case .recentlyAdded:
-            return "All Recently Added"
+            return L10n.tr("All Recently Added")
         case .hiRes:
-            return "All Hi-Res Audio Tracks"
+            return L10n.tr("All Hi-Res Audio Tracks")
         case .languageStudy:
-            return "All Language Study Tracks"
+            return L10n.tr("All Language Study Tracks")
         case .albums:
-            return "All Albums"
+            return L10n.tr("All Albums")
         case .artists:
-            return "All Artists"
+            return L10n.tr("All Artists")
         case .playlist(let name, _):
-            return "All Tracks in '\(name)'"
+            return L10n.tr("All Tracks in '\(name)'")
         }
     }
 
     private var allInTabSubtitle: String {
         switch tabContext {
         case .albums:
-            return "\(availableAlbums.count) albums (\(allTracks.count) total tracks)"
+            return L10n.tr("\(availableAlbums.count) albums (\(allTracks.count) total tracks)")
         case .artists:
-            return "\(availableArtists.count) artists (\(allTracks.count) total tracks)"
+            return L10n.tr("\(availableArtists.count) artists (\(allTracks.count) total tracks)")
         case .playlist(let name, let count):
-            return "\(count) tracks in playlist '\(name)'"
+            return L10n.tr("\(count) tracks in playlist '\(name)'")
         default:
-            return "\(allTracks.count) tracks in the current library tab"
+            return L10n.tr("\(allTracks.count) tracks in the current library tab")
         }
     }
 
     private var customSelectionTitle: String {
         switch tabContext {
         case .albums:
-            return "Select Specific Albums..."
+            return L10n.tr("Select Specific Albums...")
         case .artists:
-            return "Select Specific Artists..."
+            return L10n.tr("Select Specific Artists...")
         default:
-            return "Select Specific Tracks..."
+            return L10n.tr("Select Specific Tracks...")
         }
     }
 
@@ -701,13 +702,13 @@ public struct BatchLyricsGeneratorSheet: View {
         switch tabContext {
         case .albums:
             let selectedCount = selectedCustomAlbumIds.count
-            return "\(selectedCount) of \(availableAlbums.count) albums selected (\(candidateTracks.count) tracks)"
+            return L10n.tr("\(selectedCount) of \(availableAlbums.count) albums selected (\(candidateTracks.count) tracks)")
         case .artists:
             let selectedCount = selectedCustomArtistIds.count
-            return "\(selectedCount) of \(availableArtists.count) artists selected (\(candidateTracks.count) tracks)"
+            return L10n.tr("\(selectedCount) of \(availableArtists.count) artists selected (\(candidateTracks.count) tracks)")
         default:
             let selectedCount = selectedCustomTrackIds.count
-            return "\(selectedCount) of \(allTracks.count) tracks selected"
+            return L10n.tr("\(selectedCount) of \(allTracks.count) tracks selected")
         }
     }
 
@@ -747,7 +748,7 @@ public struct BatchLyricsGeneratorSheet: View {
 
                 // Select All Button
                 Button(action: selectAllCustomItems) {
-                    Text("Select All")
+                    Text(L10n.tr("Select All"))
                         .font(WalkmanFont.caption)
                         .foregroundStyle(WalkmanTheme.silverLight)
                         .padding(.horizontal, 8)
@@ -759,7 +760,7 @@ public struct BatchLyricsGeneratorSheet: View {
 
                 // Deselect All Button
                 Button(action: deselectAllCustomItems) {
-                    Text("Deselect All")
+                    Text(L10n.tr("Deselect All"))
                         .font(WalkmanFont.caption)
                         .foregroundStyle(WalkmanTheme.silverMuted)
                         .padding(.horizontal, 8)
@@ -803,9 +804,9 @@ public struct BatchLyricsGeneratorSheet: View {
 
     private var customSearchPlaceholder: String {
         switch tabContext {
-        case .albums: return "Search albums or artists..."
-        case .artists: return "Search artists..."
-        default: return "Search tracks by title, artist, or album..."
+        case .albums: return L10n.tr("Search albums or artists...")
+        case .artists: return L10n.tr("Search artists...")
+        default: return L10n.tr("Search tracks by title, artist, or album...")
         }
     }
 
@@ -962,7 +963,7 @@ public struct BatchLyricsGeneratorSheet: View {
 
                 Spacer()
 
-                Text("\(album.trackCount) tracks")
+                Text(L10n.tr("\(album.trackCount) tracks"))
                     .font(WalkmanFont.badge)
                     .foregroundStyle(WalkmanTheme.silverLight)
                     .padding(.horizontal, 6)
@@ -1007,7 +1008,7 @@ public struct BatchLyricsGeneratorSheet: View {
                         .font(WalkmanFont.calloutMedium)
                         .foregroundStyle(WalkmanTheme.silverLight)
                         .lineLimit(1)
-                    Text("\(artist.albumCount) albums • \(artist.trackCount) tracks")
+                    Text(L10n.tr("\(artist.albumCount) albums • \(artist.trackCount) tracks"))
                         .font(WalkmanFont.caption)
                         .foregroundStyle(WalkmanTheme.silverMuted)
                         .lineLimit(1)
@@ -1015,7 +1016,7 @@ public struct BatchLyricsGeneratorSheet: View {
 
                 Spacer()
 
-                Text("\(artist.trackCount) tracks")
+                Text(L10n.tr("\(artist.trackCount) tracks"))
                     .font(WalkmanFont.badge)
                     .foregroundStyle(WalkmanTheme.silverLight)
                     .padding(.horizontal, 6)
@@ -1133,7 +1134,7 @@ public struct BatchLyricsGeneratorSheet: View {
                 .animation(.interactiveSpring(response: 0.30, dampingFraction: 0.80), value: currentProgress)
 
                 HStack {
-                    Text("\(processedCount) of \(totalTracksToProcess) tracks")
+                    Text(L10n.tr("\(processedCount) of \(totalTracksToProcess) tracks"))
                         .font(WalkmanFont.monoSmall)
                         .foregroundStyle(WalkmanTheme.silverLight)
 
@@ -1221,11 +1222,11 @@ public struct BatchLyricsGeneratorSheet: View {
             .padding(.top, 8)
 
             VStack(spacing: 6) {
-                Text("LRC Batch Fetch Complete")
+                Text(L10n.tr("LRC Batch Fetch Complete"))
                     .font(WalkmanFont.title2)
                     .foregroundStyle(WalkmanTheme.silverLight)
 
-                Text("Successfully checked \(totalTracksToProcess) tracks in your Walkman Library.")
+                Text(L10n.tr("Successfully checked \(totalTracksToProcess) tracks in your Walkman Library."))
                     .font(WalkmanFont.callout)
                     .foregroundStyle(WalkmanTheme.silverMuted)
                     .multilineTextAlignment(.center)
@@ -1249,7 +1250,7 @@ public struct BatchLyricsGeneratorSheet: View {
                 Image(systemName: "checkmark.shield.fill")
                     .font(.system(size: 12))
                     .foregroundStyle(Color.green.opacity(0.85))
-                Text("Hardware companion .LRC files saved with timestamp metadata preserved.")
+                Text(L10n.tr("Hardware companion .LRC files saved with timestamp metadata preserved."))
                     .font(WalkmanFont.caption)
                     .foregroundStyle(WalkmanTheme.silverMuted)
             }
@@ -1301,13 +1302,13 @@ public struct BatchLyricsGeneratorSheet: View {
     private func breakdownHeaderTitle(for category: LyricsFetchCategory) -> String {
         switch category {
         case .notFound:
-            return "Tracks with No Lyrics Found"
+            return L10n.tr("Tracks with No Lyrics Found")
         case .synced:
-            return "Tracks with Synced .LRC Saved"
+            return L10n.tr("Tracks with Synced .LRC Saved")
         case .plain:
-            return "Tracks with Plain Lyrics Saved"
+            return L10n.tr("Tracks with Plain Lyrics Saved")
         case .skipped:
-            return "Skipped Tracks (Already Had .LRC)"
+            return L10n.tr("Skipped Tracks (Already Had .LRC)")
         }
     }
 
@@ -1340,7 +1341,7 @@ public struct BatchLyricsGeneratorSheet: View {
                             Image(systemName: "magnifyingglass")
                                 .font(.system(size: 10))
                                 .foregroundStyle(WalkmanTheme.silverMuted)
-                            TextField("Filter tracks...", text: $breakdownSearchQuery)
+                            TextField(L10n.tr("Filter tracks..."), text: $breakdownSearchQuery)
                                 .textFieldStyle(.plain)
                                 .font(WalkmanFont.caption)
                                 .foregroundStyle(WalkmanTheme.silverLight)
@@ -1378,7 +1379,7 @@ public struct BatchLyricsGeneratorSheet: View {
                             .clipShape(Circle())
                     }
                     .buttonStyle(.plain)
-                    .help("Close breakdown")
+                    .help(L10n.tr("Close breakdown"))
                 }
 
                 Divider()
@@ -1387,7 +1388,7 @@ public struct BatchLyricsGeneratorSheet: View {
                 if filteredCategoryItems.isEmpty {
                     HStack {
                         Spacer()
-                        Text(currentCategoryItems.isEmpty ? "No tracks in this category yet." : "No matching tracks found.")
+                        Text(currentCategoryItems.isEmpty ? L10n.tr("No tracks in this category yet.") : L10n.tr("No matching tracks found."))
                             .font(WalkmanFont.caption)
                             .foregroundStyle(WalkmanTheme.silverMuted)
                             .padding(.vertical, 16)
@@ -1410,7 +1411,7 @@ public struct BatchLyricsGeneratorSheet: View {
                         Image(systemName: "info.circle")
                             .font(.system(size: 11))
                             .foregroundStyle(Color.orange.opacity(0.85))
-                        Text("Tip: Verify song title and artist tags in the Metadata Editor to help online lyric matching.")
+                        Text(L10n.tr("Tip: Verify song title and artist tags in the Metadata Editor to help online lyric matching."))
                             .font(WalkmanFont.caption)
                             .foregroundStyle(WalkmanTheme.silverMuted)
                     }
@@ -1537,7 +1538,7 @@ public struct BatchLyricsGeneratorSheet: View {
             if sheetState == .configure {
                 // Cancel
                 Button(action: onDismiss) {
-                    Text("Cancel")
+                    Text(L10n.tr("Cancel"))
                         .font(WalkmanFont.calloutMedium)
                         .foregroundStyle(WalkmanTheme.silverMuted)
                         .padding(.horizontal, 18)
@@ -1555,12 +1556,12 @@ public struct BatchLyricsGeneratorSheet: View {
                             ProgressView()
                                 .controlSize(.small)
                                 .scaleEffect(0.75)
-                            Text("Checking Lyrics...")
+                            Text(L10n.tr("Checking Lyrics..."))
                                 .font(WalkmanFont.calloutBold)
                         } else {
                             Image(systemName: "quote.bubble.fill")
                                 .font(.system(size: 12, weight: .bold))
-                            Text(targetTracks.isEmpty ? "No Tracks to Fetch" : "Fetch LRC Lyrics (\(targetTracks.count))")
+                            Text(targetTracks.isEmpty ? L10n.tr("No Tracks to Fetch") : L10n.tr("Fetch LRC Lyrics (\(targetTracks.count))"))
                                 .font(WalkmanFont.calloutBold)
                         }
                     }
@@ -1579,7 +1580,7 @@ public struct BatchLyricsGeneratorSheet: View {
                     HStack(spacing: 6) {
                         Image(systemName: "stop.fill")
                             .font(.system(size: 11, weight: .semibold))
-                        Text("Stop Generation")
+                        Text(L10n.tr("Stop Generation"))
                             .font(WalkmanFont.calloutMedium)
                     }
                     .foregroundStyle(Color.red.opacity(0.90))
@@ -1594,7 +1595,7 @@ public struct BatchLyricsGeneratorSheet: View {
 
                 // Done Button
                 Button(action: onDismiss) {
-                    Text("Done")
+                    Text(L10n.tr("Done"))
                         .font(WalkmanFont.calloutBold)
                         .foregroundStyle(Color(red: 20/255, green: 24/255, blue: 36/255))
                         .padding(.horizontal, 28)
@@ -1623,8 +1624,8 @@ public struct BatchLyricsGeneratorSheet: View {
         breakdownSearchQuery = ""
         currentTrackTitle = ""
         currentTrackArtist = ""
-        currentTrackStage = "Starting multi-threaded concurrent engine..."
-        etaString = "Estimating..."
+        currentTrackStage = L10n.tr("Starting multi-threaded concurrent engine...")
+        etaString = L10n.tr("Estimating...")
         startTime = Date()
 
         generationTask = Task {
@@ -1712,44 +1713,44 @@ public struct BatchLyricsGeneratorSheet: View {
                     try AudioTagger.shared.saveLyrics(fileURL: trackURL, lyrics: lyricsResult.lyrics)
                     if lyricsResult.synced {
                         syncedCount += 1
-                        currentTrackStage = "Saved synchronized .LRC file"
+                        currentTrackStage = L10n.tr("Saved synchronized .LRC file")
                         fetchedResultItems.append(TrackFetchResultItem(
                             id: "\(track.id)-synced-\(processedCount)",
                             track: track,
                             category: .synced,
-                            detail: "Synced .LRC companion saved",
+                            detail: L10n.tr("Synced .LRC companion saved"),
                             timestamp: Date()
                         ))
                     } else {
                         plainCount += 1
-                        currentTrackStage = "Saved plain lyrics file"
+                        currentTrackStage = L10n.tr("Saved plain lyrics file")
                         fetchedResultItems.append(TrackFetchResultItem(
                             id: "\(track.id)-plain-\(processedCount)",
                             track: track,
                             category: .plain,
-                            detail: "Plain text lyrics saved",
+                            detail: L10n.tr("Plain text lyrics saved"),
                             timestamp: Date()
                         ))
                     }
                 } catch {
                     notFoundCount += 1
-                    currentTrackStage = "Failed to write .LRC: \(error.localizedDescription)"
+                    currentTrackStage = L10n.tr("Failed to write .LRC: \(error.localizedDescription)")
                     fetchedResultItems.append(TrackFetchResultItem(
                         id: "\(track.id)-diskerror-\(processedCount)",
                         track: track,
                         category: .notFound,
-                        detail: "Disk error: \(error.localizedDescription)",
+                        detail: L10n.tr("Disk error: \(error.localizedDescription)"),
                         timestamp: Date()
                     ))
                 }
             case .failure(let error):
                 notFoundCount += 1
-                currentTrackStage = "No lyrics found online"
+                currentTrackStage = L10n.tr("No lyrics found online")
                 let detailMsg: String
                 if let lyricsErr = error as? LyricsError {
-                    detailMsg = lyricsErr.errorDescription ?? "No lyrics found online"
+                    detailMsg = lyricsErr.errorDescription ?? L10n.tr("No lyrics found online")
                 } else {
-                    detailMsg = "No lyrics found online"
+                    detailMsg = L10n.tr("No lyrics found online")
                 }
                 fetchedResultItems.append(TrackFetchResultItem(
                     id: "\(track.id)-notfound-\(processedCount)",
@@ -1762,12 +1763,12 @@ public struct BatchLyricsGeneratorSheet: View {
         } else {
             // Skipped (already has lyrics)
             skippedCount += 1
-            currentTrackStage = "Skipped (already has .LRC)"
+            currentTrackStage = L10n.tr("Skipped (already has .LRC)")
             fetchedResultItems.append(TrackFetchResultItem(
                 id: "\(track.id)-skipped-\(processedCount)",
                 track: track,
                 category: .skipped,
-                detail: "Existing companion .LRC preserved",
+                detail: L10n.tr("Existing companion .LRC preserved"),
                 timestamp: Date()
             ))
         }
@@ -1784,15 +1785,15 @@ public struct BatchLyricsGeneratorSheet: View {
 
     private func formatETA(_ seconds: Double) -> String {
         if seconds <= 2 {
-            return "Finishing..."
+            return L10n.tr("Finishing...")
         }
         let totalSec = Int(seconds)
         let mins = totalSec / 60
         let secs = totalSec % 60
         if mins > 0 {
-            return "\(mins)m \(secs)s remaining"
+            return L10n.tr("\(mins)m \(secs)s remaining")
         } else {
-            return "\(secs)s remaining"
+            return L10n.tr("\(secs)s remaining")
         }
     }
 
@@ -1812,6 +1813,7 @@ public struct BatchLyricsGeneratorSheet: View {
 
 // MARK: - Sheet Close Button
 private struct SheetCloseButton: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let action: () -> Void
     @State private var isHovered: Bool = false
     
@@ -2005,6 +2007,7 @@ private final class SheetWindowDelegate: NSObject, NSWindowDelegate {
 
 // MARK: - Liquid Glass Metric Button
 private struct LiquidGlassMetricButton: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let category: BatchLyricsGeneratorSheet.LyricsFetchCategory
     let count: Int
     let isSelected: Bool
@@ -2028,7 +2031,7 @@ private struct LiquidGlassMetricButton: View {
                 }
 
                 HStack(spacing: 4) {
-                    Text(category.rawValue)
+                    Text(L10n.lookup(category.rawValue))
                         .font(.system(size: 10, weight: isSelected ? .semibold : .medium))
                         .foregroundStyle(isSelected ? WalkmanTheme.silverLight : WalkmanTheme.silverMuted)
                         .lineLimit(1)
@@ -2107,6 +2110,6 @@ private struct LiquidGlassMetricButton: View {
             isHovered = h
             if h { NSCursor.pointingHand.push() } else { NSCursor.pop() }
         }
-        .help(count == 0 ? "No tracks in \(category.rawValue)" : "Click to view \(count) \(category.rawValue) tracks")
+        .help(count == 0 ? L10n.tr("No tracks in \(L10n.lookup(category.rawValue))") : L10n.tr("Click to view \(count) \(L10n.lookup(category.rawValue)) tracks"))
     }
 }

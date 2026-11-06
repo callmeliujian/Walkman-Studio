@@ -2,6 +2,7 @@ import SwiftUI
 import AppKit
 
 public struct FullScreenNowPlayingView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     @Binding var isPresented: Bool
     var libraryTracks: [Track] = []
 
@@ -283,7 +284,7 @@ public struct FullScreenNowPlayingView: View {
                     systemName: "xmark",
                     iconSize: 13,
                     buttonSize: 36,
-                    helpText: "Exit Full Screen (Esc)",
+                    helpText: L10n.tr("Exit Full Screen (Esc)"),
                     action: dismiss
                 )
                 .keyboardShortcut(.escape, modifiers: [])
@@ -293,7 +294,7 @@ public struct FullScreenNowPlayingView: View {
                     systemName: isWindowFullScreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right",
                     iconSize: 13,
                     buttonSize: 36,
-                    helpText: isWindowFullScreen ? "Exit Window Full Screen" : "Enter Window Full Screen",
+                    helpText: isWindowFullScreen ? L10n.tr("Exit Window Full Screen") : L10n.tr("Enter Window Full Screen"),
                     action: {
                         if let win = NSApp.keyWindow {
                             win.toggleFullScreen(nil)
@@ -356,8 +357,8 @@ public struct FullScreenNowPlayingView: View {
             .buttonStyle(FullScreenTactileButtonStyle())
             .help(
                 isVolumeExpanded
-                    ? (player.volume <= 0.001 ? "Unmute" : "Close Volume Slider (⌥+Click to Mute)")
-                    : "Adjust Volume (Click to expand, ⌥+Click to Mute)"
+                    ? (player.volume <= 0.001 ? L10n.tr("Unmute") : L10n.tr("Close Volume Slider (⌥+Click to Mute)"))
+                    : L10n.tr("Adjust Volume (Click to expand, ⌥+Click to Mute)")
             )
             .onHover { h in
                 isVolumeSpeakerHovered = h
@@ -505,7 +506,7 @@ public struct FullScreenNowPlayingView: View {
                                 HStack(spacing: 3) {
                                     Text("HR")
                                         .font(.system(size: 8.5, weight: .black))
-                                    Text("\(track.bitsPerSample)bit")
+                                    Text(L10n.tr("\(track.bitsPerSample)bit"))
                                         .font(.system(size: 8.5, weight: .semibold))
                                 }
                                 .foregroundStyle(WalkmanTheme.hiResGoldLight)
@@ -520,11 +521,11 @@ public struct FullScreenNowPlayingView: View {
                             }
                         }
                     } else {
-                        Text("Not Playing")
+                        Text(L10n.tr("Not Playing"))
                             .font(.system(size: 20, weight: .bold))
                             .foregroundStyle(.white)
 
-                        Text("Select a song to start listening")
+                        Text(L10n.tr("Select a song to start listening"))
                             .font(.system(size: 14, weight: .regular))
                             .foregroundStyle(WalkmanTheme.silverMuted.opacity(0.7))
                     }
@@ -554,7 +555,7 @@ public struct FullScreenNowPlayingView: View {
                         size: artworkDimension < 260 ? 15 : 18,
                         isActive: player.isShuffle,
                         isDisabled: player.currentTrack == nil && libraryTracks.isEmpty,
-                        helpText: player.isShuffle ? "Shuffle: On" : "Shuffle: Off",
+                        helpText: player.isShuffle ? L10n.tr("Shuffle: On") : L10n.tr("Shuffle: Off"),
                         action: { player.isShuffle.toggle() }
                     )
 
@@ -564,7 +565,7 @@ public struct FullScreenNowPlayingView: View {
                         size: artworkDimension < 260 ? 20 : 24,
                         isActive: false,
                         isDisabled: player.currentTrack == nil && libraryTracks.isEmpty,
-                        helpText: "Previous Track",
+                        helpText: L10n.tr("Previous Track"),
                         action: { player.playPrevious() }
                     )
 
@@ -585,7 +586,7 @@ public struct FullScreenNowPlayingView: View {
                     }
                     .buttonStyle(FullScreenTactileButtonStyle())
                     .keyboardShortcut(.space, modifiers: [])
-                    .help(player.isPlaying ? "Pause (Space)" : "Play (Space)")
+                    .help(player.isPlaying ? L10n.tr("Pause (Space)") : L10n.tr("Play (Space)"))
                     .onHover { h in
                         if h { NSCursor.pointingHand.push() } else { NSCursor.pop() }
                     }
@@ -596,7 +597,7 @@ public struct FullScreenNowPlayingView: View {
                         size: artworkDimension < 260 ? 20 : 24,
                         isActive: false,
                         isDisabled: player.currentTrack == nil && libraryTracks.isEmpty,
-                        helpText: "Next Track",
+                        helpText: L10n.tr("Next Track"),
                         action: { player.playNext() }
                     )
 
@@ -606,7 +607,7 @@ public struct FullScreenNowPlayingView: View {
                         size: artworkDimension < 260 ? 15 : 18,
                         isActive: player.isRepeat,
                         isDisabled: player.currentTrack == nil && libraryTracks.isEmpty,
-                        helpText: player.isRepeat ? "Repeat: On" : "Repeat: Off",
+                        helpText: player.isRepeat ? L10n.tr("Repeat: On") : L10n.tr("Repeat: Off"),
                         action: { player.isRepeat.toggle() }
                     )
                 }
@@ -623,7 +624,7 @@ public struct FullScreenNowPlayingView: View {
             if player.currentTrack == nil {
                 // Exact text and centered layout from Image 1: "Play a song to see lyrics here."
                 VStack(spacing: 8) {
-                    Text("Play a song to see lyrics here.")
+                    Text(L10n.tr("Play a song to see lyrics here."))
                         .font(.system(size: 16, weight: .regular))
                         .foregroundStyle(WalkmanTheme.silverMuted.opacity(0.72))
                 }
@@ -651,7 +652,7 @@ public struct FullScreenNowPlayingView: View {
                             .tint(WalkmanTheme.silverLight)
                             .scaleEffect(1.2)
 
-                        Text("Fetching lyrics...")
+                        Text(L10n.tr("Fetching lyrics..."))
                             .font(.system(size: 14, weight: .medium))
                             .foregroundStyle(WalkmanTheme.silverMuted)
                     }
@@ -662,7 +663,7 @@ public struct FullScreenNowPlayingView: View {
                             .font(.system(size: 42, weight: .light))
                             .foregroundStyle(WalkmanTheme.silverMuted.opacity(0.4))
 
-                        Text("No lyrics found for this song.")
+                        Text(L10n.tr("No lyrics found for this song."))
                             .font(.system(size: 15, weight: .medium))
                             .foregroundStyle(WalkmanTheme.silverMuted)
 
@@ -672,7 +673,7 @@ public struct FullScreenNowPlayingView: View {
                             }) {
                                 HStack(spacing: 7) {
                                     Image(systemName: "arrow.clockwise")
-                                    Text("Search Online")
+                                    Text(L10n.tr("Search Online"))
                                 }
                                 .font(.system(size: 13, weight: .semibold))
                                 .foregroundStyle(WalkmanTheme.silverLight)
@@ -821,11 +822,11 @@ public struct FullScreenNowPlayingView: View {
 
         return VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text("Playing Next")
+                Text(L10n.tr("Playing Next"))
                     .font(.system(size: 18, weight: .bold))
                     .foregroundStyle(.white)
 
-                Text("(\(queueTracks.count) songs)")
+                Text(L10n.tr("(\(queueTracks.count) songs)"))
                     .font(.system(size: 14, weight: .regular))
                     .foregroundStyle(WalkmanTheme.silverMuted)
 
@@ -835,7 +836,7 @@ public struct FullScreenNowPlayingView: View {
 
             if queueTracks.isEmpty {
                 VStack(spacing: 8) {
-                    Text("Queue is empty")
+                    Text(L10n.tr("Queue is empty"))
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(WalkmanTheme.silverMuted)
                 }
@@ -899,7 +900,7 @@ public struct FullScreenNowPlayingView: View {
                 .animation(.spring(response: 0.20, dampingFraction: 0.72), value: isLyricsTabHovered)
             }
             .buttonStyle(FullScreenTactileButtonStyle())
-            .help("Synchronized Live Lyrics")
+            .help(L10n.tr("Synchronized Live Lyrics"))
             .onHover { h in
                 isLyricsTabHovered = h
                 if h { NSCursor.pointingHand.push() } else { NSCursor.pop() }
@@ -937,7 +938,7 @@ public struct FullScreenNowPlayingView: View {
                 .animation(.spring(response: 0.20, dampingFraction: 0.72), value: isQueueTabHovered)
             }
             .buttonStyle(FullScreenTactileButtonStyle())
-            .help("Playing Next Queue")
+            .help(L10n.tr("Playing Next Queue"))
             .onHover { h in
                 isQueueTabHovered = h
                 if h { NSCursor.pointingHand.push() } else { NSCursor.pop() }
@@ -1001,7 +1002,7 @@ public struct FullScreenNowPlayingView: View {
                     } else {
                         self.lyrics = nil
                         self.parsedLines = []
-                        self.lyricsError = "No lyrics found on device"
+                        self.lyricsError = L10n.tr("No lyrics found on device")
                     }
                     self.isLoadingLyrics = false
                 }
@@ -1034,7 +1035,7 @@ public struct FullScreenNowPlayingView: View {
                         } else {
                             self.lyrics = nil
                             self.parsedLines = []
-                            self.lyricsError = "No lyrics found online"
+                            self.lyricsError = L10n.tr("No lyrics found online")
                         }
                         self.isLoadingLyrics = false
                     }
@@ -1055,6 +1056,7 @@ struct FullScreenTactileButtonStyle: ButtonStyle {
 }
 
 private struct LiquidGlassTopBarButton: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let systemName: String
     var iconSize: CGFloat = 13
     var iconWeight: Font.Weight = .bold
@@ -1121,6 +1123,7 @@ private struct LiquidGlassTopBarButton: View {
 }
 
 private struct FullScreenScrubberBar: View {
+    @ObservedObject private var localization = AppLocalization.shared
     @Binding var currentTime: Double
     let duration: Double
     let isHiRes: Bool
@@ -1224,6 +1227,7 @@ private struct FullScreenScrubberBar: View {
 }
 
 private struct FullScreenTransportButton: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let systemName: String
     let size: CGFloat
     let isActive: Bool
@@ -1258,6 +1262,7 @@ private struct FullScreenTransportButton: View {
 }
 
 private struct QueueRowView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let index: Int
     let item: Track
     let isCurrent: Bool
@@ -1317,6 +1322,7 @@ private struct QueueRowView: View {
 }
 
 private struct FullScreenVolumeSlider: View {
+    @ObservedObject private var localization = AppLocalization.shared
     @Binding var volume: Float
     let totalWidth: CGFloat = 96
     let trackHeight: CGFloat = 6.5

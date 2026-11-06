@@ -1,6 +1,7 @@
 import SwiftUI
 
 public struct TopStorageBarView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let drives: [WalkmanDrive]
     let activeDrive: WalkmanDrive?
     let onSelectDrive: (WalkmanDrive) -> Void
@@ -57,13 +58,13 @@ public struct TopStorageBarView: View {
                     }
 
                     HStack(spacing: 4) {
-                        Text("Native Apple Silicon")
+                        Text(L10n.tr("Native Apple Silicon"))
                             .font(WalkmanFont.subheadline)
                             .foregroundStyle(.secondary)
                         Text("•")
                             .font(.system(size: 8))
                             .foregroundStyle(.tertiary)
-                        Text("Signature Edition")
+                        Text(L10n.tr("Signature Edition"))
                             .font(WalkmanFont.subheadlineMedium)
                             .foregroundStyle(WalkmanTheme.silverMuted)
                     }
@@ -82,7 +83,7 @@ public struct TopStorageBarView: View {
                         isSelected: activeDrive?.mountPoint == drive.mountPoint
                     )
                 } else {
-                    disconnectedPill(title: "Internal WALKMAN: Disconnected")
+                    disconnectedPill(title: L10n.tr("Internal WALKMAN: Disconnected"))
                 }
 
                 // MicroSD Gauge
@@ -93,7 +94,7 @@ public struct TopStorageBarView: View {
                         isSelected: activeDrive?.mountPoint == drive.mountPoint
                     )
                 } else {
-                    disconnectedPill(title: "MicroSD: Empty")
+                    disconnectedPill(title: L10n.tr("MicroSD: Empty"))
                 }
 
                 // Rescan Button
@@ -108,7 +109,7 @@ public struct TopStorageBarView: View {
                         .overlay(Circle().stroke(WalkmanTheme.border, lineWidth: 1))
                 }
                 .buttonStyle(.plain)
-                .help("Rescan Walkman storage volumes")
+                .help(L10n.tr("Rescan Walkman storage volumes"))
             }
 
             Spacer()
@@ -120,7 +121,7 @@ public struct TopStorageBarView: View {
                         ProgressView()
                             .controlSize(.small)
                             .scaleEffect(0.7)
-                        Text("Ejecting...")
+                        Text(L10n.tr("Ejecting..."))
                             .font(WalkmanFont.calloutBold)
                             .foregroundStyle(WalkmanTheme.silverLight)
                     } else {
@@ -128,7 +129,7 @@ public struct TopStorageBarView: View {
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(WalkmanTheme.silver)
 
-                        Text("Eject")
+                        Text(L10n.tr("Eject"))
                             .font(WalkmanFont.calloutBold)
                             .foregroundStyle(WalkmanTheme.silverLight)
                     }
@@ -145,7 +146,7 @@ public struct TopStorageBarView: View {
             .buttonStyle(.plain)
             .disabled(activeDrive == nil || isEjecting)
             .opacity((activeDrive == nil || isEjecting) ? 0.4 : 1.0)
-            .help("Run dot_clean -m, purge macOS ghost files, and safely unmount Walkman")
+            .help(L10n.tr("Run dot_clean -m, purge macOS ghost files, and safely unmount Walkman"))
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 10)
@@ -172,7 +173,7 @@ public struct TopStorageBarView: View {
                         Text(formatBytes(drive.freeBytes))
                             .font(WalkmanFont.monoSmall.weight(.bold))
                             .foregroundStyle(.white)
-                        Text("/ \(formatBytes(drive.totalBytes)) free")
+                        Text(L10n.tr("/ \(formatBytes(drive.totalBytes)) free"))
                             .font(WalkmanFont.monoSmall)
                             .foregroundStyle(.secondary)
                     }

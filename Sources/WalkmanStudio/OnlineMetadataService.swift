@@ -3,7 +3,10 @@ import CoreGraphics
 import ImageIO
 import AppKit
 
-public struct OnlineTrackMetadata: Sendable {
+public struct OnlineTrackMetadata: Sendable, Identifiable {
+    public let id: String
+    public let durationSeconds: Double?
+    public let previewArtworkURL: URL?
     public let title: String
     public let artist: String
     public let album: String
@@ -23,8 +26,14 @@ public struct OnlineTrackMetadata: Sendable {
         genre: String = "",
         artworkData: Data? = nil,
         artworkURL: URL? = nil,
-        source: String = "iTunes"
+        source: String = "iTunes",
+        id: String = UUID().uuidString,
+        durationSeconds: Double? = nil,
+        previewArtworkURL: URL? = nil
     ) {
+        self.id = id
+        self.durationSeconds = durationSeconds
+        self.previewArtworkURL = previewArtworkURL
         self.title = title
         self.artist = artist
         self.album = album
@@ -42,15 +51,19 @@ public struct OnlineTrackMetadata: Sendable {
 public final class OnlineMetadataService: @unchecked Sendable {
     public static let shared = OnlineMetadataService()
 
-    private let session: URLSession = {
+    private let session: URLSession
+
+    init(session: URLSession? = nil) {
+        if let session {
+            self.session = session
+            return
+        }
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 6.0
         config.timeoutIntervalForResource = 12.0
         config.requestCachePolicy = .returnCacheDataElseLoad
-        return URLSession(configuration: config)
-    }()
-
-    private init() {}
+        self.session = URLSession(configuration: config)
+    }
 
     /// Cleans a raw filename or title string into clean search terms
     public static func cleanSearchTerms(filename: String, title: String? = nil, artist: String? = nil) -> (title: String, artist: String, query: String) {
@@ -114,220 +127,142 @@ public final class OnlineMetadataService: @unchecked Sendable {
         return (q, "", q)
     }
 
-    /// Fetches metadata and artwork online for a track.
+    /// Interactive callers must inspect all candidates before applying metadata.
+    /// Artwork is deliberately loaded only after a candidate has been chosen.
+    public func searchMetadata(
+        filename: String,
+        currentTitle: String? = nil,
+        currentArtist: String? = nil,
+        currentAlbum: String? = nil
+    ) async -> [OnlineTrackMetadata] {
+        let terms = Self.cleanSearchTerms(filename: filename, title: currentTitle, artist: currentArtist)
+        guard !terms.query.isEmpty, !Task.isCancelled else { return [] }
+
+        var candidates = await queryiTunes(query: terms.query)
+        if candidates.isEmpty && !Task.isCancelled {
+            candidates = await queryDeezer(query: terms.query)
+        }
+        if candidates.isEmpty && !Task.isCancelled && !terms.artist.isEmpty && !terms.title.isEmpty {
+            candidates = await queryiTunes(query: terms.title)
+        }
+        guard !Task.isCancelled else { return [] }
+        return Self.rankedCandidates(candidates, title: terms.title, artist: terms.artist, album: currentAlbum ?? "")
+    }
+
+    /// Compatibility path for noninteractive queue optimization.
     public func fetchMetadata(
         filename: String,
         currentTitle: String? = nil,
         currentArtist: String? = nil,
         currentAlbum: String? = nil
     ) async -> OnlineTrackMetadata? {
-        let terms = Self.cleanSearchTerms(filename: filename, title: currentTitle, artist: currentArtist)
-        let query = terms.query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return nil }
-
-        // 1. Try iTunes Search API
-        if let itunesResult = await queryiTunes(query: query, expectedTitle: terms.title, expectedArtist: terms.artist) {
-            return itunesResult
-        }
-
-        // 2. Try Deezer API Fallback
-        if let deezerResult = await queryDeezer(query: query, expectedTitle: terms.title, expectedArtist: terms.artist) {
-            return deezerResult
-        }
-
-        // 3. Fallback: try title-only query if we had an artist attached that might have missed
-        if !terms.artist.isEmpty && !terms.title.isEmpty && terms.title != query {
-            if let looseResult = await queryiTunes(query: terms.title, expectedTitle: terms.title, expectedArtist: "") {
-                return looseResult
-            }
-        }
-
-        return nil
+        let candidates = await searchMetadata(filename: filename, currentTitle: currentTitle,
+                                              currentArtist: currentArtist, currentAlbum: currentAlbum)
+        guard let first = candidates.first else { return nil }
+        return await loadArtwork(for: first)
     }
 
-    /// Fetches high-res cover art specifically for given track info
+    public func loadArtwork(for candidate: OnlineTrackMetadata) async -> OnlineTrackMetadata {
+        guard candidate.artworkData == nil, let url = candidate.artworkURL, !Task.isCancelled else { return candidate }
+        let data = await downloadImage(from: url)
+        return OnlineTrackMetadata(
+            title: candidate.title, artist: candidate.artist, album: candidate.album,
+            trackNumber: candidate.trackNumber, year: candidate.year, genre: candidate.genre,
+            artworkData: data, artworkURL: candidate.artworkURL, source: candidate.source,
+            id: candidate.id, durationSeconds: candidate.durationSeconds, previewArtworkURL: candidate.previewArtworkURL
+        )
+    }
+
     public func fetchArtworkOnly(title: String, artist: String, album: String = "") async -> Data? {
         let query = "\(title) \(artist)".trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return nil }
-
-        if let itunes = await queryiTunes(query: query, expectedTitle: title, expectedArtist: artist), let data = itunes.artworkData {
-            return data
-        }
-        if let deezer = await queryDeezer(query: query, expectedTitle: title, expectedArtist: artist), let data = deezer.artworkData {
-            return data
-        }
+        let itunes = Self.rankedCandidates(await queryiTunes(query: query), title: title, artist: artist, album: album)
+        if let first = itunes.first, let data = await loadArtwork(for: first).artworkData { return data }
+        guard !Task.isCancelled else { return nil }
+        let deezer = Self.rankedCandidates(await queryDeezer(query: query), title: title, artist: artist, album: album)
+        if let first = deezer.first { return await loadArtwork(for: first).artworkData }
         return nil
     }
 
-    // MARK: - iTunes Search API
-    private func queryiTunes(query: String, expectedTitle: String, expectedArtist: String) async -> OnlineTrackMetadata? {
-        var allowed = CharacterSet.urlQueryAllowed
-        allowed.remove(charactersIn: "+&?/#%")
-        guard let encoded = query.addingPercentEncoding(withAllowedCharacters: allowed),
-              let url = URL(string: "https://itunes.apple.com/search?term=\(encoded)&entity=song&limit=5") else {
-            return nil
-        }
-
-        var request = URLRequest(url: url)
-        request.setValue("WalkmanStudio/3.1.0", forHTTPHeaderField: "User-Agent")
-        request.timeoutInterval = 6.0
-
-        guard let (data, response) = try? await session.data(for: request),
-              let http = response as? HTTPURLResponse, http.statusCode == 200 else {
-            return nil
-        }
-
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let results = json["results"] as? [[String: Any]], !results.isEmpty else {
-            return nil
-        }
-
-        // Find the best match or take first
-        let best = pickBestMatch(results: results, expectedTitle: expectedTitle, expectedArtist: expectedArtist) ?? results[0]
-
-        let rawTitle = (best["trackName"] as? String) ?? (best["collectionName"] as? String) ?? ""
-        let cleanTitle = rawTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        let isTitleBogus = cleanTitle.isEmpty || cleanTitle.lowercased() == "unknown" || cleanTitle.lowercased() == "unknown track" || cleanTitle.lowercased() == "unknown title"
-
-        let resolvedTitle: String
-        if !isTitleBogus {
-            resolvedTitle = cleanTitle
-        } else if !expectedTitle.isEmpty && expectedTitle.lowercased() != "unknown" && expectedTitle.lowercased() != "unknown track" && expectedTitle.lowercased() != "unknown title" {
-            resolvedTitle = expectedTitle
-        } else {
-            resolvedTitle = ""
-        }
-
-        let artist = (best["artistName"] as? String) ?? ""
-        let album = (best["collectionName"] as? String) ?? ""
-        let trackNum = (best["trackNumber"] as? Int).map { String($0) } ?? "1"
-        let genre = (best["primaryGenreName"] as? String) ?? ""
-        
-        var year = ""
-        if let releaseDate = best["releaseDate"] as? String, releaseDate.count >= 4 {
-            year = String(releaseDate.prefix(4))
-        }
-
-        // High resolution artwork: replace 100x100bb.jpg with 800x800bb.jpg
-        var artworkData: Data? = nil
-        var artworkURL: URL? = nil
-
-        if let art100 = best["artworkUrl100"] as? String {
-            let highResStr = art100
-                .replacingOccurrences(of: "100x100bb.jpg", with: "800x800bb.jpg")
-                .replacingOccurrences(of: "100x100bb.png", with: "800x800bb.jpg")
-                .replacingOccurrences(of: "60x60bb.jpg", with: "800x800bb.jpg")
-            
-            if let artURL = URL(string: highResStr) {
-                artworkURL = artURL
-                artworkData = await downloadImage(from: artURL)
+    private func queryiTunes(query: String) async -> [OnlineTrackMetadata] {
+        let results = await search(query: query, endpoint: "https://itunes.apple.com/search",
+                                   queryName: "term", extra: [URLQueryItem(name: "entity", value: "song")], resultKey: "results")
+        return results.compactMap { item in
+            guard let trackID = item["trackId"] as? Int,
+                  let title = item["trackName"] as? String, !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+            let preview = (item["artworkUrl100"] as? String).flatMap(URL.init(string:))
+            let artwork = preview.flatMap {
+                URL(string: $0.absoluteString.replacingOccurrences(of: "100x100bb", with: "800x800bb")
+                    .replacingOccurrences(of: "60x60bb", with: "800x800bb"))
             }
+            return OnlineTrackMetadata(
+                title: WalkmanEngine.sanitizeWalkmanText(title),
+                artist: WalkmanEngine.sanitizeWalkmanText(item["artistName"] as? String ?? "", stripExplicitMarkers: false),
+                album: WalkmanEngine.sanitizeWalkmanText(item["collectionName"] as? String ?? ""),
+                trackNumber: (item["trackNumber"] as? Int).map(String.init) ?? "",
+                year: (item["releaseDate"] as? String).map { String($0.prefix(4)) } ?? "",
+                genre: item["primaryGenreName"] as? String ?? "",
+                artworkURL: artwork, source: "iTunes", id: "itunes:\(trackID)",
+                durationSeconds: (item["trackTimeMillis"] as? Double).map { $0 / 1000 },
+                previewArtworkURL: preview
+            )
         }
-
-        return OnlineTrackMetadata(
-            title: WalkmanEngine.sanitizeWalkmanText(resolvedTitle),
-            artist: WalkmanEngine.sanitizeWalkmanText(artist.isEmpty ? "Unknown Artist" : artist, stripExplicitMarkers: false),
-            album: WalkmanEngine.sanitizeWalkmanText(album.isEmpty ? "Unknown Album" : album),
-            trackNumber: trackNum,
-            year: year,
-            genre: genre,
-            artworkData: artworkData,
-            artworkURL: artworkURL,
-            source: "iTunes"
-        )
     }
 
-    // MARK: - Deezer Search API
-    private func queryDeezer(query: String, expectedTitle: String, expectedArtist: String) async -> OnlineTrackMetadata? {
-        var allowed = CharacterSet.urlQueryAllowed
-        allowed.remove(charactersIn: "+&?/#%")
-        guard let encoded = query.addingPercentEncoding(withAllowedCharacters: allowed),
-              let url = URL(string: "https://api.deezer.com/search?q=\(encoded)&limit=5") else {
-            return nil
+    private func queryDeezer(query: String) async -> [OnlineTrackMetadata] {
+        let results = await search(query: query, endpoint: "https://api.deezer.com/search",
+                                   queryName: "q", resultKey: "data")
+        return results.compactMap { item in
+            guard let trackID = item["id"] as? Int,
+                  let title = item["title"] as? String, !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+            let artist = item["artist"] as? [String: Any]
+            let album = item["album"] as? [String: Any]
+            let cover = (album?["cover_xl"] as? String) ?? (album?["cover_big"] as? String) ?? (album?["cover_medium"] as? String)
+            return OnlineTrackMetadata(
+                title: WalkmanEngine.sanitizeWalkmanText(title),
+                artist: WalkmanEngine.sanitizeWalkmanText(artist?["name"] as? String ?? "", stripExplicitMarkers: false),
+                album: WalkmanEngine.sanitizeWalkmanText(album?["title"] as? String ?? ""),
+                artworkURL: cover.flatMap(URL.init(string:)), source: "Deezer", id: "deezer:\(trackID)",
+                durationSeconds: item["duration"] as? Double,
+                previewArtworkURL: (album?["cover_medium"] as? String).flatMap(URL.init(string:))
+            )
         }
-
-        var request = URLRequest(url: url)
-        request.setValue("WalkmanStudio/3.1.0", forHTTPHeaderField: "User-Agent")
-        request.timeoutInterval = 6.0
-
-        guard let (data, response) = try? await session.data(for: request),
-              let http = response as? HTTPURLResponse, http.statusCode == 200 else {
-            return nil
-        }
-
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let list = json["data"] as? [[String: Any]], !list.isEmpty else {
-            return nil
-        }
-
-        let first = list[0]
-        let rawTitle = (first["title"] as? String) ?? ""
-        let cleanTitle = rawTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        let isTitleBogus = cleanTitle.isEmpty || cleanTitle.lowercased() == "unknown" || cleanTitle.lowercased() == "unknown track" || cleanTitle.lowercased() == "unknown title"
-
-        let resolvedTitle: String
-        if !isTitleBogus {
-            resolvedTitle = cleanTitle
-        } else if !expectedTitle.isEmpty && expectedTitle.lowercased() != "unknown" && expectedTitle.lowercased() != "unknown track" && expectedTitle.lowercased() != "unknown title" {
-            resolvedTitle = expectedTitle
-        } else {
-            resolvedTitle = ""
-        }
-
-        let artistObj = first["artist"] as? [String: Any]
-        let artist = (artistObj?["name"] as? String) ?? ""
-        let albumObj = first["album"] as? [String: Any]
-        let album = (albumObj?["title"] as? String) ?? ""
-        
-        var artworkData: Data? = nil
-        var artworkURL: URL? = nil
-
-        let coverStr = (albumObj?["cover_xl"] as? String)
-            ?? (albumObj?["cover_big"] as? String)
-            ?? (albumObj?["cover_medium"] as? String)
-
-        if let cStr = coverStr, let cURL = URL(string: cStr) {
-            artworkURL = cURL
-            artworkData = await downloadImage(from: cURL)
-        }
-
-        return OnlineTrackMetadata(
-            title: WalkmanEngine.sanitizeWalkmanText(resolvedTitle),
-            artist: WalkmanEngine.sanitizeWalkmanText(artist.isEmpty ? "Unknown Artist" : artist, stripExplicitMarkers: false),
-            album: WalkmanEngine.sanitizeWalkmanText(album.isEmpty ? "Unknown Album" : album),
-            trackNumber: "1",
-            year: "",
-            genre: "",
-            artworkData: artworkData,
-            artworkURL: artworkURL,
-            source: "Deezer"
-        )
     }
 
-    private func pickBestMatch(results: [[String: Any]], expectedTitle: String, expectedArtist: String) -> [String: Any]? {
-        let tLow = WalkmanEngine.sanitizeWalkmanText(expectedTitle).lowercased()
-        let aLow = WalkmanEngine.sanitizeWalkmanText(expectedArtist, stripExplicitMarkers: false).lowercased()
-        guard !tLow.isEmpty || !aLow.isEmpty else { return results.first }
+    private func search(query: String, endpoint: String, queryName: String,
+                        extra: [URLQueryItem] = [], resultKey: String) async -> [[String: Any]] {
+        guard !Task.isCancelled, var components = URLComponents(string: endpoint) else { return [] }
+        components.queryItems = [URLQueryItem(name: queryName, value: query), URLQueryItem(name: "limit", value: "25")] + extra
+        guard let url = components.url else { return [] }
+        var request = URLRequest(url: url)
+        request.setValue("WalkmanStudio/3.1.0", forHTTPHeaderField: "User-Agent")
+        request.timeoutInterval = 6
+        guard let (data, response) = try? await session.data(for: request),
+              let http = response as? HTTPURLResponse, http.statusCode == 200,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return [] }
+        return json[resultKey] as? [[String: Any]] ?? []
+    }
 
-        for item in results {
-            let itemT = WalkmanEngine.sanitizeWalkmanText(item["trackName"] as? String ?? "").lowercased()
-            let itemA = WalkmanEngine.sanitizeWalkmanText(item["artistName"] as? String ?? "", stripExplicitMarkers: false).lowercased()
-
-            if !tLow.isEmpty && !aLow.isEmpty {
-                if (itemT == tLow || itemT.contains(tLow) || tLow.contains(itemT)) && (itemA == aLow || itemA.contains(aLow) || aLow.contains(itemA)) {
-                    return item
-                }
-            } else if !tLow.isEmpty {
-                if itemT == tLow || itemT.contains(tLow) || tLow.contains(itemT) {
-                    return item
-                }
-            } else if !aLow.isEmpty {
-                if itemA == aLow || itemA.contains(aLow) || aLow.contains(itemA) {
-                    return item
-                }
-            }
+    /// Ranking changes order only: artist aliases must never hide valid alternatives.
+    static func rankedCandidates(_ candidates: [OnlineTrackMetadata], title: String, artist: String, album: String) -> [OnlineTrackMetadata] {
+        func normalized(_ value: String) -> String {
+            value.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "en_US_POSIX"))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
         }
-        return results.first
+        func match(_ value: String, _ expected: String) -> Int {
+            let value = normalized(value), expected = normalized(expected)
+            guard !value.isEmpty, !expected.isEmpty else { return 0 }
+            if value == expected { return 2 }
+            return value.contains(expected) || expected.contains(value) ? 1 : 0
+        }
+        func score(_ item: OnlineTrackMetadata) -> Int {
+            match(item.title, title) * 4 + match(item.artist, artist) * 3 + match(item.album, album) * 2
+        }
+        var seen = Set<String>()
+        return candidates.filter { seen.insert($0.id).inserted }.enumerated().sorted {
+            let left = score($0.element), right = score($1.element)
+            return left == right ? $0.offset < $1.offset : left > right
+        }.map(\.element)
     }
 
     private func downloadImage(from url: URL) async -> Data? {

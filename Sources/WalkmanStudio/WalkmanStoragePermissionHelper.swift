@@ -36,7 +36,7 @@ public enum WalkmanStoragePermissionHelper {
         if let vol = getVolumeURL(for: fileURL) {
             return vol.lastPathComponent
         }
-        return "Walkman Storage"
+        return L10n.tr("Walkman Storage")
     }
 
     /// Prompts the user with an NSOpenPanel to grant access to the storage volume/folder
@@ -81,6 +81,7 @@ public enum WalkmanStoragePermissionHelper {
 
 // MARK: - Storage Permission Request Sheet
 public struct StoragePermissionRequestSheet: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let fileURL: URL
     let onGranted: () -> Void
     let onDismiss: () -> Void
@@ -129,11 +130,11 @@ public struct StoragePermissionRequestSheet: View {
                 .shadow(color: Color.orange.opacity(0.35), radius: 8, x: 0, y: 3)
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Storage Permission Required")
+                    Text(L10n.tr("Storage Permission Required"))
                         .font(WalkmanFont.title2)
                         .foregroundStyle(.white)
 
-                    Text("macOS requires authorization to modify files on \(driveName)")
+                    Text(L10n.tr("macOS requires authorization to modify files on \(driveName)"))
                         .font(WalkmanFont.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -148,7 +149,7 @@ public struct StoragePermissionRequestSheet: View {
 
             // Informational Body
             VStack(alignment: .leading, spacing: 14) {
-                Text("Sony Walkman devices and MicroSD cards are protected by macOS privacy controls. Before Walkman Studio can save tags, album artwork, or synchronized lyrics directly to your music, permission must be granted for this drive.")
+                Text(L10n.tr("Sony Walkman devices and MicroSD cards are protected by macOS privacy controls. Before Walkman Studio can save tags, album artwork, or synchronized lyrics directly to your music, permission must be granted for this drive."))
                     .font(WalkmanFont.body)
                     .foregroundStyle(WalkmanTheme.silverLight)
                     .fixedSize(horizontal: false, vertical: true)
@@ -158,7 +159,7 @@ public struct StoragePermissionRequestSheet: View {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundStyle(Color.green)
                             .font(.system(size: 14))
-                        Text("Click \"Grant Access...\" below and choose \(driveName) to authorize Walkman Studio immediately.")
+                        Text(L10n.tr("Click \"Grant Access...\" below and choose \(driveName) to authorize Walkman Studio immediately."))
                             .font(WalkmanFont.callout)
                             .foregroundStyle(.white.opacity(0.9))
                     }
@@ -167,7 +168,7 @@ public struct StoragePermissionRequestSheet: View {
                         Image(systemName: "gearshape.fill")
                             .foregroundStyle(Color.orange)
                             .font(.system(size: 14))
-                        Text("Or open System Settings > Privacy & Security > Files and Folders to enable access.")
+                        Text(L10n.tr("Or open System Settings > Privacy & Security > Files and Folders to enable access."))
                             .font(WalkmanFont.callout)
                             .foregroundStyle(.secondary)
                     }
@@ -188,7 +189,7 @@ public struct StoragePermissionRequestSheet: View {
 
             // Footer Actions
             HStack(spacing: 12) {
-                Button("Open System Settings") {
+                Button(L10n.tr("Open System Settings")) {
                     WalkmanStoragePermissionHelper.openSystemPrivacySettings()
                 }
                 .font(WalkmanFont.bodyMedium)
@@ -202,7 +203,7 @@ public struct StoragePermissionRequestSheet: View {
 
                 Spacer()
 
-                Button("Cancel", action: onDismiss)
+                Button(L10n.tr("Cancel"), action: onDismiss)
                     .font(WalkmanFont.bodyMedium)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 8)
@@ -222,7 +223,7 @@ public struct StoragePermissionRequestSheet: View {
                     HStack(spacing: 6) {
                         Image(systemName: "checkmark.shield.fill")
                             .font(.system(size: 13, weight: .bold))
-                        Text("Grant Access...")
+                        Text(L10n.tr("Grant Access..."))
                             .font(WalkmanFont.headline)
                     }
                     .padding(.horizontal, 18)
@@ -277,6 +278,7 @@ public struct StoragePermissionRequestSheet: View {
 
 // MARK: - Sheet Close Button
 private struct SheetCloseButton: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let action: () -> Void
     @State private var isHovered: Bool = false
 

@@ -861,11 +861,25 @@ public final class SenseMeEngine: @unchecked Sendable {
         let s2 = Int(max(0, min(100, 50.0 + 40.0 * valence + 15.0 * normBpm))) // Upbeat
         let s3 = Int(max(0, min(100, 50.0 - 25.0 * arousal + 20.0 * dynamicRange))) // Mellow
         let s4 = Int(max(0, min(100, 40.0 + 35.0 * dynamicRange - 25.0 * valence))) // Emotional
-        let s5 = Int(max(0, min(100, 50.0 + 25.0 * (1.0 - abs(normBpm)) - 15.0 * abs(arousal)))) // Lounge
-        var s6 = Int(max(0, min(100, 35.0 * min(pulseRate / 130.0, 1.0) + 30.0 * min(rmsEnergy / 0.20, 1.0) + 15.0 * ((normRms + 1.0) / 2.0) + 20.0 * max(0.0, 1.0 - abs(effectiveBpm - 122.0) / 35.0)))) // Dance
+        // Keep each weighted term separate to bound Swift's type-checking work.
+        let loungeTempo: Double = 25.0 * (1.0 - abs(normBpm))
+        let loungeArousal: Double = 15.0 * abs(arousal)
+        let loungeScore: Double = 50.0 + loungeTempo - loungeArousal
+        let s5 = Int(max(0.0, min(100.0, loungeScore))) // Lounge
+
+        let dancePulse: Double = 35.0 * min(pulseRate / 130.0, 1.0)
+        let danceEnergy: Double = 30.0 * min(rmsEnergy / 0.20, 1.0)
+        let danceLoudness: Double = 15.0 * ((normRms + 1.0) / 2.0)
+        let danceTempo: Double = 20.0 * max(0.0, 1.0 - abs(effectiveBpm - 122.0) / 35.0)
+        let danceScore: Double = dancePulse + danceEnergy + danceLoudness + danceTempo
+        var s6 = Int(max(0.0, min(100.0, danceScore))) // Dance
         var s7 = Int(max(0, min(100, 30.0 + 45.0 * arousal + 25.0 * normZcr))) // Extreme
         var s8 = Int(max(0, min(100, 35.0 + 25.0 * (1.0 - normZcr) + 25.0 * dynamicRange - 30.0 * min(rmsEnergy / 0.18, 1.0) - 15.0 * max(0.0, normRms)))) // Acoustic
-        var s9 = Int(max(0, min(100, 20.0 + 30.0 * min(pulseRate / 120.0, 1.0) + 30.0 * min(rmsEnergy / 0.22, 1.0) + 20.0 * (1.0 - dynamicRange)))) // Electronic
+        let electronicPulse: Double = 30.0 * min(pulseRate / 120.0, 1.0)
+        let electronicEnergy: Double = 30.0 * min(rmsEnergy / 0.22, 1.0)
+        let electronicDynamics: Double = 20.0 * (1.0 - dynamicRange)
+        let electronicScore: Double = 20.0 + electronicPulse + electronicEnergy + electronicDynamics
+        var s9 = Int(max(0.0, min(100.0, electronicScore))) // Electronic
 
         if g.contains("acoustic") || g.contains("folk") || g.contains("unplugged") { s8 = max(s8, 85) }
         if g.contains("electronic") || g.contains("synth") || g.contains("techno") || g.contains("edm") { s9 = max(s9, 85) }

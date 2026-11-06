@@ -196,6 +196,7 @@ private func createPreviewAudioTap(controller: PreviewDSPController) -> MTAudioP
 }
 
 public struct TrimAndCutSheet: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let track: Track
     let onSaved: () -> Void
     let onDismiss: () -> Void
@@ -362,11 +363,11 @@ public struct TrimAndCutSheet: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 8) {
-                    Text("Trim & Cut Audio Studio")
+                    Text(L10n.tr("Trim & Cut Audio Studio"))
                         .font(WalkmanFont.title3)
                         .foregroundStyle(.white)
 
-                    Text("DAW PRECISION")
+                    Text(L10n.tr("DAW PRECISION"))
                         .font(WalkmanFont.badge)
                         .foregroundStyle(WalkmanTheme.silverLight)
                         .padding(.horizontal, 6)
@@ -434,7 +435,7 @@ public struct TrimAndCutSheet: View {
                         .foregroundStyle(WalkmanTheme.silverLight)
                         .clipShape(RoundedRectangle(cornerRadius: 3))
 
-                    Text(sourceChannels == 1 ? "Mono (1 ch)" : "Stereo (2 ch)")
+                    Text(sourceChannels == 1 ? L10n.tr("Mono (1 ch)") : L10n.tr("Stereo (2 ch)"))
                         .font(WalkmanFont.monoSmall)
                         .foregroundStyle(WalkmanTheme.silverMuted)
 
@@ -448,7 +449,7 @@ public struct TrimAndCutSheet: View {
                     if track.bitsPerSample > 0 {
                         Text("•")
                             .foregroundStyle(Color.white.opacity(0.20))
-                        Text("\(track.bitsPerSample)-bit")
+                        Text(L10n.tr("\(track.bitsPerSample)-bit"))
                             .font(WalkmanFont.monoSmall)
                             .foregroundStyle(WalkmanTheme.silverMuted)
                     }
@@ -473,8 +474,8 @@ public struct TrimAndCutSheet: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 4) {
                 TrimCutModeTabPill(
-                    title: "Trim Mode",
-                    subtitle: "Keep Selected [Start → End]",
+                    title: L10n.tr("Trim Mode"),
+                    subtitle: L10n.tr("Keep Selected [Start → End]"),
                     icon: "scissors",
                     mode: .trim,
                     selectedMode: $mode,
@@ -482,8 +483,8 @@ public struct TrimAndCutSheet: View {
                 )
 
                 TrimCutModeTabPill(
-                    title: "Cut Mode",
-                    subtitle: "Remove Selected & Splice",
+                    title: L10n.tr("Cut Mode"),
+                    subtitle: L10n.tr("Remove Selected & Splice"),
                     icon: "scissors.badge.ellipsis",
                     mode: .cut,
                     selectedMode: $mode,
@@ -504,7 +505,7 @@ public struct TrimAndCutSheet: View {
                 Image(systemName: "info.circle")
                     .font(.system(size: 11))
                     .foregroundStyle(WalkmanTheme.silverMuted)
-                Text(mode.description)
+                Text(L10n.lookup(mode.description))
                     .font(WalkmanFont.callout)
                     .foregroundStyle(WalkmanTheme.silverMuted)
             }
@@ -517,7 +518,7 @@ public struct TrimAndCutSheet: View {
         VStack(alignment: .leading, spacing: 8) {
             // Header: Title and Zoom / Navigation Controls
             HStack(spacing: 8) {
-                Text("AUDIO WAVEFORM & RANGE SELECTION")
+                Text(L10n.tr("AUDIO WAVEFORM & RANGE SELECTION"))
                     .font(WalkmanFont.sectionHeader)
                     .foregroundStyle(WalkmanTheme.silverMuted)
 
@@ -528,7 +529,7 @@ public struct TrimAndCutSheet: View {
                         ProgressView()
                             .scaleEffect(0.55)
                             .frame(width: 12, height: 12)
-                        Text("Rendering Waveform...")
+                        Text(L10n.tr("Rendering Waveform..."))
                             .font(WalkmanFont.monoSmall)
                             .foregroundStyle(WalkmanTheme.silverMuted)
                     }
@@ -540,14 +541,14 @@ public struct TrimAndCutSheet: View {
                     ForEach([1.0, 2.0, 4.0, 8.0, 16.0, 20.0], id: \.self) { z in
                         let isSelected = abs(zoomScale - CGFloat(z)) < 0.1
                         Button(action: { setZoom(CGFloat(z)) }) {
-                            Text(z == 1.0 ? "Fit" : "\(Int(z))x")
+                            Text(z == 1.0 ? L10n.tr("Fit") : "\(Int(z))x")
                                 .font(WalkmanFont.pillCounter)
                                 .foregroundStyle(isSelected ? Color(red: 20 / 255, green: 20 / 255, blue: 24 / 255) : WalkmanTheme.silverLight)
                                 .padding(.horizontal, 7)
                                 .frame(height: 24)
                         }
                         .buttonStyle(LiquidGlassButtonStyle(variant: isSelected ? .prominent : .glass, cornerRadius: 6))
-                        .help(z == 1.0 ? "Fit waveform exactly into window (100% full view)" : "Zoom into waveform at \(Int(z))x magnification")
+                        .help(z == 1.0 ? L10n.tr("Fit waveform exactly into window (100% full view)") : L10n.tr("Zoom into waveform at \(Int(z))x magnification"))
                     }
 
                     Divider()
@@ -566,7 +567,7 @@ public struct TrimAndCutSheet: View {
                     }
                     .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 6))
                     .disabled(zoomScale <= 1.01)
-                    .help("Zoom Out (-)")
+                    .help(L10n.tr("Zoom Out (-)"))
 
                     // Zoom Slider (1.0x to 20.0x)
                     Slider(
@@ -591,7 +592,7 @@ public struct TrimAndCutSheet: View {
                     }
                     .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 6))
                     .disabled(zoomScale >= 19.99)
-                    .help("Zoom In (+)")
+                    .help(L10n.tr("Zoom In (+)"))
                 }
                 .padding(.horizontal, 6)
                 .padding(.vertical, 3)
@@ -700,7 +701,7 @@ public struct TrimAndCutSheet: View {
                                         Image(systemName: "scissors")
                                             .font(.system(size: 9.5, weight: .bold))
                                             .foregroundStyle(Color.red.opacity(0.85))
-                                        Text("CUT REGION")
+                                        Text(L10n.tr("CUT REGION"))
                                             .font(WalkmanFont.badge)
                                             .fontWeight(.bold)
                                             .foregroundStyle(Color.red.opacity(0.95))
@@ -729,7 +730,7 @@ public struct TrimAndCutSheet: View {
                             Image(systemName: "chevron.right.square.fill")
                                 .font(.system(size: 10.5, weight: .bold))
                                 .foregroundStyle(WalkmanTheme.hiResGoldLight)
-                            Text("START")
+                            Text(L10n.tr("START"))
                                 .font(Font.system(size: 10, weight: .bold, design: .monospaced))
                                 .foregroundStyle(WalkmanTheme.hiResGoldLight)
                         }
@@ -799,7 +800,7 @@ public struct TrimAndCutSheet: View {
 
                         // 2. End Badge Handle (Center is anchored directly to gold line)
                         HStack(spacing: 3) {
-                            Text("END")
+                            Text(L10n.tr("END"))
                                 .font(Font.system(size: 10, weight: .bold, design: .monospaced))
                                 .foregroundStyle(WalkmanTheme.hiResGoldLight)
                             Image(systemName: "chevron.left.square.fill")
@@ -1077,7 +1078,7 @@ public struct TrimAndCutSheet: View {
                 HStack(spacing: 4) {
                     Image(systemName: "scope")
                         .font(.system(size: 10))
-                    Text("Playhead")
+                    Text(L10n.tr("Playhead"))
                         .font(WalkmanFont.calloutMedium)
                 }
                 .foregroundStyle(WalkmanTheme.silverLight)
@@ -1085,14 +1086,14 @@ public struct TrimAndCutSheet: View {
                 .frame(height: 24)
             }
             .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 6))
-            .help("Center viewport on playhead position")
+            .help(L10n.tr("Center viewport on playhead position"))
 
             // Jump to Start Marker
             Button(action: centerOnStartMarker) {
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.left.to.line")
                         .font(.system(size: 10))
-                    Text("Start")
+                    Text(L10n.tr("Start"))
                         .font(WalkmanFont.calloutMedium)
                 }
                 .foregroundStyle(WalkmanTheme.silverLight)
@@ -1100,12 +1101,12 @@ public struct TrimAndCutSheet: View {
                 .frame(height: 24)
             }
             .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 6))
-            .help("Center viewport on Start Marker")
+            .help(L10n.tr("Center viewport on Start Marker"))
 
             // Jump to End Marker
             Button(action: centerOnEndMarker) {
                 HStack(spacing: 4) {
-                    Text("End")
+                    Text(L10n.tr("End"))
                         .font(WalkmanFont.calloutMedium)
                     Image(systemName: "arrow.right.to.line")
                         .font(.system(size: 10))
@@ -1115,7 +1116,7 @@ public struct TrimAndCutSheet: View {
                 .frame(height: 24)
             }
             .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 6))
-            .help("Center viewport on End Marker")
+            .help(L10n.tr("Center viewport on End Marker"))
 
             Spacer()
 
@@ -1127,12 +1128,12 @@ public struct TrimAndCutSheet: View {
                     .frame(width: 24, height: 24)
             }
             .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 6))
-            .help("Scroll Viewport Left")
+            .help(L10n.tr("Scroll Viewport Left"))
 
             // Timeline Pan Slider
             Slider(value: $windowStartTime, in: 0...max(0.001, maxWindowStartTime))
                 .frame(width: 170)
-                .help("Timeline Pan Slider")
+                .help(L10n.tr("Timeline Pan Slider"))
 
             // Pan Right Button
             Button(action: panRight) {
@@ -1142,7 +1143,7 @@ public struct TrimAndCutSheet: View {
                     .frame(width: 24, height: 24)
             }
             .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 6))
-            .help("Scroll Viewport Right")
+            .help(L10n.tr("Scroll Viewport Right"))
         }
         .padding(.top, 2)
     }
@@ -1174,7 +1175,7 @@ public struct TrimAndCutSheet: View {
         HStack(spacing: 16) {
             // Playhead Time Readout
             VStack(alignment: .leading, spacing: 2) {
-                Text("PLAYHEAD")
+                Text(L10n.tr("PLAYHEAD"))
                     .font(WalkmanFont.badge)
                     .foregroundStyle(WalkmanTheme.silverMuted)
                 HStack(alignment: .firstTextBaseline, spacing: 5) {
@@ -1200,7 +1201,7 @@ public struct TrimAndCutSheet: View {
                         .frame(width: 34, height: 34)
                 }
                 .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 17))
-                .help("Jump playhead to Start Marker (\(formatTime(startTime)))")
+                .help(L10n.tr("Jump playhead to Start Marker (\(formatTime(startTime)))"))
 
                 // Step -5s
                 Button(action: { seekTo(time: max(0, currentTime - 5.0)) }) {
@@ -1210,7 +1211,7 @@ public struct TrimAndCutSheet: View {
                         .frame(width: 34, height: 34)
                 }
                 .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 17))
-                .help("Rewind 5 seconds")
+                .help(L10n.tr("Rewind 5 seconds"))
 
                 // Main Play / Pause Button
                 Button(action: togglePlayPause) {
@@ -1229,7 +1230,7 @@ public struct TrimAndCutSheet: View {
                 }
                 .buttonStyle(LiquidGlassButtonStyle(variant: .prominent, cornerRadius: 20))
                 .keyboardShortcut(.space, modifiers: [])
-                .help("Play / Pause from current position (Space)")
+                .help(L10n.tr("Play / Pause from current position (Space)"))
 
                 // Step +5s
                 Button(action: { seekTo(time: min(totalDuration, currentTime + 5.0)) }) {
@@ -1239,7 +1240,7 @@ public struct TrimAndCutSheet: View {
                         .frame(width: 34, height: 34)
                 }
                 .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 17))
-                .help("Forward 5 seconds")
+                .help(L10n.tr("Forward 5 seconds"))
 
                 // Jump to End Marker
                 Button(action: { seekTo(time: endTime) }) {
@@ -1249,7 +1250,7 @@ public struct TrimAndCutSheet: View {
                         .frame(width: 34, height: 34)
                 }
                 .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 17))
-                .help("Jump playhead to End Marker (\(formatTime(endTime)))")
+                .help(L10n.tr("Jump playhead to End Marker (\(formatTime(endTime)))"))
             }
 
             Spacer()
@@ -1261,7 +1262,7 @@ public struct TrimAndCutSheet: View {
                     HStack(spacing: 6) {
                         Image(systemName: isAuditioningResult ? "stop.fill" : (mode == .trim ? "waveform.badge.magnifyingglass" : "scissors"))
                             .font(.system(size: 11.5, weight: .bold))
-                        Text(isAuditioningResult ? "Stop Audition" : (mode == .trim ? "Audition Trim" : "Audition Cut"))
+                        Text(isAuditioningResult ? L10n.tr("Stop Audition") : (mode == .trim ? L10n.tr("Audition Trim") : L10n.tr("Audition Cut")))
                             .font(WalkmanFont.calloutBold)
                     }
                     .foregroundStyle(isAuditioningResult ? Color(red: 20 / 255, green: 20 / 255, blue: 24 / 255) : WalkmanTheme.silverLight)
@@ -1269,7 +1270,7 @@ public struct TrimAndCutSheet: View {
                     .frame(height: 34)
                 }
                 .buttonStyle(LiquidGlassButtonStyle(variant: isAuditioningResult ? .prominent : .glass, cornerRadius: 17))
-                .help(mode == .trim ? "Audition trimmed result with fades & effects applied" : "Audition track with the cut section skipped")
+                .help(mode == .trim ? L10n.tr("Audition trimmed result with fades & effects applied") : L10n.tr("Audition track with the cut section skipped"))
 
                 // Loop Toggle
                 Button(action: { isLoopingSelection.toggle() }) {
@@ -1279,7 +1280,7 @@ public struct TrimAndCutSheet: View {
                         .frame(width: 34, height: 34)
                 }
                 .buttonStyle(LiquidGlassButtonStyle(variant: isLoopingSelection ? .gold : .glass, cornerRadius: 17))
-                .help("Loop playback continuously between Start and End markers")
+                .help(L10n.tr("Loop playback continuously between Start and End markers"))
 
                 // Volume Slider
                 HStack(spacing: 5) {
@@ -1309,7 +1310,7 @@ public struct TrimAndCutSheet: View {
                         Image(systemName: "chevron.right.square.fill")
                             .font(.system(size: 12))
                             .foregroundStyle(WalkmanTheme.hiResGoldLight)
-                        Text("START MARKER")
+                        Text(L10n.tr("START MARKER"))
                             .font(WalkmanFont.badge)
                             .foregroundStyle(WalkmanTheme.silverMuted)
                     }
@@ -1320,7 +1321,7 @@ public struct TrimAndCutSheet: View {
                         HStack(spacing: 4) {
                             Image(systemName: "arrow.counterclockwise")
                                 .font(.system(size: 9))
-                            Text("Reset (0:00)")
+                            Text(L10n.tr("Reset (0:00)"))
                                 .font(WalkmanFont.monoSmall)
                         }
                         .foregroundStyle(WalkmanTheme.silverLight)
@@ -1328,7 +1329,7 @@ public struct TrimAndCutSheet: View {
                         .frame(height: 24)
                     }
                     .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 6))
-                    .help("Reset Start Marker to beginning (0:00.000)")
+                    .help(L10n.tr("Reset Start Marker to beginning (0:00.000)"))
                 }
 
                 HStack(alignment: .center) {
@@ -1343,7 +1344,7 @@ public struct TrimAndCutSheet: View {
                             Image(systemName: "mappin.and.ellipse")
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundStyle(WalkmanTheme.hiResGoldLight)
-                            Text("Set to Playhead")
+                            Text(L10n.tr("Set to Playhead"))
                                 .font(WalkmanFont.calloutMedium)
                         }
                         .foregroundStyle(WalkmanTheme.silverLight)
@@ -1351,7 +1352,7 @@ public struct TrimAndCutSheet: View {
                         .frame(height: 28)
                     }
                     .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 7))
-                    .help("Set Start Marker to current Playhead cursor (\(formatTime(currentTime)))")
+                    .help(L10n.tr("Set Start Marker to current Playhead cursor (\(formatTime(currentTime)))"))
                 }
 
                 // Fine-tuning buttons
@@ -1374,7 +1375,7 @@ public struct TrimAndCutSheet: View {
                         Image(systemName: "chevron.left.square.fill")
                             .font(.system(size: 12))
                             .foregroundStyle(WalkmanTheme.hiResGoldLight)
-                        Text("END MARKER")
+                        Text(L10n.tr("END MARKER"))
                             .font(WalkmanFont.badge)
                             .foregroundStyle(WalkmanTheme.silverMuted)
                     }
@@ -1383,7 +1384,7 @@ public struct TrimAndCutSheet: View {
 
                     Button(action: { setEndTime(totalDuration) }) {
                         HStack(spacing: 4) {
-                            Text("Set to End")
+                            Text(L10n.tr("Set to End"))
                                 .font(WalkmanFont.monoSmall)
                             Image(systemName: "arrow.forward.to.line")
                                 .font(.system(size: 9))
@@ -1393,7 +1394,7 @@ public struct TrimAndCutSheet: View {
                         .frame(height: 24)
                     }
                     .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 6))
-                    .help("Set End Marker to track end (\(formatTime(totalDuration)))")
+                    .help(L10n.tr("Set End Marker to track end (\(formatTime(totalDuration)))"))
                 }
 
                 HStack(alignment: .center) {
@@ -1408,7 +1409,7 @@ public struct TrimAndCutSheet: View {
                             Image(systemName: "mappin.and.ellipse")
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundStyle(WalkmanTheme.hiResGoldLight)
-                            Text("Set to Playhead")
+                            Text(L10n.tr("Set to Playhead"))
                                 .font(WalkmanFont.calloutMedium)
                         }
                         .foregroundStyle(WalkmanTheme.silverLight)
@@ -1416,7 +1417,7 @@ public struct TrimAndCutSheet: View {
                         .frame(height: 28)
                     }
                     .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 7))
-                    .help("Set End Marker to current Playhead cursor (\(formatTime(currentTime)))")
+                    .help(L10n.tr("Set End Marker to current Playhead cursor (\(formatTime(currentTime)))"))
                 }
 
                 // Fine-tuning buttons
@@ -1508,19 +1509,19 @@ public struct TrimAndCutSheet: View {
     // MARK: - Duration Metrics Strip
     private var durationMetricsStrip: some View {
         HStack(spacing: 16) {
-            metricItem(label: "ORIGINAL DURATION", value: formatTime(totalDuration), color: WalkmanTheme.silverMuted)
+            metricItem(label: L10n.tr("ORIGINAL DURATION"), value: formatTime(totalDuration), color: WalkmanTheme.silverMuted)
 
             Divider()
                 .frame(height: 22)
                 .overlay(Color.white.opacity(0.12))
 
-            metricItem(label: "SELECTED SPAN", value: formatTime(endTime - startTime), color: WalkmanTheme.silverLight)
+            metricItem(label: L10n.tr("SELECTED SPAN"), value: formatTime(endTime - startTime), color: WalkmanTheme.silverLight)
 
             Divider()
                 .frame(height: 22)
                 .overlay(Color.white.opacity(0.12))
 
-            metricItem(label: "RESULT OUTPUT DURATION", value: formatTime(outputDuration), color: WalkmanTheme.hiResGoldLight)
+            metricItem(label: L10n.tr("RESULT OUTPUT DURATION"), value: formatTime(outputDuration), color: WalkmanTheme.hiResGoldLight)
 
             Spacer()
 
@@ -1580,7 +1581,7 @@ public struct TrimAndCutSheet: View {
     // MARK: - Channel Routing & Effects Deck
     private var channelAndEffectsDeck: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("AUDIO CHANNEL ROUTING & ENHANCEMENTS")
+            Text(L10n.tr("AUDIO CHANNEL ROUTING & ENHANCEMENTS"))
                 .font(WalkmanFont.sectionHeader)
                 .foregroundStyle(WalkmanTheme.silverMuted)
 
@@ -1591,7 +1592,7 @@ public struct TrimAndCutSheet: View {
                         Image(systemName: "speaker.wave.2.fill")
                             .font(.system(size: 11.5))
                             .foregroundStyle(WalkmanTheme.hiResGoldLight)
-                        Text("AUDIO CHANNELS & LEVEL")
+                        Text(L10n.tr("AUDIO CHANNELS & LEVEL"))
                             .font(WalkmanFont.badge)
                             .foregroundStyle(WalkmanTheme.silverLight)
                         Spacer()
@@ -1600,12 +1601,12 @@ public struct TrimAndCutSheet: View {
                     HStack(spacing: 12) {
                         // Channel Mode Column
                         LiquidGlassDropdown(
-                            title: "CHANNEL CONFIGURATION",
-                            currentSelectionTitle: channelMode.title,
+                            title: L10n.tr("CHANNEL CONFIGURATION"),
+                            currentSelectionTitle: L10n.lookup(channelMode.title),
                             subtitle: channelModeSubtitle,
                             subtitleColor: channelMode == .original ? WalkmanTheme.silverMuted : WalkmanTheme.hiResGoldLight,
                             items: AudioChannelMode.allCases,
-                            itemTitle: { $0.title },
+                            itemTitle: { L10n.lookup($0.title) },
                             isSelected: { channelMode == $0 },
                             onSelect: { channelMode = $0 }
                         )
@@ -1613,7 +1614,7 @@ public struct TrimAndCutSheet: View {
                         // Gain / Boost Column
                         let gainOptions: [Double] = [-12.0, -6.0, -3.0, 0.0, 2.0, 3.0, 4.0, 6.0, 9.0, 12.0]
                         LiquidGlassDropdown(
-                            title: "GAIN / BOOST",
+                            title: L10n.tr("GAIN / BOOST"),
                             currentSelectionTitle: gainTitle(for: gainDb),
                             subtitle: gainSubtitle,
                             subtitleColor: gainDb == 0 ? WalkmanTheme.silverMuted : (gainDb > 0 ? Color.green : Color.orange),
@@ -1633,7 +1634,7 @@ public struct TrimAndCutSheet: View {
                         Image(systemName: "waveform.path")
                             .font(.system(size: 11.5))
                             .foregroundStyle(WalkmanTheme.hiResGoldLight)
-                        Text("SMOOTH TRANSITIONS (FADES)")
+                        Text(L10n.tr("SMOOTH TRANSITIONS (FADES)"))
                             .font(WalkmanFont.badge)
                             .foregroundStyle(WalkmanTheme.silverLight)
                         Spacer()
@@ -1643,7 +1644,7 @@ public struct TrimAndCutSheet: View {
                         // Fade In Column
                         let fadeOptions: [Double] = [0.0, 0.10, 0.25, 0.50, 1.00, 2.00, 3.00, 5.00]
                         LiquidGlassDropdown(
-                            title: "FADE IN",
+                            title: L10n.tr("FADE IN"),
                             currentSelectionTitle: fadeTitle(for: fadeInDuration),
                             subtitle: fadeInSubtitle,
                             subtitleColor: fadeInDuration == 0 ? WalkmanTheme.silverMuted : WalkmanTheme.hiResGoldLight,
@@ -1655,7 +1656,7 @@ public struct TrimAndCutSheet: View {
 
                         // Fade Out Column
                         LiquidGlassDropdown(
-                            title: "FADE OUT",
+                            title: L10n.tr("FADE OUT"),
                             currentSelectionTitle: fadeTitle(for: fadeOutDuration),
                             subtitle: fadeOutSubtitle,
                             subtitleColor: fadeOutDuration == 0 ? WalkmanTheme.silverMuted : WalkmanTheme.hiResGoldLight,
@@ -1676,11 +1677,11 @@ public struct TrimAndCutSheet: View {
 
     private func gainTitle(for db: Double) -> String {
         if db == 0 {
-            return "0 dB (Normal)"
+            return L10n.tr("0 dB (Normal)")
         } else if db == 6.0 {
-            return "+6 dB (2x Boost)"
+            return L10n.tr("+6 dB (2x Boost)")
         } else if db == 12.0 {
-            return "+12 dB (4x Boost)"
+            return L10n.tr("+12 dB (4x Boost)")
         } else if db > 0 {
             return String(format: "+%.0f dB", db)
         } else {
@@ -1690,7 +1691,7 @@ public struct TrimAndCutSheet: View {
 
     private func fadeTitle(for sec: Double) -> String {
         if sec == 0 {
-            return "None (0s)"
+            return L10n.tr("None (0s)")
         } else {
             return String(format: "%.2fs", sec)
         }
@@ -1699,29 +1700,29 @@ public struct TrimAndCutSheet: View {
     private var channelModeSubtitle: String {
         switch channelMode {
         case .original:
-            return "Preserve layout (\(sourceChannels == 1 ? "Mono" : "Stereo"))"
+            return L10n.tr("Preserve layout (\(sourceChannels == 1 ? L10n.tr("Mono") : L10n.tr("Stereo")))")
         case .swapLR:
-            return "Stereo: [ Left ] ⇄ [ Right ]"
+            return L10n.tr("Stereo: [ Left ] ⇄ [ Right ]")
         case .mono:
-            return "Downmix: [ (L + R) / 2 ]"
+            return L10n.tr("Downmix: [ (L + R) / 2 ]")
         case .stereo:
-            return "Force 2-channel stereo"
+            return L10n.tr("Force 2-channel stereo")
         case .leftOnly:
-            return "Duplicate: [ L ] → Both Ears"
+            return L10n.tr("Duplicate: [ L ] → Both Ears")
         case .rightOnly:
-            return "Duplicate: [ R ] → Both Ears"
+            return L10n.tr("Duplicate: [ R ] → Both Ears")
         case .muteLeft:
-            return "Mute Left: [ Off ] | [ Right ]"
+            return L10n.tr("Mute Left: [ Off ] | [ Right ]")
         case .muteRight:
-            return "Mute Right: [ Left ] | [ Off ]"
+            return L10n.tr("Mute Right: [ Left ] | [ Off ]")
         case .invertPhase:
-            return "Invert phase: -180° polarity"
+            return L10n.tr("Invert phase: -180° polarity")
         }
     }
 
     private var gainSubtitle: String {
         if gainDb == 0 {
-            return "0 dB (Unity level / 1.0x)"
+            return L10n.tr("0 dB (Unity level / 1.0x)")
         } else if gainDb > 0 {
             let mult = pow(10.0, gainDb / 20.0)
             return String(format: "+%.0f dB (%.1fx volume boost)", gainDb, mult)
@@ -1733,7 +1734,7 @@ public struct TrimAndCutSheet: View {
 
     private var fadeInSubtitle: String {
         if fadeInDuration == 0 {
-            return "None (Immediate start)"
+            return L10n.tr("None (Immediate start)")
         } else {
             return String(format: "%.2fs linear attack fade", fadeInDuration)
         }
@@ -1741,7 +1742,7 @@ public struct TrimAndCutSheet: View {
 
     private var fadeOutSubtitle: String {
         if fadeOutDuration == 0 {
-            return "None (Immediate end)"
+            return L10n.tr("None (Immediate end)")
         } else {
             return String(format: "%.2fs linear release fade", fadeOutDuration)
         }
@@ -1750,7 +1751,7 @@ public struct TrimAndCutSheet: View {
     // MARK: - Destination Deck
     private var destinationDeck: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("SAVE & EXPORT DESTINATION")
+            Text(L10n.tr("SAVE & EXPORT DESTINATION"))
                 .font(WalkmanFont.sectionHeader)
                 .foregroundStyle(WalkmanTheme.silverMuted)
 
@@ -1767,7 +1768,7 @@ public struct TrimAndCutSheet: View {
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundStyle(isSelected ? Color(red: 20 / 255, green: 20 / 255, blue: 24 / 255) : WalkmanTheme.silverLight)
 
-                            Text(opt.title)
+                            Text(L10n.lookup(opt.title))
                                 .font(WalkmanFont.calloutBold)
                                 .foregroundStyle(isSelected ? Color(red: 20 / 255, green: 20 / 255, blue: 24 / 255) : WalkmanTheme.silverLight)
                         }
@@ -1785,7 +1786,7 @@ public struct TrimAndCutSheet: View {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundStyle(Color.orange)
                         .font(.system(size: 11))
-                    Text("Overwriting will safely replace the track file on disk and preserve all ID3v2.3 / Vorbis tags and embedded album art.")
+                    Text(L10n.tr("Overwriting will safely replace the track file on disk and preserve all ID3v2.3 / Vorbis tags and embedded album art."))
                         .font(WalkmanFont.callout)
                         .foregroundStyle(WalkmanTheme.silverMuted)
                 }
@@ -1795,7 +1796,7 @@ public struct TrimAndCutSheet: View {
                     Image(systemName: "doc.badge.plus")
                         .foregroundStyle(WalkmanTheme.silverLight)
                         .font(.system(size: 11))
-                    Text("Creates a new copy alongside the original file with '[Trimmed]' appended to the filename.")
+                    Text(L10n.tr("Creates a new copy alongside the original file with '[Trimmed]' appended to the filename."))
                         .font(WalkmanFont.callout)
                         .foregroundStyle(WalkmanTheme.silverMuted)
                 }
@@ -1808,7 +1809,7 @@ public struct TrimAndCutSheet: View {
                     Image(systemName: "tag.fill")
                         .font(.system(size: 11))
                         .foregroundStyle(WalkmanTheme.silverLight)
-                    Text("Preserve Track Metadata (Title, Artist, Album, Year) and Baseline RGB JPEG Cover Art")
+                    Text(L10n.tr("Preserve Track Metadata (Title, Artist, Album, Year) and Baseline RGB JPEG Cover Art"))
                         .font(WalkmanFont.bodyMedium)
                         .foregroundStyle(WalkmanTheme.silverLight)
                 }
@@ -1837,7 +1838,7 @@ public struct TrimAndCutSheet: View {
                 HStack(spacing: 6) {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(Color.green)
-                    Text("Track processed successfully!")
+                    Text(L10n.tr("Track processed successfully!"))
                         .font(WalkmanFont.calloutBold)
                         .foregroundStyle(Color.green)
                 }
@@ -1846,7 +1847,7 @@ public struct TrimAndCutSheet: View {
             Spacer()
 
             Button(action: onDismiss) {
-                Text("Cancel")
+                Text(L10n.tr("Cancel"))
                     .font(WalkmanFont.calloutBold)
                     .foregroundStyle(WalkmanTheme.silverLight)
                     .padding(.horizontal, 22)
@@ -1862,11 +1863,11 @@ public struct TrimAndCutSheet: View {
                         ProgressView()
                             .scaleEffect(0.65)
                             .frame(width: 14, height: 14)
-                        Text(statusMessage ?? "Processing...")
+                        Text(statusMessage ?? L10n.tr("Processing..."))
                     } else {
                         Image(systemName: "checkmark")
                             .font(.system(size: 12, weight: .bold))
-                        Text(mode == .trim ? "Apply & Trim Track" : "Apply & Cut Track")
+                        Text(mode == .trim ? L10n.tr("Apply & Trim Track") : L10n.tr("Apply & Cut Track"))
                     }
                 }
                 .font(WalkmanFont.calloutBold)
@@ -2123,7 +2124,7 @@ public struct TrimAndCutSheet: View {
         teardownPlayer()
 
         errorMessage = nil
-        statusMessage = "Preparing audio processor..."
+        statusMessage = L10n.tr("Preparing audio processor...")
         isProcessing = true
 
         let selectedDest = destination
@@ -2131,8 +2132,8 @@ public struct TrimAndCutSheet: View {
         // Handle export to Mac via NSSavePanel
         if selectedDest == .exportMac {
             let savePanel = NSSavePanel()
-            savePanel.title = "Export Trimmed Audio"
-            savePanel.prompt = "Export"
+            savePanel.title = L10n.tr("Export Trimmed Audio")
+            savePanel.prompt = L10n.tr("Export")
             savePanel.canCreateDirectories = true
 
             let ext = URL(fileURLWithPath: track.fullPath).pathExtension
@@ -2225,6 +2226,7 @@ public struct TrimAndCutSheet: View {
 }
 
 private struct SheetCloseButton: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let action: () -> Void
 
     var body: some View {
@@ -2236,12 +2238,13 @@ private struct SheetCloseButton: View {
         }
         .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 14))
         .keyboardShortcut(.cancelAction)
-        .help("Close (Esc)")
+        .help(L10n.tr("Close (Esc)"))
     }
 }
 
 // MARK: - Liquid Glass Mode Tab Pill
 private struct TrimCutModeTabPill: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let title: String
     let subtitle: String
     let icon: String
@@ -2357,6 +2360,7 @@ private struct TrimCutModeTabPill: View {
 
 // MARK: - Liquid Glass Dropdown
 private struct LiquidGlassDropdown<T: Hashable>: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let title: String
     let currentSelectionTitle: String
     let subtitle: String

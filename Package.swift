@@ -12,7 +12,12 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "WalkmanStudio",
-            path: "Sources/WalkmanStudio"
+            path: "Sources/WalkmanStudio",
+            resources: [.copy("Resources/Localization")]
+        ),
+        .testTarget(
+            name: "WalkmanStudioTests",
+            dependencies: ["WalkmanStudio"]
         )
     ]
 )

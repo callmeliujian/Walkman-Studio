@@ -36,14 +36,14 @@ public enum LocalSortOption: String, CaseIterable, Identifiable, Sendable {
 
     public var shortTitle: String {
         switch self {
-        case .titleAZ: return "Title (A–Z)"
-        case .titleZA: return "Title (Z–A)"
-        case .artistAZ: return "Artist"
-        case .albumAZ: return "Album"
-        case .dateNewest: return "Newest"
-        case .dateOldest: return "Oldest"
-        case .duration: return "Duration"
-        case .bitrate: return "Quality"
+        case .titleAZ: return L10n.tr("Title (A–Z)")
+        case .titleZA: return L10n.tr("Title (Z–A)")
+        case .artistAZ: return L10n.tr("Artist")
+        case .albumAZ: return L10n.tr("Album")
+        case .dateNewest: return L10n.tr("Newest")
+        case .dateOldest: return L10n.tr("Oldest")
+        case .duration: return L10n.tr("Duration")
+        case .bitrate: return L10n.tr("Quality")
         }
     }
 
@@ -70,6 +70,7 @@ public enum LocalSortOption: String, CaseIterable, Identifiable, Sendable {
 }
 
 public struct LocalLibraryView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let tracks: [Track]
     let folders: [LocalMusicFolder]
     let isLoading: Bool
@@ -182,11 +183,11 @@ public struct LocalLibraryView: View {
 
     private var formatOptions: [(id: String, label: String)] {
         [
-            ("ALL", "All Formats"),
+            ("ALL", L10n.tr("All Formats")),
             ("FLAC", "FLAC"),
             ("MP3", "MP3"),
             ("M4A", "M4A"),
-            ("HI-RES", "Hi-Res Audio")
+            ("HI-RES", L10n.tr("Hi-Res Audio"))
         ]
     }
 
@@ -384,8 +385,8 @@ public struct LocalLibraryView: View {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = true
-        panel.prompt = "Import Folders"
-        panel.message = "Choose one or more music folders to add to your Local Music Library"
+        panel.prompt = L10n.tr("Import Folders")
+        panel.message = L10n.tr("Choose one or more music folders to add to your Local Music Library")
         panel.canCreateDirectories = false
 
         if panel.runModal() == .OK {
@@ -399,8 +400,8 @@ public struct LocalLibraryView: View {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
-        panel.prompt = "Relocate Folder"
-        panel.message = "Choose the new location for \"\(folder.displayName)\""
+        panel.prompt = L10n.tr("Relocate Folder")
+        panel.message = L10n.tr("Choose the new location for \"\(folder.displayName)\"")
         panel.canCreateDirectories = false
 
         if panel.runModal() == .OK, let selectedURL = panel.url {
@@ -545,17 +546,17 @@ public struct LocalLibraryView: View {
             return true
         }
         .confirmationDialog(
-            "Remove Folder from Local Library?",
+            L10n.tr("Remove Folder from Local Library?"),
             isPresented: $showRemoveConfirmation,
             titleVisibility: .visible,
             presenting: folderToRemove
         ) { folder in
-            Button("Remove Folder", role: .destructive) {
+            Button(L10n.tr("Remove Folder"), role: .destructive) {
                 localService.removeFolder(id: folder.id)
             }
-            Button("Cancel", role: .cancel) {}
+            Button(L10n.tr("Cancel"), role: .cancel) {}
         } message: { folder in
-            Text("This will remove \"\(folder.displayName)\" and its indexed tracks from your Walkman Studio database. Files on disk will NOT be deleted.")
+            Text(L10n.tr("This will remove \"\(folder.displayName)\" and its indexed tracks from your Walkman Studio database. Files on disk will NOT be deleted."))
         }
         .sheet(isPresented: $showDirectTransferSheet) {
             DirectTransferSheet(
@@ -572,39 +573,39 @@ public struct LocalLibraryView: View {
         }
         .alert(transferWarningTitle, isPresented: $showTransferWarningAlert) {
             if hasMixedFormats {
-                Button("Transfer & Convert (All)") {
+                Button(L10n.tr("Transfer & Convert (All)")) {
                     TransferQueueService.shared.enqueue(tracks: pendingWarningTracks)
                     onGoToTransfer?()
                 }
                 if let targetDrive = ((activeDrive != nil && activeDrive?.type != .local) ? activeDrive : drives.first(where: { $0.type == .internal || $0.type == .microsd })) {
-                    Button("Transfer \(supportedTracksForMixedChoice.count) Supported Tracks") {
+                    Button(L10n.tr("Transfer \(supportedTracksForMixedChoice.count) Supported Tracks")) {
                         startDirectTransfer(tracks: supportedTracksForMixedChoice, targetDrive: targetDrive)
                     }
                 }
-                Button("Cancel", role: .cancel) { }
+                Button(L10n.tr("Cancel"), role: .cancel) { }
             } else {
-                Button("Open Transfer & Convert") {
+                Button(L10n.tr("Open Transfer & Convert")) {
                     TransferQueueService.shared.enqueue(tracks: pendingWarningTracks)
                     onGoToTransfer?()
                 }
-                Button("Cancel", role: .cancel) { }
+                Button(L10n.tr("Cancel"), role: .cancel) { }
             }
         } message: {
             Text(transferWarningMessage)
         }
         .alert(
-            "Audio File Not Found",
+            L10n.tr("Audio File Not Found"),
             isPresented: $showPlaybackMissingAlert,
             presenting: missingTrackForAlert
         ) { track in
             if let folder = effectiveFolders.first(where: { track.fullPath.hasPrefix($0.path) || $0.isMissing }) {
-                Button("Relocate Folder...") {
+                Button(L10n.tr("Relocate Folder...")) {
                     openRelocatePicker(for: folder)
                 }
             }
-            Button("Dismiss", role: .cancel) {}
+            Button(L10n.tr("Dismiss"), role: .cancel) {}
         } message: { track in
-            Text("\"\(track.title.isEmpty ? track.filename : track.title)\" could not be found on disk at:\n\n\(track.fullPath)\n\nThe folder may have been moved, renamed, or deleted in Finder.")
+            Text(L10n.tr("\"\(track.title.isEmpty ? track.filename : track.title)\" could not be found on disk at:\n\n\(track.fullPath)\n\nThe folder may have been moved, renamed, or deleted in Finder."))
         }
     }
 
@@ -653,18 +654,18 @@ public struct LocalLibraryView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 if localService.missingFolders.count == 1, let single = localService.missingFolders.first {
-                    Text("Music Folder Missing or Renamed")
+                    Text(L10n.tr("Music Folder Missing or Renamed"))
                         .font(.system(size: 12.5, weight: .bold))
                         .foregroundStyle(.white)
-                    Text("\"\(single.displayName)\" could not be found at \(single.path). Relocate it to restore your tracks or remove it from the library.")
+                    Text(L10n.tr("\"\(single.displayName)\" could not be found at \(single.path). Relocate it to restore your tracks or remove it from the library."))
                         .font(.system(size: 11))
                         .foregroundStyle(Color.white.opacity(0.70))
                         .lineLimit(1)
                 } else {
-                    Text("\(localService.missingFolders.count) Music Folders Missing")
+                    Text(L10n.tr("\(localService.missingFolders.count) Music Folders Missing"))
                         .font(.system(size: 12.5, weight: .bold))
                         .foregroundStyle(.white)
-                    Text("One or more monitored folders cannot be found on disk. Relocate them to restore your tracks or remove missing tracks.")
+                    Text(L10n.tr("One or more monitored folders cannot be found on disk. Relocate them to restore your tracks or remove missing tracks."))
                         .font(.system(size: 11))
                         .foregroundStyle(Color.white.opacity(0.70))
                         .lineLimit(1)
@@ -680,7 +681,7 @@ public struct LocalLibraryView: View {
                     }) {
                         HStack(spacing: 5) {
                             Image(systemName: "folder.badge.gearshape")
-                            Text("Relocate Folder...")
+                            Text(L10n.tr("Relocate Folder..."))
                         }
                         .font(.system(size: 11.5, weight: .semibold))
                         .foregroundStyle(Color(red: 20/255, green: 20/255, blue: 24/255))
@@ -696,7 +697,7 @@ public struct LocalLibraryView: View {
                     }) {
                         HStack(spacing: 5) {
                             Image(systemName: "folder.badge.gearshape")
-                            Text("Manage Folders...")
+                            Text(L10n.tr("Manage Folders..."))
                         }
                         .font(.system(size: 11.5, weight: .semibold))
                         .foregroundStyle(Color(red: 20/255, green: 20/255, blue: 24/255))
@@ -713,7 +714,7 @@ public struct LocalLibraryView: View {
                 }) {
                     HStack(spacing: 4) {
                         Image(systemName: "trash")
-                        Text("Remove Missing")
+                        Text(L10n.tr("Remove Missing"))
                     }
                     .font(.system(size: 11.5, weight: .medium))
                     .foregroundStyle(Color.white.opacity(0.85))
@@ -742,15 +743,15 @@ public struct LocalLibraryView: View {
                 .stroke(Color.orange.opacity(0.35), lineWidth: 0.8)
         )
         .confirmationDialog(
-            "Remove Missing Folders and Tracks?",
+            L10n.tr("Remove Missing Folders and Tracks?"),
             isPresented: $showPurgeConfirmation
         ) {
-            Button("Remove Missing Tracks", role: .destructive) {
+            Button(L10n.tr("Remove Missing Tracks"), role: .destructive) {
                 localService.purgeMissingFolders()
             }
-            Button("Cancel", role: .cancel) {}
+            Button(L10n.tr("Cancel"), role: .cancel) {}
         } message: {
-            Text("This will remove all missing folders and their orphaned tracks from Walkman Studio's local database. No files on disk will be deleted.")
+            Text(L10n.tr("This will remove all missing folders and their orphaned tracks from Walkman Studio's local database. No files on disk will be deleted."))
         }
     }
 
@@ -851,9 +852,9 @@ public struct LocalLibraryView: View {
         ExpandableLiquidGlassSearchBar(
             text: $searchQuery,
             isExpanded: $isSearchExpanded,
-            placeholder: "Search local tracks, artists, albums, folders...",
+            placeholder: L10n.tr("Search local tracks, artists, albums, folders..."),
             expandedWidth: 260,
-            helpText: "Search Local Library"
+            helpText: L10n.tr("Search Local Library")
         )
     }
 
@@ -881,14 +882,14 @@ public struct LocalLibraryView: View {
                         .scaleEffect(0.65)
                         .tint(WalkmanTheme.hiResGold)
                         .frame(width: 13, height: 13)
-                    Text("Scanning...")
+                    Text(L10n.tr("Scanning..."))
                         .font(.system(size: 12.5, weight: .semibold))
                         .foregroundStyle(WalkmanTheme.hiResGold)
                 } else {
                     Image(systemName: "folder.badge.plus")
                         .font(.system(size: 13.5, weight: .semibold))
                         .foregroundStyle(isImportHovered ? WalkmanTheme.hiResGold : WalkmanTheme.silverLight)
-                    Text("Import Folder")
+                    Text(L10n.tr("Import Folder"))
                         .font(.system(size: 12.5, weight: .semibold))
                         .foregroundStyle(isImportHovered ? Color.white : Color.white.opacity(0.88))
                 }
@@ -931,7 +932,7 @@ public struct LocalLibraryView: View {
         }
         .buttonStyle(.plain)
         .contentShape(Capsule())
-        .help("Import music folders into Local Music Library • \(effectiveTracks.count) songs indexed")
+        .help(L10n.tr("Import music folders into Local Music Library • \(effectiveTracks.count) songs indexed"))
         .onHover { hovering in
             guard isImportHovered != hovering else { return }
             isImportHovered = hovering
@@ -962,7 +963,7 @@ public struct LocalLibraryView: View {
             }
             .width(min: 26, ideal: 34, max: 44)
 
-            TableColumn("Title", value: \.title) { track in
+            TableColumn(L10n.tr("Title"), value: \.title) { track in
                 let isCurrent = player.currentTrack?.id == track.id
                 let isPlayingThis = isCurrent && player.isPlaying
 
@@ -973,7 +974,7 @@ public struct LocalLibraryView: View {
                         TrackCoverThumbnail(track: track, size: 30, isPlaying: isPlayingThis)
                     }
                     .buttonStyle(.plain)
-                    .help(isPlayingThis ? "Pause" : "Play preview")
+                    .help(isPlayingThis ? L10n.tr("Pause") : L10n.tr("Play preview"))
 
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 5) {
@@ -981,7 +982,7 @@ public struct LocalLibraryView: View {
                                 Image(systemName: "exclamationmark.triangle.fill")
                                     .font(.system(size: 9, weight: .bold))
                                     .foregroundStyle(Color.orange)
-                                    .help("File not found on disk. The folder may have been moved, renamed, or deleted.")
+                                    .help(L10n.tr("File not found on disk. The folder may have been moved, renamed, or deleted."))
                             }
 
                             Text(track.title)
@@ -999,7 +1000,7 @@ public struct LocalLibraryView: View {
                                 Image(systemName: "character.book.closed.fill")
                                     .font(.system(size: 9))
                                     .foregroundStyle(WalkmanTheme.silverMuted)
-                                    .help("Language Study & Audiobooks")
+                                    .help(L10n.tr("Language Study & Audiobooks"))
                             }
                         }
                     }
@@ -1007,7 +1008,7 @@ public struct LocalLibraryView: View {
             }
             .width(min: 130, ideal: 220)
 
-            TableColumn("Artist", value: \.artist) { track in
+            TableColumn(L10n.tr("Artist"), value: \.artist) { track in
                 Text(track.artist.isEmpty ? "Unknown Artist" : track.artist)
                     .font(WalkmanFont.callout)
                     .foregroundStyle(Color.white.opacity(0.85))
@@ -1015,7 +1016,7 @@ public struct LocalLibraryView: View {
             }
             .width(min: 90, ideal: 140)
 
-            TableColumn("Album", value: \.album) { track in
+            TableColumn(L10n.tr("Album"), value: \.album) { track in
                 Text(track.album.isEmpty ? "—" : track.album)
                     .font(WalkmanFont.callout)
                     .foregroundStyle(Color.secondary)
@@ -1023,7 +1024,7 @@ public struct LocalLibraryView: View {
             }
             .width(min: 90, ideal: 150)
 
-            TableColumn("Format", value: \.format) { track in
+            TableColumn(L10n.tr("Format"), value: \.format) { track in
                 let hiRes = isHiRes(track)
                 HStack(spacing: 4.5) {
                     Text(track.format)
@@ -1058,7 +1059,7 @@ public struct LocalLibraryView: View {
                         HStack(spacing: 2.5) {
                             Image(systemName: "waveform")
                                 .font(.system(size: 7, weight: .black))
-                            Text("Hi-Res")
+                            Text(L10n.tr("Hi-Res"))
                                 .font(WalkmanFont.badge)
                         }
                         .padding(.horizontal, 5)
@@ -1093,7 +1094,7 @@ public struct LocalLibraryView: View {
                         Capsule().stroke(Color(red: 255/255, green: 165/255, blue: 30/255).opacity(0.55), lineWidth: 0.8)
                     )
                     .foregroundStyle(Color(red: 255/255, green: 195/255, blue: 80/255))
-                    .help("Sony 12 Tone / SenseMe Analyzed • \(track.senseMeChannels.joined(separator: ", "))")
+                    .help(L10n.tr("Sony 12 Tone / SenseMe Analyzed • \(track.senseMeChannels.joined(separator: ", "))"))
                 } else {
                     Text("—")
                         .font(WalkmanFont.monoSmall)
@@ -1102,14 +1103,14 @@ public struct LocalLibraryView: View {
             }
             .width(min: 60, ideal: 76, max: 90)
 
-            TableColumn("Duration", value: \.durationSeconds) { track in
+            TableColumn(L10n.tr("Duration"), value: \.durationSeconds) { track in
                 Text(formatDuration(track.durationSeconds))
                     .font(WalkmanFont.monoSmall)
                     .foregroundStyle(Color.white.opacity(0.85))
             }
             .width(min: 50, ideal: 64, max: 80)
 
-            TableColumn("Bitrate", value: \.bitrateKbps) { track in
+            TableColumn(L10n.tr("Bitrate"), value: \.bitrateKbps) { track in
                 Text(track.bitrateKbps > 0 ? "\(track.bitrateKbps)k" : "—")
                     .font(WalkmanFont.monoSmall)
                     .foregroundStyle(Color.secondary)
@@ -1139,7 +1140,7 @@ public struct LocalLibraryView: View {
             }
             .width(min: 28, ideal: 36, max: 46)
 
-            TableColumn("Title", value: \.title) { track in
+            TableColumn(L10n.tr("Title"), value: \.title) { track in
                 let isCurrent = player.currentTrack?.id == track.id
                 let isPlayingThis = isCurrent && player.isPlaying
 
@@ -1150,7 +1151,7 @@ public struct LocalLibraryView: View {
                         TrackCoverThumbnail(track: track, size: 30, isPlaying: isPlayingThis)
                     }
                     .buttonStyle(.plain)
-                    .help(isPlayingThis ? "Pause" : "Play preview")
+                    .help(isPlayingThis ? L10n.tr("Pause") : L10n.tr("Play preview"))
 
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 5) {
@@ -1158,7 +1159,7 @@ public struct LocalLibraryView: View {
                                 Image(systemName: "exclamationmark.triangle.fill")
                                     .font(.system(size: 9, weight: .bold))
                                     .foregroundStyle(Color.orange)
-                                    .help("File not found on disk. The folder may have been moved, renamed, or deleted.")
+                                    .help(L10n.tr("File not found on disk. The folder may have been moved, renamed, or deleted."))
                             }
 
                             Text(track.title)
@@ -1176,7 +1177,7 @@ public struct LocalLibraryView: View {
                                 Image(systemName: "character.book.closed.fill")
                                     .font(.system(size: 9))
                                     .foregroundStyle(WalkmanTheme.silverMuted)
-                                    .help("Language Study & Audiobooks")
+                                    .help(L10n.tr("Language Study & Audiobooks"))
                             }
                         }
                     }
@@ -1184,7 +1185,7 @@ public struct LocalLibraryView: View {
             }
             .width(min: 130, ideal: 220)
 
-            TableColumn("Artist", value: \.artist) { track in
+            TableColumn(L10n.tr("Artist"), value: \.artist) { track in
                 Text(track.artist.isEmpty ? "Unknown Artist" : track.artist)
                     .font(WalkmanFont.callout)
                     .foregroundStyle(Color.white.opacity(0.85))
@@ -1192,7 +1193,7 @@ public struct LocalLibraryView: View {
             }
             .width(min: 90, ideal: 140)
 
-            TableColumn("Album", value: \.album) { track in
+            TableColumn(L10n.tr("Album"), value: \.album) { track in
                 Text(track.album.isEmpty ? "—" : track.album)
                     .font(WalkmanFont.callout)
                     .foregroundStyle(Color.secondary)
@@ -1200,7 +1201,7 @@ public struct LocalLibraryView: View {
             }
             .width(min: 90, ideal: 150)
 
-            TableColumn("Format", value: \.format) { track in
+            TableColumn(L10n.tr("Format"), value: \.format) { track in
                 let hiRes = isHiRes(track)
                 HStack(spacing: 4.5) {
                     Text(track.format)
@@ -1235,7 +1236,7 @@ public struct LocalLibraryView: View {
                         HStack(spacing: 2.5) {
                             Image(systemName: "waveform")
                                 .font(.system(size: 7, weight: .black))
-                            Text("Hi-Res")
+                            Text(L10n.tr("Hi-Res"))
                                 .font(WalkmanFont.badge)
                         }
                         .padding(.horizontal, 5)
@@ -1270,7 +1271,7 @@ public struct LocalLibraryView: View {
                         Capsule().stroke(Color(red: 255/255, green: 165/255, blue: 30/255).opacity(0.55), lineWidth: 0.8)
                     )
                     .foregroundStyle(Color(red: 255/255, green: 195/255, blue: 80/255))
-                    .help("Sony 12 Tone / SenseMe Analyzed • \(track.senseMeChannels.joined(separator: ", "))")
+                    .help(L10n.tr("Sony 12 Tone / SenseMe Analyzed • \(track.senseMeChannels.joined(separator: ", "))"))
                 } else {
                     Text("—")
                         .font(WalkmanFont.monoSmall)
@@ -1279,7 +1280,7 @@ public struct LocalLibraryView: View {
             }
             .width(min: 60, ideal: 76, max: 90)
 
-            TableColumn("Date Added", value: \.dateAdded) { track in
+            TableColumn(L10n.tr("Date Added"), value: \.dateAdded) { track in
                 Text(formatDateAdded(track.dateAdded))
                     .font(WalkmanFont.callout)
                     .foregroundStyle(Color.secondary)
@@ -1287,7 +1288,7 @@ public struct LocalLibraryView: View {
             }
             .width(min: 90, ideal: 120, max: 160)
 
-            TableColumn("Duration", value: \.durationSeconds) { track in
+            TableColumn(L10n.tr("Duration"), value: \.durationSeconds) { track in
                 Text(formatDuration(track.durationSeconds))
                     .font(WalkmanFont.monoSmall)
                     .foregroundStyle(Color.white.opacity(0.85))
@@ -1309,7 +1310,7 @@ public struct LocalLibraryView: View {
         if let firstId = selection.first, let track = sourceTracks.first(where: { $0.id == firstId }) {
             let isThisPlaying = player.currentTrack?.id == track.id && player.isPlaying
 
-            Button(isThisPlaying ? "Pause Playback" : "Play Preview") {
+            Button(isThisPlaying ? L10n.tr("Pause Playback") : L10n.tr("Play Preview")) {
                 playTrackSafe(track, in: sourceTracks)
             }
 
@@ -1318,19 +1319,19 @@ public struct LocalLibraryView: View {
             Button {
                 onEditTrack?(track)
             } label: {
-                Label("Edit Song Metadata...", systemImage: "square.and.pencil")
+                Label(L10n.tr("Edit Song Metadata..."), systemImage: "square.and.pencil")
             }
 
             Button {
                 onTrimCutTrack?(track)
             } label: {
-                Label("Trim & Cut Audio...", systemImage: "scissors")
+                Label(L10n.tr("Trim & Cut Audio..."), systemImage: "scissors")
             }
 
             Button {
                 ArtworkExportService.exportArtwork(for: track)
             } label: {
-                Label("Export Cover Art to Mac...", systemImage: "square.and.arrow.down")
+                Label(L10n.tr("Export Cover Art to Mac..."), systemImage: "square.and.arrow.down")
             }
 
             Divider()
@@ -1340,7 +1341,7 @@ public struct LocalLibraryView: View {
                 let toTransfer = targets.isEmpty ? [track] : targets
                 handleTransferToWalkman(tracks: toTransfer)
             } label: {
-                Label(selection.count > 1 ? "Transfer \(selection.count) Tracks to Walkman" : "Transfer to Walkman", systemImage: "arrow.right.circle.fill")
+                Label(selection.count > 1 ? L10n.tr("Transfer \(selection.count) Tracks to Walkman") : L10n.tr("Transfer to Walkman"), systemImage: "arrow.right.circle.fill")
             }
 
             if let onTransfer = onGoToTransfer {
@@ -1350,21 +1351,21 @@ public struct LocalLibraryView: View {
                     TransferQueueService.shared.enqueue(tracks: toQueue)
                     onTransfer()
                 } label: {
-                    Label("Send to Transfer & Convert...", systemImage: "arrow.up.arrow.down.circle")
+                    Label(L10n.tr("Send to Transfer & Convert..."), systemImage: "arrow.up.arrow.down.circle")
                 }
             }
 
-            Button("Inspect Metadata & Artwork (Cmd+I)") {
+            Button(L10n.tr("Inspect Metadata & Artwork (Cmd+I)")) {
                 onInspectTrack(track)
             }
 
             Divider()
 
-            Button("Reveal in Finder") {
+            Button(L10n.tr("Reveal in Finder")) {
                 NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: track.fullPath)])
             }
 
-            Button("Copy Path") {
+            Button(L10n.tr("Copy Path")) {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(track.fullPath, forType: .string)
             }
@@ -1378,7 +1379,7 @@ public struct LocalLibraryView: View {
                     onDeleteTrack?(tr)
                 }
             } label: {
-                Label(selection.count > 1 ? "Remove \(selection.count) Songs from Local Library" : "Remove from Local Library", systemImage: "trash")
+                Label(selection.count > 1 ? L10n.tr("Remove \(selection.count) Songs from Local Library") : L10n.tr("Remove from Local Library"), systemImage: "trash")
             }
         }
     }
@@ -1490,10 +1491,10 @@ public struct LocalLibraryView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 3) {
-                        Text("Monitored Music Folders")
+                        Text(L10n.tr("Monitored Music Folders"))
                             .font(.system(size: 15, weight: .bold))
                             .foregroundStyle(.white)
-                        Text("\(effectiveFolders.count) directories indexed • \(formatBytes(localService.totalSizeBytes)) storage • \(effectiveTracks.count) total songs")
+                        Text(L10n.tr("\(effectiveFolders.count) directories indexed • \(formatBytes(localService.totalSizeBytes)) storage • \(effectiveTracks.count) total songs"))
                             .font(.system(size: 12))
                             .foregroundStyle(WalkmanTheme.silverMuted)
                     }
@@ -1503,7 +1504,7 @@ public struct LocalLibraryView: View {
                     Button(action: openFolderPicker) {
                         HStack(spacing: 6) {
                             Image(systemName: "plus")
-                            Text("Add Folder...")
+                            Text(L10n.tr("Add Folder..."))
                         }
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(.white)
@@ -1571,11 +1572,11 @@ public struct LocalLibraryView: View {
             }
 
             VStack(spacing: 8) {
-                Text("Your Local Music Library")
+                Text(L10n.tr("Your Local Music Library"))
                     .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(.white)
 
-                Text("Import music folders to organize, play, and transfer tracks to your Sony Walkman.")
+                Text(L10n.tr("Import music folders to organize, play, and transfer tracks to your Sony Walkman."))
                     .font(.system(size: 13))
                     .foregroundStyle(WalkmanTheme.silverMuted)
                     .multilineTextAlignment(.center)
@@ -1586,7 +1587,7 @@ public struct LocalLibraryView: View {
                 Button(action: openFolderPicker) {
                     HStack(spacing: 7) {
                         Image(systemName: "plus.circle.fill")
-                        Text("Import Music Folders...")
+                        Text(L10n.tr("Import Music Folders..."))
                     }
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Color(red: 20/255, green: 20/255, blue: 24/255))
@@ -1598,7 +1599,7 @@ public struct LocalLibraryView: View {
                 }
                 .buttonStyle(.plain)
 
-                Text("or drag & drop folders here from Finder")
+                Text(L10n.tr("or drag & drop folders here from Finder"))
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }
@@ -1617,10 +1618,10 @@ public struct LocalLibraryView: View {
                 .scaleEffect(1.2)
                 .tint(WalkmanTheme.hiResGold)
             VStack(spacing: 6) {
-                Text(localService.scanStatusText ?? "Scanning Local Folders...")
+                Text(localService.scanStatusText ?? L10n.tr("Scanning Local Folders..."))
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(.white)
-                Text("Indexing tracks, audio formats, and cover artwork")
+                Text(L10n.tr("Indexing tracks, audio formats, and cover artwork"))
                     .font(.system(size: 12))
                     .foregroundStyle(WalkmanTheme.silverMuted)
             }
@@ -1636,17 +1637,17 @@ public struct LocalLibraryView: View {
                 .font(.system(size: 40))
                 .foregroundStyle(WalkmanTheme.silverMuted)
             VStack(spacing: 6) {
-                Text("No Audio Files Found")
+                Text(L10n.tr("No Audio Files Found"))
                     .font(.system(size: 17, weight: .bold))
                     .foregroundStyle(.white)
-                Text("The monitored local folders do not contain supported audio files (FLAC, MP3, M4A, AAC, WAV, AIFF, DSD).")
+                Text(L10n.tr("The monitored local folders do not contain supported audio files (FLAC, MP3, M4A, AAC, WAV, AIFF, DSD)."))
                     .font(.system(size: 12.5))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 420)
             }
             HStack(spacing: 10) {
-                Button("Add Another Folder...") {
+                Button(L10n.tr("Add Another Folder...")) {
                     openFolderPicker()
                 }
                 .font(.system(size: 12, weight: .semibold))
@@ -1657,7 +1658,7 @@ public struct LocalLibraryView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                 .buttonStyle(.plain)
 
-                Button("Rescan Monitored Folders") {
+                Button(L10n.tr("Rescan Monitored Folders")) {
                     localService.rescanAllFolders()
                 }
                 .font(.system(size: 12, weight: .semibold))
@@ -1679,27 +1680,27 @@ public struct LocalLibraryView: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 36))
                 .foregroundStyle(WalkmanTheme.silverMuted)
-            Text("No Matching Local Tracks")
+            Text(L10n.tr("No Matching Local Tracks"))
                 .font(.system(size: 17, weight: .bold))
                 .foregroundStyle(.white)
             if !searchQuery.isEmpty && formatFilter != "ALL" {
-                Text("No tracks matched your query \"\(searchQuery)\" with format filter \"\(formatFilter)\".")
+                Text(L10n.tr("No tracks matched your query \"\(searchQuery)\" with format filter \"\(formatFilter)\"."))
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
             } else if !searchQuery.isEmpty {
-                Text("No tracks matched your search query \"\(searchQuery)\".")
+                Text(L10n.tr("No tracks matched your search query \"\(searchQuery)\"."))
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
             } else if formatFilter != "ALL" {
-                Text("No tracks matched active format filter \"\(formatFilter)\".")
+                Text(L10n.tr("No tracks matched active format filter \"\(formatFilter)\"."))
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
             } else {
-                Text("No local tracks match current filter criteria.")
+                Text(L10n.tr("No local tracks match current filter criteria."))
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
             }
-            Button("Clear Filters") {
+            Button(L10n.tr("Clear Filters")) {
                 searchQuery = ""
                 formatFilter = "ALL"
             }
@@ -1724,8 +1725,8 @@ public struct LocalLibraryView: View {
         let walkmanDrive = (activeDrive != nil && activeDrive?.type != .local) ? activeDrive : drives.first(where: { $0.type == .internal || $0.type == .microsd })
         guard let targetDrive = walkmanDrive else {
             // No Walkman device connected -> Show Warning Alert offering redirect to Transfer & Convert tab
-            transferWarningTitle = "No Walkman Connected"
-            transferWarningMessage = "Please connect your Sony Walkman DAP via USB to transfer songs directly.\n\nWould you like to redirect to the Transfer & Convert tab to prepare your queue?"
+            transferWarningTitle = L10n.tr("No Walkman Connected")
+            transferWarningMessage = L10n.tr("Please connect your Sony Walkman DAP via USB to transfer songs directly.\n\nWould you like to redirect to the Transfer & Convert tab to prepare your queue?")
             pendingWarningTracks = tracks
             hasMixedFormats = false
             showTransferWarningAlert = true
@@ -1745,12 +1746,12 @@ public struct LocalLibraryView: View {
             let uniqueExts = Array(Set(unsupported.map { ".\(URL(fileURLWithPath: $0.fullPath).pathExtension.lowercased())" })).sorted().joined(separator: ", ")
             pendingWarningTracks = tracks
 
-            let deviceDesc = isTargetAndroid ? "your Android Walkman" : "Sony Walkman firmware"
+            let deviceDesc = isTargetAndroid ? L10n.tr("your Android Walkman") : L10n.tr("Sony Walkman firmware")
             if unsupported.count == tracks.count {
                 // ALL selected tracks are unsupported
                 hasMixedFormats = false
-                transferWarningTitle = "Unsupported Audio Format"
-                transferWarningMessage = "The selected track\(tracks.count == 1 ? " is" : "s are") in an audio format (\(uniqueExts)) not natively supported by \(deviceDesc).\n\nRedirect to the Transfer & Convert tab to optimize and convert \(tracks.count == 1 ? "this track" : "these tracks") before transferring to your Walkman?"
+                transferWarningTitle = L10n.tr("Unsupported Audio Format")
+                transferWarningMessage = L10n.tr("The selected track\(L10n.currentLanguage.resolvedIdentifier() == "zh-Hans" ? "" : (tracks.count == 1 ? " is" : "s are")) in an audio format (\(uniqueExts)) not natively supported by \(deviceDesc).\n\nRedirect to the Transfer & Convert tab to optimize and convert \(tracks.count == 1 ? L10n.tr("this track") : L10n.tr("these tracks")) before transferring to your Walkman?")
                 showTransferWarningAlert = true
             } else {
                 // MIXED: some supported, some unsupported
@@ -1760,8 +1761,8 @@ public struct LocalLibraryView: View {
                     return TransferQueueService.isFormatSupported(ext: ext, isAndroid: isTargetAndroid)
                 }
                 supportedTracksForMixedChoice = supported
-                transferWarningTitle = "Unsupported Formats Detected"
-                transferWarningMessage = "\(unsupported.count) of \(tracks.count) selected tracks are in formats (\(uniqueExts)) not natively playable on \(deviceDesc).\n\nWould you like to redirect to the Transfer & Convert tab to optimize all tracks, or transfer only the \(supported.count) supported track\(supported.count == 1 ? "" : "s") directly?"
+                transferWarningTitle = L10n.tr("Unsupported Formats Detected")
+                transferWarningMessage = L10n.tr("\(unsupported.count) of \(tracks.count) selected tracks are in formats (\(uniqueExts)) not natively playable on \(deviceDesc).\n\nWould you like to redirect to the Transfer & Convert tab to optimize all tracks, or transfer only the \(supported.count) supported track\(L10n.pluralSuffix(supported.count)) directly?")
                 showTransferWarningAlert = true
             }
             return
@@ -1803,7 +1804,7 @@ public struct LocalLibraryView: View {
                 await MainActor.run {
                     self.isDirectTransferring = false
                     self.showDirectTransferSheet = false
-                    self.transferWarningTitle = "Transfer Failed"
+                    self.transferWarningTitle = L10n.tr("Transfer Failed")
                     self.transferWarningMessage = error.localizedDescription
                     self.showTransferWarningAlert = true
                 }
@@ -1816,6 +1817,7 @@ public struct LocalLibraryView: View {
 // LOCAL FOLDER ROW CARD
 // -----------------------------------------------------------------------------
 private struct LocalFolderRowCard: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let folder: LocalMusicFolder
     var onSelect: (() -> Void)? = nil
     var onRescan: (() -> Void)? = nil
@@ -1860,7 +1862,7 @@ private struct LocalFolderRowCard: View {
                                 .foregroundStyle(.white)
 
                             if isMissing {
-                                Text("MISSING OR RENAMED")
+                                Text(L10n.tr("MISSING OR RENAMED"))
                                     .font(.system(size: 9.5, weight: .bold, design: .monospaced))
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2)
@@ -1868,7 +1870,7 @@ private struct LocalFolderRowCard: View {
                                     .foregroundStyle(Color.orange)
                                     .clipShape(Capsule())
                             } else {
-                                Text("\(folder.trackCount) tracks")
+                                Text(L10n.tr("\(folder.trackCount) tracks"))
                                     .font(.system(size: 10.5, weight: .bold, design: .monospaced))
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2)
@@ -1882,7 +1884,7 @@ private struct LocalFolderRowCard: View {
                                 .foregroundStyle(WalkmanTheme.silverMuted)
                         }
 
-                        Text(isMissing ? "\(folder.path) (Not found on disk)" : folder.path)
+                        Text(isMissing ? L10n.tr("\(folder.path) (Not found on disk)") : folder.path)
                             .font(.system(size: 11, design: .monospaced))
                             .foregroundStyle(isMissing ? Color.orange.opacity(0.85) : .secondary)
                             .lineLimit(1)
@@ -1899,7 +1901,7 @@ private struct LocalFolderRowCard: View {
                     Button(action: onRelocate) {
                         HStack(spacing: 4) {
                             Image(systemName: "folder.badge.gearshape")
-                            Text("Relocate...")
+                            Text(L10n.tr("Relocate..."))
                                 .font(.system(size: 11, weight: .semibold))
                         }
                         .foregroundStyle(Color.orange)
@@ -1909,7 +1911,7 @@ private struct LocalFolderRowCard: View {
                         .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                     }
                     .buttonStyle(.plain)
-                    .help("Choose new directory for renamed or moved folder")
+                    .help(L10n.tr("Choose new directory for renamed or moved folder"))
                 }
 
                 if !isMissing, let onRescan = onRescan {
@@ -1922,7 +1924,7 @@ private struct LocalFolderRowCard: View {
                             .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                     }
                     .buttonStyle(.plain)
-                    .help("Rescan this folder")
+                    .help(L10n.tr("Rescan this folder"))
                 }
 
                 Button(action: onReveal) {
@@ -1934,7 +1936,7 @@ private struct LocalFolderRowCard: View {
                         .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                 }
                 .buttonStyle(.plain)
-                .help("Reveal in Finder")
+                .help(L10n.tr("Reveal in Finder"))
 
                 Button(action: onRemove) {
                     Image(systemName: "trash")
@@ -1945,7 +1947,7 @@ private struct LocalFolderRowCard: View {
                         .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                 }
                 .buttonStyle(.plain)
-                .help("Remove folder from Local Music Library")
+                .help(L10n.tr("Remove folder from Local Music Library"))
             }
         }
         .padding(12)
@@ -1958,29 +1960,30 @@ private struct LocalFolderRowCard: View {
         .onHover { isHovered = $0 }
         .contextMenu {
             if isMissing, let onRelocate = onRelocate {
-                Button("Relocate Folder...", action: onRelocate)
+                Button(L10n.tr("Relocate Folder..."), action: onRelocate)
                 Divider()
             }
             if let onTransfer = onTransfer {
                 Button {
                     onTransfer()
                 } label: {
-                    Label("Transfer Folder to Walkman", systemImage: "arrow.right.circle.fill")
+                    Label(L10n.tr("Transfer Folder to Walkman"), systemImage: "arrow.right.circle.fill")
                 }
                 Divider()
             }
-            Button("Open Folder in Songs View") {
+            Button(L10n.tr("Open Folder in Songs View")) {
                 onSelect?()
             }
-            Button("Reveal in Finder", action: onReveal)
+            Button(L10n.tr("Reveal in Finder"), action: onReveal)
             Divider()
-            Button("Remove from Local Library", role: .destructive, action: onRemove)
+            Button(L10n.tr("Remove from Local Library"), role: .destructive, action: onRemove)
         }
     }
 }
 
 // MARK: - Liquid Glass Combined Filter & Sort Dropdown
 private struct LocalFilterSortDropdown: View {
+    @ObservedObject private var localization = AppLocalization.shared
     @Binding var formatFilter: String
     @Binding var sortOption: LocalSortOption
     let formatOptions: [(id: String, label: String)]
@@ -2008,7 +2011,7 @@ private struct LocalFilterSortDropdown: View {
             // -------------------------------------------------------------
             // SECTION 1: Audio Formats
             // -------------------------------------------------------------
-            Section("Audio Format") {
+            Section(L10n.tr("Audio Format")) {
                 ForEach(formatOptions, id: \.id) { opt in
                     Button {
                         formatFilter = opt.id
@@ -2030,7 +2033,7 @@ private struct LocalFilterSortDropdown: View {
             // -------------------------------------------------------------
             // SECTION 2: Sort Criteria
             // -------------------------------------------------------------
-            Section("Sort By") {
+            Section(L10n.tr("Sort By")) {
                 ForEach(LocalSortOption.allCases) { opt in
                     Button {
                         sortOption = opt
@@ -2039,7 +2042,7 @@ private struct LocalFilterSortDropdown: View {
                             if sortOption == opt {
                                 Image(systemName: "checkmark")
                             }
-                            Label(opt.rawValue, systemImage: opt.iconName)
+                            Label(L10n.lookup(opt.rawValue), systemImage: opt.iconName)
                         }
                     }
                 }
@@ -2054,7 +2057,7 @@ private struct LocalFilterSortDropdown: View {
                     formatFilter = "ALL"
                     sortOption = .artistAZ
                 } label: {
-                    Label("Reset Filter & Sort", systemImage: "arrow.counterclockwise")
+                    Label(L10n.tr("Reset Filter & Sort"), systemImage: "arrow.counterclockwise")
                 }
             }
         } label: {
@@ -2123,7 +2126,7 @@ private struct LocalFilterSortDropdown: View {
         .menuIndicator(.hidden)
         .buttonStyle(.plain)
         .contentShape(Circle())
-        .help("Filter & Sort: \(activeFormatLabel) • \(sortOption.rawValue)")
+        .help(L10n.tr("Filter & Sort: \(activeFormatLabel) • \(L10n.lookup(sortOption.rawValue))"))
         .onHover { hovering in
             guard isHovered != hovering else { return }
             isHovered = hovering
@@ -2146,6 +2149,7 @@ private struct LocalFilterSortDropdown: View {
 
 // MARK: - Liquid Glass Display Mode Segmented Control
 private struct LocalDisplayModeSegmentedControl: View {
+    @ObservedObject private var localization = AppLocalization.shared
     @Binding var displayMode: LocalDisplayMode
     @Namespace private var highlightNamespace
     @State private var activeHighlightId: LocalDisplayMode = .songs
@@ -2186,6 +2190,7 @@ private struct LocalDisplayModeSegmentedControl: View {
 }
 
 private struct LocalDisplayModePillView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let mode: LocalDisplayMode
     let isSelected: Bool
     let namespace: Namespace.ID
@@ -2198,7 +2203,7 @@ private struct LocalDisplayModePillView: View {
             HStack(spacing: 6) {
                 Image(systemName: mode.icon)
                     .font(.system(size: 11.5, weight: isSelected ? .bold : .medium))
-                Text(mode.rawValue)
+                Text(L10n.lookup(mode.rawValue))
                     .font(.system(size: 12.5, weight: isSelected ? .semibold : .regular))
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
@@ -2248,6 +2253,7 @@ private struct LocalDisplayModePillView: View {
 // DIRECT TRANSFER PROGRESS SHEET
 // -----------------------------------------------------------------------------
 private struct DirectTransferSheet: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let targetName: String
     let current: Int
     let total: Int
@@ -2272,7 +2278,7 @@ private struct DirectTransferSheet: View {
                 }
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(isComplete ? "Transfer Complete" : "Transferring to Walkman...")
+                    Text(isComplete ? L10n.tr("Transfer Complete") : L10n.tr("Transferring to Walkman..."))
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(Color.white)
 
@@ -2287,7 +2293,7 @@ private struct DirectTransferSheet: View {
             // Progress Details
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text(isComplete ? "\(total) track\(total == 1 ? "" : "s") transferred" : "Track \(current) of \(total)")
+                    Text(isComplete ? L10n.tr("\(total) track\(L10n.pluralSuffix(total)) transferred") : "Track \(current) of \(total)")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(WalkmanTheme.silverLight)
 
@@ -2333,14 +2339,14 @@ private struct DirectTransferSheet: View {
                 Image(systemName: "checkmark.shield.fill")
                     .font(.system(size: 11))
                     .foregroundStyle(WalkmanTheme.hiResGold)
-                Text("Baseline RGB 800x800 JPEG • Strict ID3v2.3 UTF-16 • AppleDouble Cleaned")
+                Text(L10n.tr("Baseline RGB 800x800 JPEG • Strict ID3v2.3 UTF-16 • AppleDouble Cleaned"))
                     .font(.system(size: 10))
                     .foregroundStyle(WalkmanTheme.silverDark)
             }
 
             if isComplete {
                 Button(action: onDone) {
-                    Text("Done")
+                    Text(L10n.tr("Done"))
                         .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(Color.black)
                         .frame(maxWidth: .infinity)

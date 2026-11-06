@@ -3,6 +3,7 @@ import AppKit
 
 // MARK: - Duplicate Import Guard Sheet
 public struct DuplicateImportGuardSheet: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let candidates: [DuplicateImportCandidate]
     let nonDuplicateCount: Int
     let totalCount: Int
@@ -112,13 +113,13 @@ public struct DuplicateImportGuardSheet: View {
             .shadow(color: Color.black.opacity(0.25), radius: 5, x: 0, y: 2)
 
             VStack(alignment: .leading, spacing: 3) {
-                Text("Duplicate Tracks Detected")
+                Text(L10n.tr("Duplicate Tracks Detected"))
                     .font(WalkmanFont.title)
                     .foregroundStyle(WalkmanTheme.silverLight)
 
                 let subtitle = nonDuplicateCount > 0
-                    ? "\(candidates.count) of \(totalCount) track(s) already exist in your \(targetDriveName) library."
-                    : "All \(candidates.count) selected track(s) are already present in your \(targetDriveName) library."
+                    ? L10n.tr("\(candidates.count) of \(totalCount) track(s) already exist in your \(targetDriveName) library.")
+                    : L10n.tr("All \(candidates.count) selected track(s) are already present in your \(targetDriveName) library.")
 
                 Text(subtitle)
                     .font(WalkmanFont.subheadline)
@@ -140,11 +141,11 @@ public struct DuplicateImportGuardSheet: View {
                 .padding(.top, 1)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Duplicate Prevention Guardrail")
+                Text(L10n.tr("Duplicate Prevention Guardrail"))
                     .font(WalkmanFont.calloutBold)
                     .foregroundStyle(WalkmanTheme.silverLight)
 
-                Text("To protect your Walkman storage and keep your playlists clean from duplicate audio files, you can choose to skip existing tracks.")
+                Text(L10n.tr("To protect your Walkman storage and keep your playlists clean from duplicate audio files, you can choose to skip existing tracks."))
                     .font(WalkmanFont.caption)
                     .foregroundStyle(WalkmanTheme.silverMuted)
                     .fixedSize(horizontal: false, vertical: true)
@@ -180,7 +181,7 @@ public struct DuplicateImportGuardSheet: View {
     private var detectedDuplicatesSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
-                Text("DETECTED DUPLICATES (\(candidates.count))")
+                Text(L10n.tr("DETECTED DUPLICATES (\(candidates.count))"))
                     .font(WalkmanFont.sectionHeader)
                     .foregroundStyle(WalkmanTheme.silverMuted)
 
@@ -190,7 +191,7 @@ public struct DuplicateImportGuardSheet: View {
                     HStack(spacing: 4) {
                         Image(systemName: "plus.circle.fill")
                             .font(.system(size: 11, weight: .semibold))
-                        Text("\(nonDuplicateCount) ready to add")
+                        Text(L10n.tr("\(nonDuplicateCount) ready to add"))
                             .font(WalkmanFont.subheadlineMedium)
                     }
                     .foregroundStyle(WalkmanTheme.silverLight)
@@ -216,7 +217,7 @@ public struct DuplicateImportGuardSheet: View {
                     HStack(spacing: 4) {
                         Image(systemName: expandedCandidateIds.count == candidates.count ? "chevron.up.circle.fill" : "chevron.down.circle.fill")
                             .font(.system(size: 11, weight: .semibold))
-                        Text(expandedCandidateIds.count == candidates.count ? "Collapse Details" : "Expand All Details")
+                        Text(expandedCandidateIds.count == candidates.count ? L10n.tr("Collapse Details") : L10n.tr("Expand All Details"))
                             .font(WalkmanFont.subheadlineMedium)
                     }
                     .foregroundStyle(WalkmanTheme.silverLight)
@@ -419,7 +420,7 @@ public struct DuplicateImportGuardSheet: View {
                     .font(.system(size: 10))
                     .foregroundStyle(WalkmanTheme.hiResGold)
 
-                Text("Skipping will keep the existing file on \(candidate.destinationDriveName) and avoid redundant storage usage.")
+                Text(L10n.tr("Skipping will keep the existing file on \(candidate.destinationDriveName) and avoid redundant storage usage."))
                     .font(WalkmanFont.caption)
                     .foregroundStyle(WalkmanTheme.silverMuted)
 
@@ -443,7 +444,7 @@ public struct DuplicateImportGuardSheet: View {
                 Image(systemName: "arrow.down.doc.fill")
                     .font(.system(size: 9.5))
                     .foregroundStyle(WalkmanTheme.silver)
-                Text("INCOMING SOURCE")
+                Text(L10n.tr("INCOMING SOURCE"))
                     .font(WalkmanFont.badge)
                     .foregroundStyle(WalkmanTheme.silverMuted)
                 Spacer()
@@ -503,7 +504,7 @@ public struct DuplicateImportGuardSheet: View {
                 Image(systemName: "internaldrive.fill")
                     .font(.system(size: 9.5))
                     .foregroundStyle(Color.orange)
-                Text("ON \(driveName.uppercased())")
+                Text(L10n.tr("ON \(driveName.uppercased())"))
                     .font(WalkmanFont.badge)
                     .foregroundStyle(Color.orange.opacity(0.9))
                 Spacer()
@@ -558,7 +559,7 @@ public struct DuplicateImportGuardSheet: View {
         HStack(alignment: .center, spacing: 12) {
             // Cancel
             Button(action: onCancel) {
-                Text("Cancel")
+                Text(L10n.tr("Cancel"))
                     .font(WalkmanFont.calloutMedium)
                     .foregroundStyle(WalkmanTheme.silverLight)
                     .padding(.horizontal, 18)
@@ -581,7 +582,7 @@ public struct DuplicateImportGuardSheet: View {
                             ProgressView()
                                 .controlSize(.small)
                         }
-                        Text("Add All Anyway")
+                        Text(L10n.tr("Add All Anyway"))
                             .font(WalkmanFont.calloutMedium)
                     }
                     .foregroundStyle(WalkmanTheme.silverLight)
@@ -600,7 +601,7 @@ public struct DuplicateImportGuardSheet: View {
                             ProgressView()
                                 .controlSize(.small)
                         }
-                        Text("Add All Anyway")
+                        Text(L10n.tr("Add All Anyway"))
                             .font(WalkmanFont.calloutMedium)
                     }
                     .foregroundStyle(Color(red: 20 / 255, green: 20 / 255, blue: 24 / 255))
@@ -626,7 +627,7 @@ public struct DuplicateImportGuardSheet: View {
                             Image(systemName: "checkmark.circle.fill")
                                 .font(.system(size: 13, weight: .bold))
                         }
-                        Text("Skip Duplicates")
+                        Text(L10n.tr("Skip Duplicates"))
                             .font(WalkmanFont.calloutBold)
                     }
                     .foregroundStyle(Color(red: 20 / 255, green: 20 / 255, blue: 24 / 255))
@@ -684,6 +685,7 @@ public struct DuplicateImportGuardSheet: View {
 
 // MARK: - Sheet Close Button
 private struct SheetCloseButton: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let action: () -> Void
     @State private var isHovered: Bool = false
 
@@ -706,7 +708,7 @@ private struct SheetCloseButton: View {
         }
         .buttonStyle(.plain)
         .keyboardShortcut(.cancelAction)
-        .help("Close")
+        .help(L10n.tr("Close"))
         .onHover { h in
             withAnimation(.spring(response: 0.20, dampingFraction: 0.70)) {
                 isHovered = h

@@ -19,12 +19,13 @@ private func cleanDriveName(_ drive: WalkmanDrive) -> String {
     name = name.replacingOccurrences(of: "(Internal)", with: "")
     name = name.trimmingCharacters(in: .whitespaces)
     if name.isEmpty {
-        return drive.type == .internal ? "Internal Flash" : "MicroSD Card"
+        return drive.type == .internal ? L10n.tr("Internal Flash") : L10n.tr("MicroSD Card")
     }
     return name
 }
 
 public struct BackupRestoreView: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let drives: [WalkmanDrive]
     let activeDrive: WalkmanDrive?
     let tracks: [Track]
@@ -478,12 +479,12 @@ public struct BackupRestoreView: View {
             .shadow(color: Color.black.opacity(0.20), radius: 3, y: 1)
 
             VStack(alignment: .leading, spacing: 1) {
-                Text("Backup & Restore")
+                Text(L10n.tr("Backup & Restore"))
                     .font(WalkmanFont.title2)
                     .foregroundStyle(WalkmanTheme.silverLight)
                     .lineLimit(1)
 
-                Text(compactSubtitle ? "Safeguard or restore your Walkman library locally or to external storage" : "Safeguard or restore your Walkman library locally to your Mac or direct to an external drive")
+                Text(compactSubtitle ? L10n.tr("Safeguard or restore your Walkman library locally or to external storage") : L10n.tr("Safeguard or restore your Walkman library locally to your Mac or direct to an external drive"))
                     .font(WalkmanFont.callout)
                     .foregroundStyle(WalkmanTheme.silverMuted)
                     .lineLimit(1)
@@ -531,7 +532,7 @@ public struct BackupRestoreView: View {
         VStack(alignment: .leading, spacing: 10) {
             ViewThatFits(in: .horizontal) {
                 HStack {
-                    Label("1. SOURCE WALKMAN PARTITION", systemImage: "hifispeaker.fill")
+                    Label(L10n.tr("1. SOURCE WALKMAN PARTITION"), systemImage: "hifispeaker.fill")
                         .font(WalkmanFont.sectionHeader)
                         .foregroundStyle(WalkmanTheme.silverLight)
                         .lineLimit(1)
@@ -546,7 +547,7 @@ public struct BackupRestoreView: View {
                     }
                 }
                 VStack(alignment: .leading, spacing: 3) {
-                    Label("1. SOURCE WALKMAN PARTITION", systemImage: "hifispeaker.fill")
+                    Label(L10n.tr("1. SOURCE WALKMAN PARTITION"), systemImage: "hifispeaker.fill")
                         .font(WalkmanFont.sectionHeader)
                         .foregroundStyle(WalkmanTheme.silverLight)
                         .lineLimit(1)
@@ -561,7 +562,7 @@ public struct BackupRestoreView: View {
             }
 
             if drives.isEmpty {
-                Text("No Walkman drive connected.")
+                Text(L10n.tr("No Walkman drive connected."))
                     .font(WalkmanFont.callout)
                     .foregroundStyle(.secondary)
             } else {
@@ -601,7 +602,7 @@ public struct BackupRestoreView: View {
                             .lineLimit(1)
                             .minimumScaleFactor(0.85)
 
-                        Text(drive.type == .internal ? "Internal Flash" : "MicroSD Card")
+                        Text(drive.type == .internal ? L10n.tr("Internal Flash") : L10n.tr("MicroSD Card"))
                             .font(WalkmanFont.badge)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
@@ -612,7 +613,7 @@ public struct BackupRestoreView: View {
                             .fixedSize(horizontal: true, vertical: false)
                     }
 
-                    Text("\(formatBytes(drive.usedBytes)) used • \(formatBytes(drive.freeBytes)) free")
+                    Text(L10n.tr("\(formatBytes(drive.usedBytes)) used • \(formatBytes(drive.freeBytes)) free"))
                         .font(WalkmanFont.monoSmall)
                         .foregroundStyle(WalkmanTheme.silverMuted)
                         .lineLimit(1)
@@ -647,7 +648,7 @@ public struct BackupRestoreView: View {
         VStack(alignment: .leading, spacing: 12) {
             ViewThatFits(in: .horizontal) {
                 HStack {
-                    Label("2. BACKUP SCOPE", systemImage: "square.grid.2x2.fill")
+                    Label(L10n.tr("2. BACKUP SCOPE"), systemImage: "square.grid.2x2.fill")
                         .font(WalkmanFont.sectionHeader)
                         .foregroundStyle(WalkmanTheme.silverLight)
                         .lineLimit(1)
@@ -657,7 +658,7 @@ public struct BackupRestoreView: View {
                     backupScopeSelectionPill
                 }
                 VStack(alignment: .leading, spacing: 4) {
-                    Label("2. BACKUP SCOPE", systemImage: "square.grid.2x2.fill")
+                    Label(L10n.tr("2. BACKUP SCOPE"), systemImage: "square.grid.2x2.fill")
                         .font(WalkmanFont.sectionHeader)
                         .foregroundStyle(WalkmanTheme.silverLight)
                         .lineLimit(1)
@@ -682,12 +683,12 @@ public struct BackupRestoreView: View {
                                 .foregroundStyle(isSelected ? WalkmanTheme.silverLight : WalkmanTheme.silverMuted)
 
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(scope.title)
+                                Text(L10n.lookup(scope.title))
                                     .font(WalkmanFont.bodyBold)
                                     .foregroundStyle(isSelected ? .white : .secondary)
                                     .lineLimit(1)
 
-                                Text(scope.subtitle)
+                                Text(L10n.lookup(scope.subtitle))
                                     .font(WalkmanFont.callout)
                                     .foregroundStyle(WalkmanTheme.silverMuted)
                                     .fixedSize(horizontal: false, vertical: true)
@@ -699,7 +700,7 @@ public struct BackupRestoreView: View {
                                 Button(action: { showAlbumPickerSheet = true }) {
                                     HStack(spacing: 5) {
                                         Image(systemName: "checklist")
-                                        Text(selectedAlbumKeys.isEmpty ? "Select Albums..." : "\(selectedAlbumKeys.count) Albums")
+                                        Text(selectedAlbumKeys.isEmpty ? L10n.tr("Select Albums...") : L10n.tr("\(selectedAlbumKeys.count) Albums"))
                                     }
                                     .font(WalkmanFont.calloutBold)
                                     .foregroundStyle(WalkmanTheme.silver)
@@ -711,7 +712,7 @@ public struct BackupRestoreView: View {
                                 Button(action: { showTrackPickerSheet = true }) {
                                     HStack(spacing: 5) {
                                         Image(systemName: "music.note.list")
-                                        Text(selectedTrackPaths.isEmpty ? "Select Tracks..." : "\(selectedTrackPaths.count) Tracks")
+                                        Text(selectedTrackPaths.isEmpty ? L10n.tr("Select Tracks...") : L10n.tr("\(selectedTrackPaths.count) Tracks"))
                                     }
                                     .font(WalkmanFont.calloutBold)
                                     .foregroundStyle(WalkmanTheme.silver)
@@ -745,7 +746,7 @@ public struct BackupRestoreView: View {
 
     private var backupScopeSelectionPill: some View {
         HStack(spacing: 6) {
-            Text("\(estimatedCount.formatted()) items selected")
+            Text(L10n.tr("\(estimatedCount.formatted()) items selected"))
                 .font(WalkmanFont.subheadlineBold)
                 .foregroundStyle(.white)
                 .lineLimit(1)
@@ -769,7 +770,7 @@ public struct BackupRestoreView: View {
         VStack(alignment: .leading, spacing: 12) {
             ViewThatFits(in: .horizontal) {
                 HStack {
-                    Label("3. DESTINATION (LOCAL & EXTERNAL)", systemImage: "internaldrive.fill")
+                    Label(L10n.tr("3. DESTINATION (LOCAL & EXTERNAL)"), systemImage: "internaldrive.fill")
                         .font(WalkmanFont.sectionHeader)
                         .foregroundStyle(WalkmanTheme.silverLight)
                         .lineLimit(1)
@@ -779,7 +780,7 @@ public struct BackupRestoreView: View {
                     chooseCustomFolderButton
                 }
                 VStack(alignment: .leading, spacing: 4) {
-                    Label("3. DESTINATION (LOCAL & EXTERNAL)", systemImage: "internaldrive.fill")
+                    Label(L10n.tr("3. DESTINATION (LOCAL & EXTERNAL)"), systemImage: "internaldrive.fill")
                         .font(WalkmanFont.sectionHeader)
                         .foregroundStyle(WalkmanTheme.silverLight)
                         .lineLimit(1)
@@ -809,7 +810,7 @@ public struct BackupRestoreView: View {
                                             .lineLimit(1)
 
                                         if let free = dest.freeBytes {
-                                            Text("\(formatBytes(free)) free")
+                                            Text(L10n.tr("\(formatBytes(free)) free"))
                                                 .font(WalkmanFont.badge)
                                                 .padding(.horizontal, 6)
                                                 .padding(.vertical, 1.5)
@@ -858,12 +859,12 @@ public struct BackupRestoreView: View {
                             .foregroundStyle(WalkmanTheme.silverMuted.opacity(0.6))
 
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("External Drive / USB Storage")
+                            Text(L10n.tr("External Drive / USB Storage"))
                                 .font(WalkmanFont.bodyBold)
                                 .foregroundStyle(WalkmanTheme.silverMuted)
                                 .lineLimit(1)
 
-                            Text("Connect a USB flash drive or external SSD to back up directly to external storage.")
+                            Text(L10n.tr("Connect a USB flash drive or external SSD to back up directly to external storage."))
                                 .font(WalkmanFont.callout)
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -888,7 +889,7 @@ public struct BackupRestoreView: View {
         Button(action: { chooseCustomFolder() }) {
             HStack(spacing: 5) {
                 Image(systemName: "folder.badge.plus")
-                Text("Choose Custom Folder...")
+                Text(L10n.tr("Choose Custom Folder..."))
             }
             .font(WalkmanFont.calloutMedium)
             .foregroundStyle(WalkmanTheme.silver)
@@ -902,7 +903,7 @@ public struct BackupRestoreView: View {
     private var encryptionCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Label("4. SECURITY & CRYPTOGRAPHY", systemImage: "lock.shield.fill")
+                Label(L10n.tr("4. SECURITY & CRYPTOGRAPHY"), systemImage: "lock.shield.fill")
                     .font(WalkmanFont.sectionHeader)
                     .foregroundStyle(WalkmanTheme.silverLight)
                     .lineLimit(1)
@@ -917,13 +918,13 @@ public struct BackupRestoreView: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
-                    Text("Encrypt Backup Container (AES-256-GCM)")
+                    Text(L10n.tr("Encrypt Backup Container (AES-256-GCM)"))
                         .font(WalkmanFont.bodyBold)
                         .foregroundStyle(isEncrypted ? .white : .secondary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.85)
 
-                    Text("Slow / High Security")
+                    Text(L10n.tr("Slow / High Security"))
                         .font(WalkmanFont.badge)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
@@ -934,7 +935,7 @@ public struct BackupRestoreView: View {
                         .fixedSize(horizontal: true, vertical: false)
                 }
 
-                Text("Applies 256-bit AES encryption with PBKDF2-HMAC-SHA256 (100,000 rounds) key derivation. Stream hashing across large FLAC audio files is computationally intensive (slower transfer), but completely protects confidential music tracks on local storage or external flash drives.")
+                Text(L10n.tr("Applies 256-bit AES encryption with PBKDF2-HMAC-SHA256 (100,000 rounds) key derivation. Stream hashing across large FLAC audio files is computationally intensive (slower transfer), but completely protects confidential music tracks on local storage or external flash drives."))
                     .font(WalkmanFont.callout)
                     .foregroundStyle(WalkmanTheme.silverMuted)
                     .fixedSize(horizontal: false, vertical: true)
@@ -952,11 +953,11 @@ public struct BackupRestoreView: View {
                             .frame(width: 18)
 
                         if showPassphrase {
-                            TextField("Enter Backup Encryption Passphrase", text: $passphrase)
+                            TextField(L10n.tr("Enter Backup Encryption Passphrase"), text: $passphrase)
                                 .textFieldStyle(.plain)
                                 .font(WalkmanFont.body)
                         } else {
-                            SecureField("Enter Backup Encryption Passphrase", text: $passphrase)
+                            SecureField(L10n.tr("Enter Backup Encryption Passphrase"), text: $passphrase)
                                 .textFieldStyle(.plain)
                                 .font(WalkmanFont.body)
                         }
@@ -983,11 +984,11 @@ public struct BackupRestoreView: View {
                             .frame(width: 18)
 
                         if showPassphrase {
-                            TextField("Confirm Passphrase", text: $confirmPassphrase)
+                            TextField(L10n.tr("Confirm Passphrase"), text: $confirmPassphrase)
                                 .textFieldStyle(.plain)
                                 .font(WalkmanFont.body)
                         } else {
-                            SecureField("Confirm Passphrase", text: $confirmPassphrase)
+                            SecureField(L10n.tr("Confirm Passphrase"), text: $confirmPassphrase)
                                 .textFieldStyle(.plain)
                                 .font(WalkmanFont.body)
                         }
@@ -1007,7 +1008,7 @@ public struct BackupRestoreView: View {
                     )
 
                     if !passphrase.isEmpty && !confirmPassphrase.isEmpty && !passwordsMatch {
-                        Text("Passphrases do not match.")
+                        Text(L10n.tr("Passphrases do not match."))
                             .font(WalkmanFont.calloutMedium)
                             .foregroundStyle(Color.red)
                     }
@@ -1034,7 +1035,7 @@ public struct BackupRestoreView: View {
                         .font(WalkmanFont.calloutMedium)
                         .foregroundStyle(Color.red)
                     Spacer()
-                    Button("Dismiss") { backupErrorMessage = nil }
+                    Button(L10n.tr("Dismiss")) { backupErrorMessage = nil }
                         .font(WalkmanFont.calloutMedium)
                         .buttonStyle(.plain)
                         .foregroundStyle(.secondary)
@@ -1055,12 +1056,12 @@ public struct BackupRestoreView: View {
                             .fixedSize()
 
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Backup Completed Successfully!")
+                            Text(L10n.tr("Backup Completed Successfully!"))
                                 .font(WalkmanFont.bodyBold)
                                 .foregroundStyle(.white)
                                 .lineLimit(1)
 
-                            Text("Saved to \(successURL.lastPathComponent)")
+                            Text(L10n.tr("Saved to \(successURL.lastPathComponent)"))
                                 .font(WalkmanFont.callout)
                                 .foregroundStyle(WalkmanTheme.silverMuted)
                                 .lineLimit(1)
@@ -1081,12 +1082,12 @@ public struct BackupRestoreView: View {
                                 .fixedSize()
 
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Backup Completed Successfully!")
+                                Text(L10n.tr("Backup Completed Successfully!"))
                                     .font(WalkmanFont.bodyBold)
                                     .foregroundStyle(.white)
                                     .lineLimit(1)
 
-                                Text("Saved to \(successURL.lastPathComponent)")
+                                Text(L10n.tr("Saved to \(successURL.lastPathComponent)"))
                                     .font(WalkmanFont.callout)
                                     .foregroundStyle(WalkmanTheme.silverMuted)
                                     .lineLimit(1)
@@ -1126,14 +1127,14 @@ public struct BackupRestoreView: View {
             if isBackingUp, let prog = backupProgress {
                 VStack(spacing: 8) {
                     HStack {
-                        Text(prog.phase.rawValue)
+                        Text(L10n.lookup(prog.phase.rawValue))
                             .font(WalkmanFont.bodyBold)
                             .foregroundStyle(.white)
                             .lineLimit(1)
 
                         Spacer()
 
-                        Text("\(prog.itemsProcessed) of \(prog.totalItems) files (\(Int(prog.fractionCompleted * 100))%)")
+                        Text(L10n.tr("\(prog.itemsProcessed) of \(prog.totalItems) files (\(Int(prog.fractionCompleted * 100))%)"))
                             .font(WalkmanFont.monoSmall)
                             .foregroundStyle(WalkmanTheme.silverMuted)
                             .lineLimit(1)
@@ -1160,7 +1161,7 @@ public struct BackupRestoreView: View {
 
                     HStack {
                         Spacer()
-                        Button("Cancel Backup") {
+                        Button(L10n.tr("Cancel Backup")) {
                             BackupRestoreService.shared.cancel()
                         }
                         .font(WalkmanFont.calloutMedium)
@@ -1175,12 +1176,12 @@ public struct BackupRestoreView: View {
                 ViewThatFits(in: .horizontal) {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Ready to Back Up")
+                            Text(L10n.tr("Ready to Back Up"))
                                 .font(WalkmanFont.bodyBold)
                                 .foregroundStyle(.white)
                                 .lineLimit(1)
 
-                            Text("\(estimatedCount) files (\(formatBytes(estimatedBytes))) → \(currentDestination?.name ?? "Destination")")
+                            Text(L10n.tr("\(estimatedCount) files (\(formatBytes(estimatedBytes))) → \(currentDestination?.name ?? "Destination")"))
                                 .font(WalkmanFont.callout)
                                 .foregroundStyle(WalkmanTheme.silverMuted)
                                 .lineLimit(1)
@@ -1193,12 +1194,12 @@ public struct BackupRestoreView: View {
 
                     VStack(alignment: .leading, spacing: 10) {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Ready to Back Up")
+                            Text(L10n.tr("Ready to Back Up"))
                                 .font(WalkmanFont.bodyBold)
                                 .foregroundStyle(.white)
                                 .lineLimit(1)
 
-                            Text("\(estimatedCount) files (\(formatBytes(estimatedBytes))) → \(currentDestination?.name ?? "Destination")")
+                            Text(L10n.tr("\(estimatedCount) files (\(formatBytes(estimatedBytes))) → \(currentDestination?.name ?? "Destination")"))
                                 .font(WalkmanFont.callout)
                                 .foregroundStyle(WalkmanTheme.silverMuted)
                                 .lineLimit(1)
@@ -1218,7 +1219,7 @@ public struct BackupRestoreView: View {
         }) {
             HStack(spacing: 5) {
                 Image(systemName: "finder")
-                Text("Reveal in Finder")
+                Text(L10n.tr("Reveal in Finder"))
             }
             .font(WalkmanFont.calloutBold)
             .foregroundStyle(WalkmanTheme.silver)
@@ -1243,7 +1244,7 @@ public struct BackupRestoreView: View {
                 .frame(width: 24, height: 24)
         }
         .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 12))
-        .help("Dismiss")
+        .help(L10n.tr("Dismiss"))
     }
 
     private func backupStartButton(fullWidth: Bool) -> some View {
@@ -1251,7 +1252,7 @@ public struct BackupRestoreView: View {
             HStack(spacing: 8) {
                 Image(systemName: isEncrypted ? "lock.fill" : "arrow.up.circle.fill")
                     .font(.system(size: 13, weight: .bold))
-                Text(isEncrypted ? "Start Encrypted Backup" : "Start Backup")
+                Text(isEncrypted ? L10n.tr("Start Encrypted Backup") : L10n.tr("Start Backup"))
                     .font(WalkmanFont.calloutBold)
                     .lineLimit(1)
             }
@@ -1353,7 +1354,7 @@ public struct BackupRestoreView: View {
         VStack(alignment: .leading, spacing: 12) {
             ViewThatFits(in: .horizontal) {
                 HStack {
-                    Label("1. SELECT BACKUP ARCHIVE", systemImage: "clock.arrow.circlepath")
+                    Label(L10n.tr("1. SELECT BACKUP ARCHIVE"), systemImage: "clock.arrow.circlepath")
                         .font(WalkmanFont.sectionHeader)
                         .foregroundStyle(WalkmanTheme.silverLight)
                         .lineLimit(1)
@@ -1363,7 +1364,7 @@ public struct BackupRestoreView: View {
                     discoveredBackupsActions
                 }
                 VStack(alignment: .leading, spacing: 6) {
-                    Label("1. SELECT BACKUP ARCHIVE", systemImage: "clock.arrow.circlepath")
+                    Label(L10n.tr("1. SELECT BACKUP ARCHIVE"), systemImage: "clock.arrow.circlepath")
                         .font(WalkmanFont.sectionHeader)
                         .foregroundStyle(WalkmanTheme.silverLight)
                         .lineLimit(1)
@@ -1378,12 +1379,12 @@ public struct BackupRestoreView: View {
                         .font(.system(size: 28))
                         .foregroundStyle(WalkmanTheme.silverMuted.opacity(0.5))
 
-                    Text("No Walkman Backups Found")
+                    Text(L10n.tr("No Walkman Backups Found"))
                         .font(WalkmanFont.bodyBold)
                         .foregroundStyle(.white)
                         .lineLimit(1)
 
-                    Text("No .walkmanbackup or .walkmanbackup.enc archives found in local Mac storage or external drives. Click 'Browse Other Backup...' to select an archive from Finder.")
+                    Text(L10n.tr("No .walkmanbackup or .walkmanbackup.enc archives found in local Mac storage or external drives. Click 'Browse Other Backup...' to select an archive from Finder."))
                         .font(WalkmanFont.callout)
                         .foregroundStyle(WalkmanTheme.silverMuted)
                         .multilineTextAlignment(.center)
@@ -1422,7 +1423,7 @@ public struct BackupRestoreView: View {
                                                 .fixedSize(horizontal: true, vertical: false)
                                         }
 
-                                        Text(b.destinationType.rawValue)
+                                        Text(L10n.lookup(b.destinationType.rawValue))
                                             .font(WalkmanFont.badge)
                                             .padding(.horizontal, 6)
                                             .padding(.vertical, 1.5)
@@ -1434,7 +1435,7 @@ public struct BackupRestoreView: View {
                                     }
 
                                     HStack(spacing: 8) {
-                                        Text(b.manifest?.scopeSummary ?? (b.isEncrypted ? "Encrypted Archive" : "Walkman Bundle"))
+                                        Text(b.manifest?.scopeSummary ?? (b.isEncrypted ? L10n.tr("Encrypted Archive") : L10n.tr("Walkman Bundle")))
                                             .font(WalkmanFont.calloutMedium)
                                             .foregroundStyle(WalkmanTheme.silverMuted)
                                             .lineLimit(1)
@@ -1487,7 +1488,7 @@ public struct BackupRestoreView: View {
             Button(action: { browseOtherBackupFile() }) {
                 HStack(spacing: 4) {
                     Image(systemName: "folder.badge.gearshape")
-                    Text("Browse Other Backup...")
+                    Text(L10n.tr("Browse Other Backup..."))
                 }
                 .font(WalkmanFont.calloutMedium)
                 .foregroundStyle(WalkmanTheme.silver)
@@ -1505,7 +1506,7 @@ public struct BackupRestoreView: View {
                     .frame(width: 28, height: 28)
             }
             .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 8))
-            .help("Rescan backup destinations")
+            .help(L10n.tr("Rescan backup destinations"))
         }
     }
 
@@ -1514,7 +1515,7 @@ public struct BackupRestoreView: View {
         VStack(alignment: .leading, spacing: 10) {
             ViewThatFits(in: .horizontal) {
                 HStack {
-                    Label("BACKUP METADATA & CONTENTS", systemImage: "info.circle.fill")
+                    Label(L10n.tr("BACKUP METADATA & CONTENTS"), systemImage: "info.circle.fill")
                         .font(WalkmanFont.sectionHeader)
                         .foregroundStyle(WalkmanTheme.silverLight)
                         .lineLimit(1)
@@ -1528,7 +1529,7 @@ public struct BackupRestoreView: View {
                         .truncationMode(.middle)
                 }
                 VStack(alignment: .leading, spacing: 3) {
-                    Label("BACKUP METADATA & CONTENTS", systemImage: "info.circle.fill")
+                    Label(L10n.tr("BACKUP METADATA & CONTENTS"), systemImage: "info.circle.fill")
                         .font(WalkmanFont.sectionHeader)
                         .foregroundStyle(WalkmanTheme.silverLight)
                         .lineLimit(1)
@@ -1544,13 +1545,13 @@ public struct BackupRestoreView: View {
             ViewThatFits(in: .horizontal) {
                 // Wide: 4-column horizontal stack
                 HStack(spacing: 20) {
-                    inspectionStatItem(title: "Source Model", value: backup.manifest?.deviceName ?? "Sony Walkman", isMono: false, isGold: false)
+                    inspectionStatItem(title: L10n.tr("Source Model"), value: backup.manifest?.deviceName ?? "Sony Walkman", isMono: false, isGold: false)
                     Divider().frame(height: 32).overlay(Color.white.opacity(0.08))
-                    inspectionStatItem(title: "Created", value: backup.dateModified.formatted(date: .abbreviated, time: .shortened), isMono: false, isGold: false)
+                    inspectionStatItem(title: L10n.tr("Created"), value: backup.dateModified.formatted(date: .abbreviated, time: .shortened), isMono: false, isGold: false)
                     Divider().frame(height: 32).overlay(Color.white.opacity(0.08))
-                    inspectionStatItem(title: "Total Size", value: formatBytes(backup.sizeBytes), isMono: true, isGold: true)
+                    inspectionStatItem(title: L10n.tr("Total Size"), value: formatBytes(backup.sizeBytes), isMono: true, isGold: true)
                     Divider().frame(height: 32).overlay(Color.white.opacity(0.08))
-                    inspectionStatItem(title: "Files", value: backup.manifest != nil ? "\(backup.manifest!.totalFiles) items" : "Protected", isMono: false, isGold: false)
+                    inspectionStatItem(title: L10n.tr("Files"), value: backup.manifest != nil ? "\(backup.manifest!.totalFiles) items" : "Protected", isMono: false, isGold: false)
                     Spacer()
                 }
                 .padding(12)
@@ -1560,10 +1561,10 @@ public struct BackupRestoreView: View {
 
                 // Narrow: 2x2 grid
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                    inspectionStatItem(title: "Source Model", value: backup.manifest?.deviceName ?? "Sony Walkman", isMono: false, isGold: false)
-                    inspectionStatItem(title: "Created", value: backup.dateModified.formatted(date: .abbreviated, time: .shortened), isMono: false, isGold: false)
-                    inspectionStatItem(title: "Total Size", value: formatBytes(backup.sizeBytes), isMono: true, isGold: true)
-                    inspectionStatItem(title: "Files", value: backup.manifest != nil ? "\(backup.manifest!.totalFiles) items" : "Protected", isMono: false, isGold: false)
+                    inspectionStatItem(title: L10n.tr("Source Model"), value: backup.manifest?.deviceName ?? "Sony Walkman", isMono: false, isGold: false)
+                    inspectionStatItem(title: L10n.tr("Created"), value: backup.dateModified.formatted(date: .abbreviated, time: .shortened), isMono: false, isGold: false)
+                    inspectionStatItem(title: L10n.tr("Total Size"), value: formatBytes(backup.sizeBytes), isMono: true, isGold: true)
+                    inspectionStatItem(title: L10n.tr("Files"), value: backup.manifest != nil ? "\(backup.manifest!.totalFiles) items" : "Protected", isMono: false, isGold: false)
                 }
                 .padding(12)
                 .background(Color.white.opacity(0.03))
@@ -1591,13 +1592,13 @@ public struct BackupRestoreView: View {
     // MARK: - Target Walkman Card
     private var targetWalkmanCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Label("2. TARGET WALKMAN RESTORE PARTITION", systemImage: "hifispeaker.fill")
+            Label(L10n.tr("2. TARGET WALKMAN RESTORE PARTITION"), systemImage: "hifispeaker.fill")
                 .font(WalkmanFont.sectionHeader)
                 .foregroundStyle(WalkmanTheme.silverLight)
                 .lineLimit(1)
 
             if drives.isEmpty {
-                Text("No target Walkman connected to restore into.")
+                Text(L10n.tr("No target Walkman connected to restore into."))
                     .font(WalkmanFont.callout)
                     .foregroundStyle(.secondary)
             } else {
@@ -1637,7 +1638,7 @@ public struct BackupRestoreView: View {
                             .lineLimit(1)
                             .minimumScaleFactor(0.85)
 
-                        Text(drive.type == .internal ? "Internal Flash" : "MicroSD Card")
+                        Text(drive.type == .internal ? L10n.tr("Internal Flash") : L10n.tr("MicroSD Card"))
                             .font(WalkmanFont.badge)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
@@ -1648,7 +1649,7 @@ public struct BackupRestoreView: View {
                             .fixedSize(horizontal: true, vertical: false)
                     }
 
-                    Text("\(formatBytes(drive.freeBytes)) available")
+                    Text(L10n.tr("\(formatBytes(drive.freeBytes)) available"))
                         .font(WalkmanFont.monoSmall)
                         .foregroundStyle(WalkmanTheme.silverMuted)
                         .lineLimit(1)
@@ -1681,11 +1682,11 @@ public struct BackupRestoreView: View {
     // MARK: - Restore Decryption Card
     private var restoreDecryptionCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Label("3. DECRYPTION PASSPHRASE", systemImage: "key.fill")
+            Label(L10n.tr("3. DECRYPTION PASSPHRASE"), systemImage: "key.fill")
                 .font(WalkmanFont.sectionHeader)
                 .foregroundStyle(WalkmanTheme.silverLight)
 
-            Text("This backup is encrypted with AES-256-GCM. Enter the secret passphrase set during backup to authenticate and unpack your audio files.")
+            Text(L10n.tr("This backup is encrypted with AES-256-GCM. Enter the secret passphrase set during backup to authenticate and unpack your audio files."))
                 .font(WalkmanFont.callout)
                 .foregroundStyle(WalkmanTheme.silverMuted)
 
@@ -1696,11 +1697,11 @@ public struct BackupRestoreView: View {
                     .frame(width: 18)
 
                 if showRestorePassphrase {
-                    TextField("Enter Decryption Passphrase", text: $restorePassphrase)
+                    TextField(L10n.tr("Enter Decryption Passphrase"), text: $restorePassphrase)
                         .textFieldStyle(.plain)
                         .font(WalkmanFont.body)
                 } else {
-                    SecureField("Enter Decryption Passphrase", text: $restorePassphrase)
+                    SecureField(L10n.tr("Enter Decryption Passphrase"), text: $restorePassphrase)
                         .textFieldStyle(.plain)
                         .font(WalkmanFont.body)
                 }
@@ -1712,7 +1713,7 @@ public struct BackupRestoreView: View {
                         .frame(width: 20, height: 20)
                 }
                 .buttonStyle(.plain)
-                .help(showRestorePassphrase ? "Hide Passphrase" : "Show Passphrase")
+                .help(showRestorePassphrase ? L10n.tr("Hide Passphrase") : L10n.tr("Show Passphrase"))
             }
             .padding(10)
             .background(Color.white.opacity(0.04))
@@ -1738,7 +1739,7 @@ public struct BackupRestoreView: View {
                         .font(WalkmanFont.calloutMedium)
                         .foregroundStyle(Color.red)
                     Spacer()
-                    Button("Dismiss") { restoreErrorMessage = nil }
+                    Button(L10n.tr("Dismiss")) { restoreErrorMessage = nil }
                         .font(WalkmanFont.calloutMedium)
                         .buttonStyle(.plain)
                         .foregroundStyle(.secondary)
@@ -1759,12 +1760,12 @@ public struct BackupRestoreView: View {
                             .fixedSize()
 
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Restore Completed Successfully!")
+                            Text(L10n.tr("Restore Completed Successfully!"))
                                 .font(WalkmanFont.bodyBold)
                                 .foregroundStyle(.white)
                                 .lineLimit(1)
 
-                            Text("Restored \(res.totalFilesRestored) files (\(formatBytes(res.totalBytesRestored))) to Walkman. Ghost files purged & database ready.")
+                            Text(L10n.tr("Restored \(res.totalFilesRestored) files (\(formatBytes(res.totalBytesRestored))) to Walkman. Ghost files purged & database ready."))
                                 .font(WalkmanFont.callout)
                                 .foregroundStyle(WalkmanTheme.silverMuted)
                                 .lineLimit(1)
@@ -1782,7 +1783,7 @@ public struct BackupRestoreView: View {
                                 .foregroundStyle(Color.green)
                                 .fixedSize()
 
-                            Text("Restore Completed Successfully!")
+                            Text(L10n.tr("Restore Completed Successfully!"))
                                 .font(WalkmanFont.bodyBold)
                                 .foregroundStyle(.white)
                                 .lineLimit(1)
@@ -1792,7 +1793,7 @@ public struct BackupRestoreView: View {
                             restoreSuccessDismissButton
                         }
 
-                        Text("Restored \(res.totalFilesRestored) files (\(formatBytes(res.totalBytesRestored))) to Walkman. Ghost files purged & database ready.")
+                        Text(L10n.tr("Restored \(res.totalFilesRestored) files (\(formatBytes(res.totalBytesRestored))) to Walkman. Ghost files purged & database ready."))
                             .font(WalkmanFont.callout)
                             .foregroundStyle(WalkmanTheme.silverMuted)
                             .lineLimit(2)
@@ -1822,14 +1823,14 @@ public struct BackupRestoreView: View {
             if isRestoring, let prog = restoreProgress {
                 VStack(spacing: 8) {
                     HStack {
-                        Text(prog.phase.rawValue)
+                        Text(L10n.lookup(prog.phase.rawValue))
                             .font(WalkmanFont.bodyBold)
                             .foregroundStyle(.white)
                             .lineLimit(1)
 
                         Spacer()
 
-                        Text("\(prog.itemsProcessed) of \(prog.totalItems) files (\(Int(prog.fractionCompleted * 100))%)")
+                        Text(L10n.tr("\(prog.itemsProcessed) of \(prog.totalItems) files (\(Int(prog.fractionCompleted * 100))%)"))
                             .font(WalkmanFont.monoSmall)
                             .foregroundStyle(WalkmanTheme.silverMuted)
                             .lineLimit(1)
@@ -1856,7 +1857,7 @@ public struct BackupRestoreView: View {
 
                     HStack {
                         Spacer()
-                        Button("Cancel Restore") {
+                        Button(L10n.tr("Cancel Restore")) {
                             BackupRestoreService.shared.cancel()
                         }
                         .font(WalkmanFont.calloutMedium)
@@ -1872,12 +1873,12 @@ public struct BackupRestoreView: View {
                 ViewThatFits(in: .horizontal) {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Restore into \(targetName)")
+                            Text(L10n.tr("Restore into \(targetName)"))
                                 .font(WalkmanFont.bodyBold)
                                 .foregroundStyle(.white)
                                 .lineLimit(1)
 
-                            Text("Reconstructs clean /MUSIC and /LEARNING directory trees without ghost files.")
+                            Text(L10n.tr("Reconstructs clean /MUSIC and /LEARNING directory trees without ghost files."))
                                 .font(WalkmanFont.callout)
                                 .foregroundStyle(WalkmanTheme.silverMuted)
                                 .lineLimit(1)
@@ -1890,12 +1891,12 @@ public struct BackupRestoreView: View {
 
                     VStack(alignment: .leading, spacing: 10) {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Restore into \(targetName)")
+                            Text(L10n.tr("Restore into \(targetName)"))
                                 .font(WalkmanFont.bodyBold)
                                 .foregroundStyle(.white)
                                 .lineLimit(1)
 
-                            Text("Reconstructs clean /MUSIC and /LEARNING directory trees without ghost files.")
+                            Text(L10n.tr("Reconstructs clean /MUSIC and /LEARNING directory trees without ghost files."))
                                 .font(WalkmanFont.callout)
                                 .foregroundStyle(WalkmanTheme.silverMuted)
                                 .lineLimit(1)
@@ -1922,7 +1923,7 @@ public struct BackupRestoreView: View {
                 .frame(width: 24, height: 24)
         }
         .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 12))
-        .help("Dismiss")
+        .help(L10n.tr("Dismiss"))
     }
 
     private func restoreStartButton(fullWidth: Bool) -> some View {
@@ -1930,7 +1931,7 @@ public struct BackupRestoreView: View {
             HStack(spacing: 8) {
                 Image(systemName: "arrow.down.circle.fill")
                     .font(.system(size: 13, weight: .bold))
-                Text("Restore to Walkman")
+                Text(L10n.tr("Restore to Walkman"))
                     .font(WalkmanFont.calloutBold)
                     .lineLimit(1)
             }
@@ -2000,8 +2001,8 @@ public struct BackupRestoreView: View {
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
-        panel.prompt = "Select Backup Folder"
-        panel.message = "Choose a local folder or external drive directory for Walkman Studio backups."
+        panel.prompt = L10n.tr("Select Backup Folder")
+        panel.message = L10n.tr("Choose a local folder or external drive directory for Walkman Studio backups.")
 
         if panel.runModal() == .OK, let url = panel.url {
             UserDefaults.standard.set(url.path, forKey: "walkman_custom_backup_dest")
@@ -2015,8 +2016,8 @@ public struct BackupRestoreView: View {
         panel.canChooseFiles = true
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
-        panel.prompt = "Open Backup"
-        panel.message = "Select a .walkmanbackup bundle or .walkmanbackup.enc encrypted archive to restore."
+        panel.prompt = L10n.tr("Open Backup")
+        panel.message = L10n.tr("Select a .walkmanbackup bundle or .walkmanbackup.enc encrypted archive to restore.")
 
         if panel.runModal() == .OK, let url = panel.url {
             let isEnc = url.pathExtension.lowercased() == "enc" || url.lastPathComponent.hasSuffix(".enc")
@@ -2042,6 +2043,7 @@ public struct BackupRestoreView: View {
 // LIQUID GLASS BACKUP ALBUM PICKER SHEET
 // -----------------------------------------------------------------------------
 private struct BackupAlbumPickerSheet: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let albums: [AlbumItem]
     @Binding var selectedAlbumKeys: Set<String>
     let sourceDriveName: String
@@ -2162,11 +2164,11 @@ private struct BackupAlbumPickerSheet: View {
                 )
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Select Albums to Back Up")
+                    Text(L10n.tr("Select Albums to Back Up"))
                         .font(WalkmanFont.title2)
                         .foregroundStyle(.white)
 
-                    Text("\(sourceDriveName) • \(localSelectedKeys.count) of \(albums.count) albums selected • \(totalSelectedTracks) tracks (\(formatBytes(totalSelectedBytes)))")
+                    Text(L10n.tr("\(sourceDriveName) • \(localSelectedKeys.count) of \(albums.count) albums selected • \(totalSelectedTracks) tracks (\(formatBytes(totalSelectedBytes)))"))
                         .font(WalkmanFont.callout)
                         .foregroundStyle(WalkmanTheme.silverMuted)
                 }
@@ -2185,7 +2187,7 @@ private struct BackupAlbumPickerSheet: View {
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(WalkmanTheme.silverMuted)
 
-                    TextField("Search Albums or Artists...", text: $searchText)
+                    TextField(L10n.tr("Search Albums or Artists..."), text: $searchText)
                         .textFieldStyle(.plain)
                         .font(WalkmanFont.body)
                         .foregroundStyle(.white)
@@ -2217,7 +2219,7 @@ private struct BackupAlbumPickerSheet: View {
                             }
                         }) {
                             HStack(spacing: 5) {
-                                Text(filter.rawValue)
+                                Text(L10n.lookup(filter.rawValue))
                                     .font(WalkmanFont.calloutBold)
                                     .lineLimit(1)
 
@@ -2269,7 +2271,7 @@ private struct BackupAlbumPickerSheet: View {
                     HStack(spacing: 4) {
                         Image(systemName: "checkmark.square")
                             .font(.system(size: 11, weight: .bold))
-                        Text("Select All")
+                        Text(L10n.tr("Select All"))
                             .font(WalkmanFont.calloutMedium)
                     }
                     .foregroundStyle(WalkmanTheme.silver)
@@ -2284,7 +2286,7 @@ private struct BackupAlbumPickerSheet: View {
                     HStack(spacing: 4) {
                         Image(systemName: "xmark.square")
                             .font(.system(size: 11, weight: .bold))
-                        Text("Clear")
+                        Text(L10n.tr("Clear"))
                             .font(WalkmanFont.calloutMedium)
                     }
                     .foregroundStyle(WalkmanTheme.silverMuted)
@@ -2306,10 +2308,10 @@ private struct BackupAlbumPickerSheet: View {
                     Image(systemName: "opticaldisc")
                         .font(.system(size: 44))
                         .foregroundStyle(WalkmanTheme.silverMuted.opacity(0.5))
-                    Text("No Albums Found")
+                    Text(L10n.tr("No Albums Found"))
                         .font(WalkmanFont.title3)
                         .foregroundStyle(.white)
-                    Text("Try adjusting your search query or filter selection.")
+                    Text(L10n.tr("Try adjusting your search query or filter selection."))
                         .font(WalkmanFont.callout)
                         .foregroundStyle(WalkmanTheme.silverMuted)
                     Spacer()
@@ -2343,11 +2345,11 @@ private struct BackupAlbumPickerSheet: View {
             // Footer Action Bar
             HStack(spacing: 14) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("\(localSelectedKeys.count) Albums Selected")
+                    Text(L10n.tr("\(localSelectedKeys.count) Albums Selected"))
                         .font(WalkmanFont.bodyBold)
                         .foregroundStyle(.white)
 
-                    Text("\(totalSelectedTracks) tracks • \(formatBytes(totalSelectedBytes)) staging footprint")
+                    Text(L10n.tr("\(totalSelectedTracks) tracks • \(formatBytes(totalSelectedBytes)) staging footprint"))
                         .font(WalkmanFont.callout)
                         .foregroundStyle(WalkmanTheme.silverMuted)
                 }
@@ -2355,7 +2357,7 @@ private struct BackupAlbumPickerSheet: View {
                 Spacer()
 
                 Button(action: onDone) {
-                    Text("Cancel")
+                    Text(L10n.tr("Cancel"))
                         .font(WalkmanFont.calloutMedium)
                         .foregroundStyle(WalkmanTheme.silverMuted)
                         .padding(.horizontal, 18)
@@ -2370,7 +2372,7 @@ private struct BackupAlbumPickerSheet: View {
                     HStack(spacing: 6) {
                         Image(systemName: "checkmark")
                             .font(.system(size: 11, weight: .bold))
-                        Text(localSelectedKeys.isEmpty ? "Done" : "Apply (\(localSelectedKeys.count) Albums)")
+                        Text(localSelectedKeys.isEmpty ? L10n.tr("Done") : L10n.tr("Apply (\(localSelectedKeys.count) Albums)"))
                             .font(WalkmanFont.calloutBold)
                     }
                     .foregroundStyle(Color(red: 20/255, green: 20/255, blue: 24/255))
@@ -2429,6 +2431,7 @@ private struct BackupAlbumPickerSheet: View {
 }
 
 private struct AlbumPickerRow: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let album: AlbumItem
     let isChecked: Bool
     let onToggle: () -> Void
@@ -2488,7 +2491,7 @@ private struct AlbumPickerRow: View {
                         .foregroundStyle(.white)
                         .lineLimit(1)
 
-                    Text("\(album.artist) • \(album.trackCount) tracks")
+                    Text(L10n.tr("\(album.artist) • \(album.trackCount) tracks"))
                         .font(WalkmanFont.callout)
                         .foregroundStyle(WalkmanTheme.silverMuted)
                         .lineLimit(1)
@@ -2497,7 +2500,7 @@ private struct AlbumPickerRow: View {
                 Spacer(minLength: 8)
 
                 if album.isHiRes {
-                    Text("Hi-Res Audio")
+                    Text(L10n.tr("Hi-Res Audio"))
                         .font(WalkmanFont.badge)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
@@ -2548,6 +2551,7 @@ private struct AlbumPickerRow: View {
 // LIQUID GLASS BACKUP TRACK PICKER SHEET
 // -----------------------------------------------------------------------------
 private struct BackupTrackPickerSheet: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let tracks: [Track]
     @Binding var selectedTrackPaths: Set<String>
     let sourceDriveName: String
@@ -2663,11 +2667,11 @@ private struct BackupTrackPickerSheet: View {
                 )
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Select Tracks to Back Up")
+                    Text(L10n.tr("Select Tracks to Back Up"))
                         .font(WalkmanFont.title2)
                         .foregroundStyle(.white)
 
-                    Text("\(sourceDriveName) • \(localSelectedPaths.count) of \(tracks.count) tracks selected • \(formatBytes(totalSelectedBytes))")
+                    Text(L10n.tr("\(sourceDriveName) • \(localSelectedPaths.count) of \(tracks.count) tracks selected • \(formatBytes(totalSelectedBytes))"))
                         .font(WalkmanFont.callout)
                         .foregroundStyle(WalkmanTheme.silverMuted)
                 }
@@ -2686,7 +2690,7 @@ private struct BackupTrackPickerSheet: View {
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(WalkmanTheme.silverMuted)
 
-                    TextField("Search Tracks, Artists, or Albums...", text: $searchText)
+                    TextField(L10n.tr("Search Tracks, Artists, or Albums..."), text: $searchText)
                         .textFieldStyle(.plain)
                         .font(WalkmanFont.body)
                         .foregroundStyle(.white)
@@ -2718,7 +2722,7 @@ private struct BackupTrackPickerSheet: View {
                             }
                         }) {
                             HStack(spacing: 5) {
-                                Text(filter.rawValue)
+                                Text(L10n.lookup(filter.rawValue))
                                     .font(WalkmanFont.calloutBold)
                                     .lineLimit(1)
 
@@ -2770,7 +2774,7 @@ private struct BackupTrackPickerSheet: View {
                     HStack(spacing: 4) {
                         Image(systemName: "checkmark.square")
                             .font(.system(size: 11, weight: .bold))
-                        Text("Select All")
+                        Text(L10n.tr("Select All"))
                             .font(WalkmanFont.calloutMedium)
                     }
                     .foregroundStyle(WalkmanTheme.silver)
@@ -2785,7 +2789,7 @@ private struct BackupTrackPickerSheet: View {
                     HStack(spacing: 4) {
                         Image(systemName: "xmark.square")
                             .font(.system(size: 11, weight: .bold))
-                        Text("Clear")
+                        Text(L10n.tr("Clear"))
                             .font(WalkmanFont.calloutMedium)
                     }
                     .foregroundStyle(WalkmanTheme.silverMuted)
@@ -2807,10 +2811,10 @@ private struct BackupTrackPickerSheet: View {
                     Image(systemName: "music.note")
                         .font(.system(size: 44))
                         .foregroundStyle(WalkmanTheme.silverMuted.opacity(0.5))
-                    Text("No Tracks Found")
+                    Text(L10n.tr("No Tracks Found"))
                         .font(WalkmanFont.title3)
                         .foregroundStyle(.white)
-                    Text("Try adjusting your search query or filter selection.")
+                    Text(L10n.tr("Try adjusting your search query or filter selection."))
                         .font(WalkmanFont.callout)
                         .foregroundStyle(WalkmanTheme.silverMuted)
                     Spacer()
@@ -2844,11 +2848,11 @@ private struct BackupTrackPickerSheet: View {
             // Footer Action Bar
             HStack(spacing: 14) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("\(localSelectedPaths.count) Tracks Selected")
+                    Text(L10n.tr("\(localSelectedPaths.count) Tracks Selected"))
                         .font(WalkmanFont.bodyBold)
                         .foregroundStyle(.white)
 
-                    Text("\(formatBytes(totalSelectedBytes)) staging footprint")
+                    Text(L10n.tr("\(formatBytes(totalSelectedBytes)) staging footprint"))
                         .font(WalkmanFont.callout)
                         .foregroundStyle(WalkmanTheme.silverMuted)
                 }
@@ -2856,7 +2860,7 @@ private struct BackupTrackPickerSheet: View {
                 Spacer()
 
                 Button(action: onDone) {
-                    Text("Cancel")
+                    Text(L10n.tr("Cancel"))
                         .font(WalkmanFont.calloutMedium)
                         .foregroundStyle(WalkmanTheme.silverMuted)
                         .padding(.horizontal, 18)
@@ -2871,7 +2875,7 @@ private struct BackupTrackPickerSheet: View {
                     HStack(spacing: 6) {
                         Image(systemName: "checkmark")
                             .font(.system(size: 11, weight: .bold))
-                        Text(localSelectedPaths.isEmpty ? "Done" : "Apply (\(localSelectedPaths.count) Tracks)")
+                        Text(localSelectedPaths.isEmpty ? L10n.tr("Done") : L10n.tr("Apply (\(localSelectedPaths.count) Tracks)"))
                             .font(WalkmanFont.calloutBold)
                     }
                     .foregroundStyle(Color(red: 20/255, green: 20/255, blue: 24/255))
@@ -2930,6 +2934,7 @@ private struct BackupTrackPickerSheet: View {
 }
 
 private struct TrackPickerRow: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let track: Track
     let isChecked: Bool
     let onToggle: () -> Void
@@ -2979,7 +2984,7 @@ private struct TrackPickerRow: View {
                 Spacer(minLength: 8)
 
                 if isHiRes {
-                    Text("Hi-Res • \(track.format)")
+                    Text(L10n.tr("Hi-Res • \(track.format)"))
                         .font(WalkmanFont.badge)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
@@ -3035,6 +3040,7 @@ private struct TrackPickerRow: View {
 // LIQUID GLASS BACKUP CONFIRMATION SHEET
 // -----------------------------------------------------------------------------
 private struct BackupConfirmationSheet: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let sourceDrive: WalkmanDrive
     let destination: BackupDestination
     let scopeType: BackupScopeType
@@ -3100,11 +3106,11 @@ private struct BackupConfirmationSheet: View {
                 )
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Confirm Walkman Backup")
+                    Text(L10n.tr("Confirm Walkman Backup"))
                         .font(WalkmanFont.title2)
                         .foregroundStyle(.white)
 
-                    Text("Verify backup scope, storage payload, and destination parameters")
+                    Text(L10n.tr("Verify backup scope, storage payload, and destination parameters"))
                         .font(WalkmanFont.callout)
                         .foregroundStyle(WalkmanTheme.silverMuted)
                 }
@@ -3138,7 +3144,7 @@ private struct BackupConfirmationSheet: View {
                 Spacer()
 
                 Button(action: onCancel) {
-                    Text("Cancel")
+                    Text(L10n.tr("Cancel"))
                         .font(WalkmanFont.calloutMedium)
                         .foregroundStyle(WalkmanTheme.silverMuted)
                         .padding(.horizontal, 18)
@@ -3150,7 +3156,7 @@ private struct BackupConfirmationSheet: View {
                     HStack(spacing: 6) {
                         Image(systemName: isEncrypted ? "lock.fill" : "arrow.up.circle.fill")
                             .font(.system(size: 12, weight: .bold))
-                        Text(isEncrypted ? "Start Encrypted Backup" : "Start Backup")
+                        Text(isEncrypted ? L10n.tr("Start Encrypted Backup") : L10n.tr("Start Backup"))
                             .font(WalkmanFont.calloutBold)
                     }
                     .foregroundStyle(Color(red: 20/255, green: 20/255, blue: 24/255))
@@ -3212,7 +3218,7 @@ private struct BackupConfirmationSheet: View {
                 .frame(width: 32)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Source Walkman Partition")
+                Text(L10n.tr("Source Walkman Partition"))
                     .font(WalkmanFont.subheadlineBold)
                     .foregroundStyle(WalkmanTheme.silverMuted)
 
@@ -3228,7 +3234,7 @@ private struct BackupConfirmationSheet: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 2) {
-                Text(sourceDrive.type == .internal ? "Internal Flash" : "MicroSD Card")
+                Text(sourceDrive.type == .internal ? L10n.tr("Internal Flash") : L10n.tr("MicroSD Card"))
                     .font(WalkmanFont.badge)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
@@ -3236,7 +3242,7 @@ private struct BackupConfirmationSheet: View {
                     .foregroundStyle(WalkmanTheme.silver)
                     .clipShape(Capsule())
 
-                Text("\(formatBytes(sourceDrive.usedBytes)) used")
+                Text(L10n.tr("\(formatBytes(sourceDrive.usedBytes)) used"))
                     .font(WalkmanFont.callout)
                     .foregroundStyle(WalkmanTheme.silverMuted)
             }
@@ -3258,7 +3264,7 @@ private struct BackupConfirmationSheet: View {
                 .frame(width: 32)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Backup Target Destination")
+                Text(L10n.tr("Backup Target Destination"))
                     .font(WalkmanFont.subheadlineBold)
                     .foregroundStyle(WalkmanTheme.silverMuted)
 
@@ -3275,7 +3281,7 @@ private struct BackupConfirmationSheet: View {
 
             Spacer()
 
-            Text(destination.type == .local ? "Local Mac" : "External SSD")
+            Text(destination.type == .local ? L10n.tr("Local Mac") : L10n.tr("External SSD"))
                 .font(WalkmanFont.badge)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
@@ -3295,14 +3301,14 @@ private struct BackupConfirmationSheet: View {
     private var scopePayloadGrid: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Backup Scope")
+                Text(L10n.tr("Backup Scope"))
                     .font(WalkmanFont.subheadlineBold)
                     .foregroundStyle(WalkmanTheme.silverMuted)
 
                 HStack(spacing: 6) {
                     Image(systemName: scopeType.icon)
                         .foregroundStyle(WalkmanTheme.silverLight)
-                    Text(scopeType.title)
+                    Text(L10n.lookup(scopeType.title))
                         .font(WalkmanFont.calloutBold)
                         .foregroundStyle(.white)
                 }
@@ -3317,12 +3323,12 @@ private struct BackupConfirmationSheet: View {
             )
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("Estimated Payload")
+                Text(L10n.tr("Estimated Payload"))
                     .font(WalkmanFont.subheadlineBold)
                     .foregroundStyle(WalkmanTheme.silverMuted)
 
                 HStack(spacing: 6) {
-                    Text("\(estimatedCount.formatted()) files")
+                    Text(L10n.tr("\(estimatedCount.formatted()) files"))
                         .font(WalkmanFont.calloutBold)
                         .foregroundStyle(.white)
                     Text("•")
@@ -3348,20 +3354,20 @@ private struct BackupConfirmationSheet: View {
             HStack {
                 Image(systemName: isEncrypted ? "lock.shield.fill" : "shield.slash")
                     .foregroundStyle(isEncrypted ? WalkmanTheme.silverLight : WalkmanTheme.silverMuted)
-                Text(isEncrypted ? "AES-256-GCM Encrypted Container (PBKDF2 Key Derivation)" : "Standard Unencrypted Container")
+                Text(isEncrypted ? L10n.tr("AES-256-GCM Encrypted Container (PBKDF2 Key Derivation)") : L10n.tr("Standard Unencrypted Container"))
                     .font(WalkmanFont.calloutBold)
                     .foregroundStyle(.white)
                 Spacer()
             }
 
             HStack(spacing: 16) {
-                Label("ID3v2.3 & Vorbis Tags Preserved", systemImage: "checkmark.circle.fill")
+                Label(L10n.tr("ID3v2.3 & Vorbis Tags Preserved"), systemImage: "checkmark.circle.fill")
                     .font(WalkmanFont.subheadline)
                     .foregroundStyle(WalkmanTheme.silverMuted)
-                Label("Companion .LRC Lyrics Included", systemImage: "checkmark.circle.fill")
+                Label(L10n.tr("Companion .LRC Lyrics Included"), systemImage: "checkmark.circle.fill")
                     .font(WalkmanFont.subheadline)
                     .foregroundStyle(WalkmanTheme.silverMuted)
-                Label("AppleDouble Cleaned", systemImage: "checkmark.circle.fill")
+                Label(L10n.tr("AppleDouble Cleaned"), systemImage: "checkmark.circle.fill")
                     .font(WalkmanFont.subheadline)
                     .foregroundStyle(WalkmanTheme.silverMuted)
             }
@@ -3380,6 +3386,7 @@ private struct BackupConfirmationSheet: View {
 // LIQUID GLASS RESTORE CONFIRMATION SHEET
 // -----------------------------------------------------------------------------
 private struct RestoreConfirmationSheet: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let backup: DiscoveredBackup
     let targetDrive: WalkmanDrive
     let passphraseProvided: Bool
@@ -3442,11 +3449,11 @@ private struct RestoreConfirmationSheet: View {
                 )
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Confirm Library Restore")
+                    Text(L10n.tr("Confirm Library Restore"))
                         .font(WalkmanFont.title2)
                         .foregroundStyle(.white)
 
-                    Text("Verify source archive parameters and target Sony Walkman drive")
+                    Text(L10n.tr("Verify source archive parameters and target Sony Walkman drive"))
                         .font(WalkmanFont.callout)
                         .foregroundStyle(WalkmanTheme.silverMuted)
                 }
@@ -3480,7 +3487,7 @@ private struct RestoreConfirmationSheet: View {
                 Spacer()
 
                 Button(action: onCancel) {
-                    Text("Cancel")
+                    Text(L10n.tr("Cancel"))
                         .font(WalkmanFont.calloutMedium)
                         .foregroundStyle(WalkmanTheme.silverMuted)
                         .padding(.horizontal, 18)
@@ -3492,7 +3499,7 @@ private struct RestoreConfirmationSheet: View {
                     HStack(spacing: 6) {
                         Image(systemName: "arrow.down.circle.fill")
                             .font(.system(size: 12, weight: .bold))
-                        Text("Restore Walkman Library")
+                        Text(L10n.tr("Restore Walkman Library"))
                             .font(WalkmanFont.calloutBold)
                     }
                     .foregroundStyle(Color(red: 20/255, green: 20/255, blue: 24/255))
@@ -3554,7 +3561,7 @@ private struct RestoreConfirmationSheet: View {
                 .frame(width: 32)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Source Backup Archive")
+                Text(L10n.tr("Source Backup Archive"))
                     .font(WalkmanFont.subheadlineBold)
                     .foregroundStyle(WalkmanTheme.silverMuted)
 
@@ -3564,7 +3571,7 @@ private struct RestoreConfirmationSheet: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
 
-                Text("Modified \(backup.dateModified.formatted(date: .abbreviated, time: .shortened))")
+                Text(L10n.tr("Modified \(backup.dateModified.formatted(date: .abbreviated, time: .shortened))"))
                     .font(WalkmanFont.callout)
                     .foregroundStyle(WalkmanTheme.silverMuted)
             }
@@ -3572,7 +3579,7 @@ private struct RestoreConfirmationSheet: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 2) {
-                Text(backup.isEncrypted ? "Encrypted" : "Standard")
+                Text(backup.isEncrypted ? L10n.tr("Encrypted") : L10n.tr("Standard"))
                     .font(WalkmanFont.badge)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
@@ -3602,7 +3609,7 @@ private struct RestoreConfirmationSheet: View {
                 .frame(width: 32)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Target Walkman Destination")
+                Text(L10n.tr("Target Walkman Destination"))
                     .font(WalkmanFont.subheadlineBold)
                     .foregroundStyle(WalkmanTheme.silverMuted)
 
@@ -3618,11 +3625,11 @@ private struct RestoreConfirmationSheet: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 2) {
-                Text("\(formatBytes(targetDrive.freeBytes)) free")
+                Text(L10n.tr("\(formatBytes(targetDrive.freeBytes)) free"))
                     .font(WalkmanFont.calloutBold)
                     .foregroundStyle(WalkmanTheme.silverLight)
 
-                Text("of \(formatBytes(targetDrive.totalBytes)) total")
+                Text(L10n.tr("of \(formatBytes(targetDrive.totalBytes)) total"))
                     .font(WalkmanFont.subheadline)
                     .foregroundStyle(WalkmanTheme.silverMuted)
             }
@@ -3639,14 +3646,14 @@ private struct RestoreConfirmationSheet: View {
     private var restorationGrid: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Restoration Target")
+                Text(L10n.tr("Restoration Target"))
                     .font(WalkmanFont.subheadlineBold)
                     .foregroundStyle(WalkmanTheme.silverMuted)
 
                 HStack(spacing: 6) {
                     Image(systemName: "folder.fill")
                         .foregroundStyle(WalkmanTheme.silverLight)
-                    Text("/MUSIC & /LEARNING Roots")
+                    Text(L10n.tr("/MUSIC & /LEARNING Roots"))
                         .font(WalkmanFont.calloutBold)
                         .foregroundStyle(.white)
                 }
@@ -3661,14 +3668,14 @@ private struct RestoreConfirmationSheet: View {
             )
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("Integrity Protocol")
+                Text(L10n.tr("Integrity Protocol"))
                     .font(WalkmanFont.subheadlineBold)
                     .foregroundStyle(WalkmanTheme.silverMuted)
 
                 HStack(spacing: 6) {
                     Image(systemName: "checkmark.seal.fill")
                         .foregroundStyle(Color.green)
-                    Text("Safe Non-Destructive Sync")
+                    Text(L10n.tr("Safe Non-Destructive Sync"))
                         .font(WalkmanFont.calloutBold)
                         .foregroundStyle(.white)
                 }
@@ -3690,7 +3697,7 @@ private struct RestoreConfirmationSheet: View {
                 .font(.system(size: 16))
                 .foregroundStyle(WalkmanTheme.silverLight)
 
-            Text("Restoration unpacks track files, companion synchronized .LRC lyrics, and .M3U8 playlists directly to your Sony Walkman storage. Existing non-conflicting tracks are safely retained.")
+            Text(L10n.tr("Restoration unpacks track files, companion synchronized .LRC lyrics, and .M3U8 playlists directly to your Sony Walkman storage. Existing non-conflicting tracks are safely retained."))
                 .font(WalkmanFont.callout)
                 .foregroundStyle(WalkmanTheme.silverMuted)
                 .fixedSize(horizontal: false, vertical: true)
@@ -3709,6 +3716,7 @@ private struct RestoreConfirmationSheet: View {
 // REUSABLE SHEET CLOSE BUTTON
 // -----------------------------------------------------------------------------
 private struct SheetCloseButton: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let action: () -> Void
     @State private var isHovered = false
 
@@ -3735,7 +3743,7 @@ private struct SheetCloseButton: View {
         .buttonStyle(.plain)
         .contentShape(Circle())
         .keyboardShortcut(.cancelAction)
-        .help("Close")
+        .help(L10n.tr("Close"))
         .onHover { hovering in
             guard isHovered != hovering else { return }
             isHovered = hovering
@@ -3806,6 +3814,7 @@ private extension View {
 // LIQUID GLASS MODE SEGMENTED BAR (38pt Track Baseline with Sliding Lens)
 // -----------------------------------------------------------------------------
 private struct BackupRestoreModeSegmentedBar: View {
+    @ObservedObject private var localization = AppLocalization.shared
     @Binding var selectedMode: BackupRestoreView.Mode
     let disabled: Bool
     let onSelect: (BackupRestoreView.Mode) -> Void
@@ -3839,6 +3848,7 @@ private struct BackupRestoreModeSegmentedBar: View {
 }
 
 private struct BackupRestoreModeTabPill: View {
+    @ObservedObject private var localization = AppLocalization.shared
     let mode: BackupRestoreView.Mode
     let isSelected: Bool
     let namespace: Namespace.ID
@@ -3850,7 +3860,7 @@ private struct BackupRestoreModeTabPill: View {
             HStack(spacing: 6) {
                 Image(systemName: mode == .backup ? "arrow.up.doc.fill" : "arrow.down.doc.fill")
                     .font(.system(size: 11, weight: .semibold))
-                Text(mode.rawValue)
+                Text(L10n.lookup(mode.rawValue))
                     .font(WalkmanFont.calloutBold)
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
