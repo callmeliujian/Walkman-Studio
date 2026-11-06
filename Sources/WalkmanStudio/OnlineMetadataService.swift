@@ -3,6 +3,11 @@ import CoreGraphics
 import ImageIO
 import AppKit
 
+public enum OnlineMetadataSource: String, CaseIterable, Sendable {
+    case itunes = "iTunes"
+    case deezer = "Deezer"
+}
+
 public struct OnlineTrackMetadata: Sendable, Identifiable {
     public let id: String
     public let durationSeconds: Double?
@@ -133,10 +138,21 @@ public final class OnlineMetadataService: @unchecked Sendable {
         filename: String,
         currentTitle: String? = nil,
         currentArtist: String? = nil,
-        currentAlbum: String? = nil
+        currentAlbum: String? = nil,
+        source: OnlineMetadataSource? = nil
     ) async -> [OnlineTrackMetadata] {
         let terms = Self.cleanSearchTerms(filename: filename, title: currentTitle, artist: currentArtist)
         guard !terms.query.isEmpty, !Task.isCancelled else { return [] }
+
+        // A manually selected tab must never silently fall back to another provider.
+        if let source {
+            var candidates = await query(source: source, terms: terms.query)
+            if candidates.isEmpty && !Task.isCancelled && !terms.artist.isEmpty && !terms.title.isEmpty {
+                candidates = await query(source: source, terms: terms.title)
+            }
+            guard !Task.isCancelled else { return [] }
+            return Self.rankedCandidates(candidates, title: terms.title, artist: terms.artist, album: currentAlbum ?? "")
+        }
 
         var candidates = await queryiTunes(query: terms.query)
         if candidates.isEmpty && !Task.isCancelled {
@@ -147,6 +163,13 @@ public final class OnlineMetadataService: @unchecked Sendable {
         }
         guard !Task.isCancelled else { return [] }
         return Self.rankedCandidates(candidates, title: terms.title, artist: terms.artist, album: currentAlbum ?? "")
+    }
+
+    private func query(source: OnlineMetadataSource, terms: String) async -> [OnlineTrackMetadata] {
+        switch source {
+        case .itunes: return await queryiTunes(query: terms)
+        case .deezer: return await queryDeezer(query: terms)
+        }
     }
 
     /// Compatibility path for noninteractive queue optimization.

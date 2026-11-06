@@ -173,9 +173,35 @@ public struct WindowConfigurator: NSViewRepresentable {
     }
 }
 
+@MainActor
+final class WalkmanStudioAppDelegate: NSObject, NSApplicationDelegate {
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        // Xcode and `swift run` launch this package as a bare executable. Unlike
+        // an .app bundle, it needs an explicit GUI activation policy for keyboard
+        // events and input-method composition to reach the focused text field.
+        NSApplication.shared.setActivationPolicy(.regular)
+    }
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        MenuBarLyricsController.shared.start()
+        // Let SwiftUI finish attaching its initial window before activating it.
+        // Do this once at launch, not during view updates while a user is typing.
+        DispatchQueue.main.async {
+            let application = NSApplication.shared
+            application.activate(ignoringOtherApps: true)
+            if application.keyWindow == nil {
+                application.windows.first { $0.isVisible && $0.canBecomeKey }?
+                    .makeKeyAndOrderFront(nil)
+            }
+        }
+    }
+}
+
 @main
 struct WalkmanStudioApp: App {
+    @NSApplicationDelegateAdaptor(WalkmanStudioAppDelegate.self) private var appDelegate
     @StateObject private var localization = AppLocalization.shared
+    @StateObject private var menuBarLyrics = MenuBarLyricsController.shared
 
     init() {
         if let iconURL = Bundle.main.url(forResource: "AppIcon", withExtension: "icns"),
@@ -190,12 +216,17 @@ struct WalkmanStudioApp: App {
         WindowGroup {
             ContentView()
                 .environment(\.locale, localization.locale)
+                // Keep native tables and controls consistent with the fixed dark palette.
+                .preferredColorScheme(.dark)
                 .frame(minWidth: 1320, idealWidth: 1440, minHeight: 720, idealHeight: 880)
                 .background(WindowConfigurator())
         }
         .defaultSize(width: 1440, height: 880)
         .windowToolbarStyle(.unified(showsTitle: false))
         .commands {
+            CommandGroup(after: .toolbar) {
+                Toggle(L10n.tr("Show Lyrics in Menu Bar"), isOn: $menuBarLyrics.isEnabled)
+            }
             CommandGroup(replacing: .appInfo) {
                 Button(L10n.tr("About Walkman Studio")) {
                     NotificationCenter.default.post(name: .showAboutWalkmanStudio, object: nil)

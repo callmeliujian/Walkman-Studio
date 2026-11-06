@@ -402,11 +402,11 @@ public struct ContentView: View {
         }
     }
 
-    private func updateTracksInMemory(_ updatedTracks: [Track]) {
+    private func updateTracksInMemory(_ updatedTracks: [Track], previousFullPath: String? = nil) {
         guard !updatedTracks.isEmpty else { return }
         var map = [String: Track]()
         for t in updatedTracks {
-            map[t.fullPath] = t
+            map[previousFullPath ?? t.fullPath] = t
         }
         
         var newTracks = self.tracks
@@ -1407,17 +1407,18 @@ public struct ContentView: View {
             SongMetadataEditorSheet(
                 track: track,
                 trackList: getEditingTrackList(for: track),
-                onSavedTrack: { updatedTrack in
+                onSavedTrack: { updatedTrack, previousFullPath in
                     if self.player.currentTrack?.id == updatedTrack.id {
                         self.player.updateTrackInfo(track: updatedTrack)
                     }
-                    if self.localLibrary.tracks.contains(where: { $0.id == updatedTrack.id }) {
-                        self.localLibrary.updateTrack(track: updatedTrack)
+                    if self.localLibrary.tracks.contains(where: { $0.id == previousFullPath }) {
+                        self.localLibrary.updateTrack(track: updatedTrack, previousFullPath: previousFullPath)
                     } else {
-                        self.updateTracksInMemory([updatedTrack])
+                        self.updateTracksInMemory([updatedTrack], previousFullPath: previousFullPath)
                         self.refreshLibrary()
                     }
-                    if let idx = self.trackListToEdit.firstIndex(where: { $0.id == updatedTrack.id }) {
+                    if self.selectedTrackId == previousFullPath { self.selectedTrackId = updatedTrack.id }
+                    if let idx = self.trackListToEdit.firstIndex(where: { $0.id == previousFullPath }) {
                         self.trackListToEdit[idx] = updatedTrack
                     }
                 },

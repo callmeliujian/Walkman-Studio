@@ -565,10 +565,18 @@ public final class LocalMusicLibraryService: ObservableObject, @unchecked Sendab
     }
 
     private func rescanFolders(_ targets: [LocalMusicFolder]) async {
-        await MainActor.run {
+        // Claim the scan inside the task: several callers can enqueue tasks before
+        // any of them sets isScanning. A late scan must not publish an old snapshot.
+        let shouldScan = await MainActor.run {
+            guard !self.isScanning else {
+                self.hasPendingScan = true
+                return false
+            }
             self.isScanning = true
             self.scanStatusText = "Scanning folders..."
+            return true
         }
+        guard shouldScan else { return }
 
         let fileManager = FileManager.default
         var updatedTracksMap = [String: Track]()
@@ -651,15 +659,20 @@ public final class LocalMusicLibraryService: ObservableObject, @unchecked Sendab
             }
 
             // Detect deleted files
-            var deletedPaths = [String]()
-            for cachedPath in cachedMtimes.keys {
-                if !discoveredPaths.contains(cachedPath) {
-                    deletedPaths.append(cachedPath)
-                }
-            }
+            // Overlapping watched folders can already have removed a row from
+            // SQLite while an older in-memory snapshot still contains its path.
+            let deletedPaths = Self.staleTrackPaths(
+                folderURL: scanURL,
+                cachedPaths: Set(cachedMtimes.keys),
+                inMemoryPaths: Set(updatedTracksMap.keys),
+                discoveredPaths: discoveredPaths
+            )
 
             // Remove deleted files from DB and in-memory
             if !deletedPaths.isEmpty {
+                for path in deletedPaths {
+                    updatedTracksMap.removeValue(forKey: path)
+                }
                 if let db = getDB() {
                     sqlite3_exec(db, "BEGIN TRANSACTION;", nil, nil, nil)
                     let delSql = "DELETE FROM local_library_tracks WHERE full_path = ?;"
@@ -669,7 +682,6 @@ public final class LocalMusicLibraryService: ObservableObject, @unchecked Sendab
                             sqlite3_bind_text(dStmt, 1, (delPath as NSString).utf8String, -1, nil)
                             sqlite3_step(dStmt)
                             sqlite3_reset(dStmt)
-                            updatedTracksMap.removeValue(forKey: delPath)
                         }
                         sqlite3_finalize(dStmt)
                     }
@@ -840,11 +852,24 @@ public final class LocalMusicLibraryService: ObservableObject, @unchecked Sendab
         }
     }
 
+    static func staleTrackPaths(
+        folderURL: URL,
+        cachedPaths: Set<String>,
+        inMemoryPaths: Set<String>,
+        discoveredPaths: Set<String>
+    ) -> Set<String> {
+        let folderPath = folderURL.standardizedFileURL.path
+        let prefix = folderPath == "/" ? "/" : folderPath + "/"
+        let scopedMemoryPaths = inMemoryPaths.filter { $0.hasPrefix(prefix) }
+        return cachedPaths.union(scopedMemoryPaths).subtracting(discoveredPaths)
+    }
+
     // -------------------------------------------------------------------------
     // Track Management & In-Memory Mutations
     // -------------------------------------------------------------------------
-    public func updateTrack(track: Track) {
-        if let idx = tracks.firstIndex(where: { $0.fullPath == track.fullPath }) {
+    public func updateTrack(track: Track, previousFullPath: String? = nil) {
+        let originalPath = previousFullPath ?? track.fullPath
+        if let idx = tracks.firstIndex(where: { $0.fullPath == originalPath }) {
             tracks[idx] = track
             recomputeStats(with: tracks)
         }
@@ -853,7 +878,8 @@ public final class LocalMusicLibraryService: ObservableObject, @unchecked Sendab
         if let db = getDB() {
             let sql = """
             UPDATE local_library_tracks
-            SET title = ?, artist = ?, album = ?, track_num = ?, year = ?, genre = ?
+            SET title = ?, artist = ?, album = ?, track_num = ?, year = ?, genre = ?,
+                full_path = ?, relative_path = ?
             WHERE full_path = ?;
             """
             var stmt: OpaquePointer?
@@ -864,7 +890,10 @@ public final class LocalMusicLibraryService: ObservableObject, @unchecked Sendab
                 sqlite3_bind_text(stmt, 4, (track.trackNum as NSString).utf8String, -1, nil)
                 sqlite3_bind_text(stmt, 5, (track.year as NSString).utf8String, -1, nil)
                 sqlite3_bind_text(stmt, 6, (track.genre as NSString).utf8String, -1, nil)
-                sqlite3_bind_text(stmt, 7, (track.fullPath as NSString).utf8String, -1, nil)
+                let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+                sqlite3_bind_text(stmt, 7, track.fullPath, -1, transient)
+                sqlite3_bind_text(stmt, 8, track.relativePath, -1, transient)
+                sqlite3_bind_text(stmt, 9, originalPath, -1, transient)
                 sqlite3_step(stmt)
                 sqlite3_finalize(stmt)
             }

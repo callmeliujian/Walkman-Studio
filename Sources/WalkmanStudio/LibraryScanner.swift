@@ -550,7 +550,9 @@ public final class LibraryScanner: @unchecked Sendable {
         year: String? = nil,
         genre: String? = nil,
         hasArtwork: Bool? = nil,
-        mtime: Double? = nil
+        mtime: Double? = nil,
+        newFullPath: String? = nil,
+        newRelativePath: String? = nil
     ) {
         guard let db = getDB() else { return }
         defer { sqlite3_close(db) }
@@ -559,7 +561,7 @@ public final class LibraryScanner: @unchecked Sendable {
         if let m = mtime {
             curMtime = m
         } else {
-            let rValues = try? URL(fileURLWithPath: fullPath).resourceValues(forKeys: [.contentModificationDateKey])
+            let rValues = try? URL(fileURLWithPath: newFullPath ?? fullPath).resourceValues(forKeys: [.contentModificationDateKey])
             curMtime = rValues?.contentModificationDate?.timeIntervalSince1970 ?? (CFAbsoluteTimeGetCurrent() + 978307200.0)
         }
         
@@ -572,7 +574,9 @@ public final class LibraryScanner: @unchecked Sendable {
             year = CASE WHEN ? != '' THEN ? ELSE year END,
             genre = CASE WHEN ? != '' THEN ? ELSE genre END,
             has_artwork = CASE WHEN ? >= 0 THEN ? ELSE has_artwork END,
-            mtime = ?
+            mtime = ?,
+            full_path = COALESCE(?, full_path),
+            relative_path = COALESCE(?, relative_path)
         WHERE full_path = ?;
         """
         var stmt: OpaquePointer?
@@ -601,7 +605,10 @@ public final class LibraryScanner: @unchecked Sendable {
             sqlite3_bind_int(stmt, 13, artVal)
             sqlite3_bind_int(stmt, 14, artVal)
             sqlite3_bind_double(stmt, 15, curMtime)
-            sqlite3_bind_text(stmt, 16, pStr, -1, nil)
+            let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+            if let newFullPath { sqlite3_bind_text(stmt, 16, newFullPath, -1, transient) }
+            if let newRelativePath { sqlite3_bind_text(stmt, 17, newRelativePath, -1, transient) }
+            sqlite3_bind_text(stmt, 18, pStr, -1, nil)
             
             sqlite3_step(stmt)
             sqlite3_finalize(stmt)

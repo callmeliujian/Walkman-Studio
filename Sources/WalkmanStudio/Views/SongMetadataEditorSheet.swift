@@ -6,7 +6,7 @@ public struct SongMetadataEditorSheet: View {
     @State private var track: Track
     @State private var trackList: [Track]
     let onSaved: () -> Void
-    let onSavedTrack: ((Track) -> Void)?
+    let onSavedTrack: ((Track, String) -> Void)?
     let onDismiss: () -> Void
 
     @ObservedObject private var player = AudioPlayerService.shared
@@ -61,6 +61,7 @@ public struct SongMetadataEditorSheet: View {
     @State private var isSenseMeAnalyzed: Bool = false
 
     // Save state
+    @AppStorage("SongMetadataEditor.autoDownloadLyrics") private var autoDownloadLyrics = false
     @State private var isSaving: Bool = false
     @State private var statusMessage: String? = nil
     @State private var isError: Bool = false
@@ -70,13 +71,17 @@ public struct SongMetadataEditorSheet: View {
     @State private var showPermissionSheet: Bool = false
     @State private var isPermissionError: Bool = false
 
+    private var isSaveBusy: Bool {
+        isSaving || isFetchingOnlineInfo || isFetchingLyrics || isFetchingOnlineArt || isAnalyzingSenseMe
+    }
+
     private let initialTrackList: [Track]
 
     public init(
         track: Track,
         trackList: [Track] = [],
         onSaved: @escaping () -> Void = {},
-        onSavedTrack: ((Track) -> Void)? = nil,
+        onSavedTrack: ((Track, String) -> Void)? = nil,
         onDismiss: @escaping () -> Void
     ) {
         self._track = State(initialValue: track)
@@ -355,7 +360,7 @@ public struct SongMetadataEditorSheet: View {
                     updatedTrack.senseMeArousal = info.arousal
                     updatedTrack.senseMeChannels = info.channels
                     updatedTrack.senseMeHighlightSec = info.highlightSec
-                    self.onSavedTrack?(updatedTrack)
+                    self.onSavedTrack?(updatedTrack, self.track.fullPath)
 
                     NotificationCenter.default.post(
                         name: .trackMetadataDidUpdate,
@@ -380,7 +385,7 @@ public struct SongMetadataEditorSheet: View {
     }
 
     private func saveAllChanges(dismissOnSuccess: Bool = true, onCompletion: (() -> Void)? = nil) {
-        guard !isSaving else { return }
+        guard !isSaveBusy else { return }
         isSaving = true
         statusMessage = L10n.tr("Saving tags & artwork to Walkman...")
         isError = false
@@ -393,12 +398,29 @@ public struct SongMetadataEditorSheet: View {
         let saveYear = self.year
         let saveGenre = self.genre
         let saveCover = self.isCoverArtModified ? self.coverData : nil
-        let saveLyricsText = self.lyricsDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-        let didLyricsChange = (lyricsDraft != (originalLyrics ?? ""))
+        let lyricsDraftToSave = self.lyricsDraft
+        let shouldDownloadLyrics = autoDownloadLyrics
 
         Task {
             let url = URL(fileURLWithPath: currentTrack.fullPath)
             do {
+                var saveLyricsText = lyricsDraftToSave.trimmingCharacters(in: .whitespacesAndNewlines)
+                if shouldDownloadLyrics {
+                    self.statusMessage = L10n.tr("Downloading lyrics...")
+                    do {
+                        let result = try await LyricsService.shared.fetchLyrics(
+                            title: saveTitle, artist: saveArtist, album: saveAlbum,
+                            durationSeconds: currentTrack.durationSeconds
+                        )
+                        saveLyricsText = result.lyrics.trimmingCharacters(in: .whitespacesAndNewlines)
+                        guard !saveLyricsText.isEmpty else { throw LyricsError.notFound }
+                    } catch {
+                        throw NSError(domain: "WalkmanStudio", code: 2, userInfo: [
+                            NSLocalizedDescriptionKey: L10n.tr("Could not download lyrics. Try again or uncheck automatic lyrics download to save.")
+                        ])
+                    }
+                }
+                self.statusMessage = L10n.tr("Saving tags & artwork to Walkman...")
                 // 1. Write tags, embedded lyrics, and embedded artwork
                 try AudioTagger.shared.writeMetadata(
                     fileURL: url,
@@ -417,21 +439,29 @@ public struct SongMetadataEditorSheet: View {
                 let lrcExists = FileManager.default.fileExists(atPath: lrcURL.path)
 
                 if saveLyricsText.isEmpty {
-                    try? AudioTagger.shared.deleteLyrics(fileURL: url)
-                } else if didLyricsChange || !lrcExists {
-                    try? WalkmanEngine.shared.writeCompanionLyrics(
+                    try AudioTagger.shared.deleteLyrics(fileURL: url)
+                } else if shouldDownloadLyrics || lyricsDraftToSave != (originalLyrics ?? "") || !lrcExists {
+                    try WalkmanEngine.shared.writeCompanionLyrics(
                         destinationAudioURL: url,
                         lyrics: saveLyricsText,
                         durationSeconds: currentTrack.durationSeconds
                     )
                 }
 
-                // 3. Invalidate & update caches
+                // 3. Keep the real filename and companion lyrics in sync with the saved tags.
+                let savedURL = try AudioFileRenamer.rename(fileURL: url, title: saveTitle, artist: saveArtist, relativePath: currentTrack.relativePath)
+                let savedRelativePath = (currentTrack.relativePath as NSString).deletingLastPathComponent
+                let relativePath = savedRelativePath.isEmpty ? savedURL.lastPathComponent
+                    : (savedRelativePath as NSString).appendingPathComponent(savedURL.lastPathComponent)
+
+                // 4. Invalidate & update caches at both paths.
+                AudioTagger.shared.invalidateCaches(fileURL: savedURL)
+                CoverArtCache.shared.invalidate(forFullPath: savedURL.path, artist: saveArtist, album: saveAlbum)
                 AudioTagger.shared.invalidateCaches(fileURL: url)
                 CoverArtCache.shared.invalidate(forFullPath: currentTrack.fullPath, artist: currentTrack.primaryArtist, album: currentTrack.album)
                 CoverArtCache.shared.invalidate(forFullPath: currentTrack.fullPath, artist: saveArtist, album: saveAlbum)
                 if self.isCoverArtModified, let sc = saveCover, !sc.isEmpty, let newImg = NSImage(data: sc) {
-                    CoverArtCache.shared.storeThumbnail(newImg, forFullPath: currentTrack.fullPath, artist: saveArtist, album: saveAlbum)
+                    CoverArtCache.shared.storeThumbnail(newImg, forFullPath: savedURL.path, artist: saveArtist, album: saveAlbum)
                 }
                 
                 let hasArt = self.isCoverArtModified ? (saveCover != nil && !saveCover!.isEmpty) : currentTrack.hasArtwork
@@ -443,10 +473,15 @@ public struct SongMetadataEditorSheet: View {
                     trackNum: saveTrackNum,
                     year: saveYear,
                     genre: saveGenre,
-                    hasArtwork: hasArt
+                    hasArtwork: hasArt,
+                    newFullPath: savedURL.path,
+                    newRelativePath: relativePath
                 )
 
                 var updatedTrack = currentTrack
+                updatedTrack.filename = savedURL.lastPathComponent
+                updatedTrack.fullPath = savedURL.path
+                updatedTrack.relativePath = relativePath
                 updatedTrack.title = saveTitle
                 updatedTrack.artist = saveArtist
                 updatedTrack.album = saveAlbum
@@ -471,10 +506,16 @@ public struct SongMetadataEditorSheet: View {
                     self.statusMessage = L10n.tr("Saved successfully!")
                     self.isError = false
                     self.track = updatedTrack
-                    if let idx = self.trackList.firstIndex(where: { $0.id == updatedTrack.id }) {
+                    self.lyricsDraft = saveLyricsText
+                    self.lyrics = saveLyricsText.isEmpty ? nil : saveLyricsText
+                    self.originalLyrics = self.lyrics
+                    self.isLyricsModified = false
+                    self.isCoverArtModified = false
+                    self.player.updateTrackInfo(track: updatedTrack, previousFullPath: currentTrack.fullPath)
+                    if let idx = self.trackList.firstIndex(where: { $0.id == currentTrack.id }) {
                         self.trackList[idx] = updatedTrack
                     }
-                    self.onSavedTrack?(updatedTrack)
+                    self.onSavedTrack?(updatedTrack, currentTrack.fullPath)
                     self.onSaved()
 
                     NotificationCenter.default.post(
@@ -534,6 +575,7 @@ public struct SongMetadataEditorSheet: View {
 
             // Hero Summary Card
             heroSummaryCard
+                .disabled(isSaving)
 
             // Liquid Glass Segmented Control
             EditorSegmentedBar(selectedTab: $selectedTab)
@@ -556,9 +598,23 @@ public struct SongMetadataEditorSheet: View {
                 .padding(.horizontal, 24)
                 .padding(.vertical, 10)
             }
+            .disabled(isSaving)
 
             Divider()
                 .overlay(Color.white.opacity(0.07))
+
+            HStack {
+                Toggle(L10n.tr("Automatically download lyrics when saving"), isOn: $autoDownloadLyrics)
+                    .toggleStyle(.checkbox)
+                    .font(WalkmanFont.calloutMedium)
+                    .disabled(isSaving)
+                Text(L10n.tr("Lyrics use the same filename as the song."))
+                    .font(WalkmanFont.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 12)
 
             // Footer Bar
             footerBar
@@ -634,6 +690,7 @@ public struct SongMetadataEditorSheet: View {
             Spacer()
 
             SheetCloseButton(action: onDismiss)
+                .disabled(isSaving)
         }
         .padding(.horizontal, 22)
         .padding(.top, 14)
@@ -1151,7 +1208,7 @@ public struct SongMetadataEditorSheet: View {
                         .frame(height: 36)
                     }
                     .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 18))
-                    .disabled(!canGoPrevious || isSaving)
+                    .disabled(!canGoPrevious || isSaveBusy)
                     .opacity(canGoPrevious ? 1.0 : 0.45)
                     .help(canGoPrevious ? L10n.tr("Previous Track (⌘[)") : L10n.tr("First Track in Album"))
                     .keyboardShortcut("[", modifiers: [.command])
@@ -1168,7 +1225,7 @@ public struct SongMetadataEditorSheet: View {
                         .frame(height: 36)
                     }
                     .buttonStyle(LiquidGlassButtonStyle(variant: .glass, cornerRadius: 18))
-                    .disabled(!canGoNext || isSaving)
+                    .disabled(!canGoNext || isSaveBusy)
                     .opacity(canGoNext ? 1.0 : 0.45)
                     .help(canGoNext ? L10n.tr("Next Track (⌘])") : L10n.tr("Last Track in Album"))
                     .keyboardShortcut("]", modifiers: [.command])
@@ -1252,7 +1309,7 @@ public struct SongMetadataEditorSheet: View {
                 .frame(height: 38)
             }
             .buttonStyle(LiquidGlassButtonStyle(variant: .prominent, cornerRadius: 19))
-            .disabled(isSaving)
+            .disabled(isSaveBusy)
             .keyboardShortcut(.defaultAction)
         }
         .padding(.horizontal, 22)

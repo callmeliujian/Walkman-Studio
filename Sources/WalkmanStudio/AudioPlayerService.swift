@@ -593,16 +593,18 @@ public final class AudioPlayerService: NSObject, ObservableObject, @unchecked Se
         }
     }
 
-    public func updateTrackInfo(track: Track) {
+    public func updateTrackInfo(track: Track, previousFullPath: String? = nil) {
+        let originalID = previousFullPath ?? track.id
+        for (idx, tr) in currentQueue.enumerated() where tr.id == originalID {
+            currentQueue[idx] = track
+        }
+        if currentTrack?.id == originalID, originalID != track.id {
+            prepare(track: track, in: currentQueue, autoPlay: isPlaying, startTime: progress.currentTime)
+        }
         if currentTrack?.id == track.id {
             self.currentTrack = track
             loadArtwork(for: track)
             updateNowPlayingInfo()
-        }
-        for (idx, tr) in currentQueue.enumerated() {
-            if tr.id == track.id {
-                currentQueue[idx] = track
-            }
         }
     }
 

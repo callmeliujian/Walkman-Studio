@@ -616,13 +616,6 @@ public struct LibraryView: View {
     
     private var trackTableView: some View {
         Table(visibleTracks, selection: $selectedTrackId, sortOrder: $sortOrder) {
-            TableColumn("#", value: \.trackNum) { track in
-                Text(track.trackNum.isEmpty ? "—" : track.trackNum)
-                    .font(WalkmanFont.monoSmall)
-                    .foregroundStyle(WalkmanTheme.silverMuted)
-            }
-            .width(min: 26, ideal: 34, max: 44)
-            
             TableColumn(L10n.tr("Title"), value: \.title) { track in
                 let isCurrent = player.currentTrack?.id == track.id
                 let isPlayingThis = isCurrent && player.isPlaying
@@ -682,6 +675,13 @@ public struct LibraryView: View {
             }
             .width(min: 90, ideal: 150)
             
+            TableColumn("#", value: \.trackNum) { track in
+                Text(track.trackNum.isEmpty ? "—" : track.trackNum)
+                    .font(WalkmanFont.monoSmall)
+                    .foregroundStyle(WalkmanTheme.silverMuted)
+            }
+            .width(min: 26, ideal: 34, max: 44)
+
             TableColumn(L10n.tr("Format"), value: \.format) { track in
                 let hiRes = isHiRes(track)
                 HStack(spacing: 4.5) {

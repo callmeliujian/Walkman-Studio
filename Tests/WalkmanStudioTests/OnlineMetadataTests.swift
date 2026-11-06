@@ -144,4 +144,65 @@ final class OnlineMetadataTests: XCTestCase {
         }
         XCTFail("Lookup did not reach expected state")
     }
+
+    func testExplicitSourceNeverFallsBackToAnotherProvider() async {
+        let service = service { request in
+            XCTAssertEqual(request.url?.host, "api.deezer.com")
+            return Data(#"{"data":[]}"#.utf8)
+        }
+        let matches = await service.searchMetadata(filename: "One Love.flac", currentTitle: "One Love",
+                                                   currentArtist: "嵐", source: .deezer)
+        XCTAssertTrue(matches.isEmpty)
+    }
+
+    @MainActor
+    func testSourceSwitchCachesResultsAndRequiresChoiceEvenForOneResult() async throws {
+        let lookup = OnlineMetadataLookup(service: service { request in
+            if request.url?.host == "api.deezer.com" {
+                return Data(#"{"data":[{"id":7,"title":"One Love","artist":{"name":"ARASHI"},"album":{"title":"One Love"}}]}"#.utf8)
+            }
+            return self.results
+        })
+        var applied: OnlineTrackMetadata?
+        lookup.search(filename: "One Love.flac", title: "One Love", artist: "嵐", album: "",
+                      onMatch: { applied = $0 }, onNotFound: { XCTFail("Expected results") })
+        try await waitUntil { lookup.selection != nil }
+        let sheetID = lookup.selection?.id
+        let itunesIDs = lookup.selection?.candidates.map(\.id)
+        lookup.selectSource(.deezer)
+        XCTAssertTrue(lookup.isLoadingSource)
+        XCTAssertTrue(lookup.selection?.candidates.isEmpty == true)
+        try await waitUntil { !lookup.isLoadingSource }
+        XCTAssertEqual(lookup.selection?.candidates.map(\.id), ["deezer:7"])
+        XCTAssertNil(applied)
+        XCTAssertEqual(lookup.selection?.id, sheetID)
+        lookup.selectSource(.itunes)
+        XCTAssertFalse(lookup.isLoadingSource)
+        XCTAssertEqual(lookup.selection?.candidates.map(\.id), itunesIDs)
+        lookup.selectSource(.deezer)
+        XCTAssertFalse(lookup.isLoadingSource)
+        lookup.choose(try XCTUnwrap(lookup.selection?.candidates.first))
+        try await waitUntil { applied != nil }
+        XCTAssertEqual(applied?.source, "Deezer")
+    }
+
+    @MainActor
+    func testSwitchingBackCancelsPendingSourceAndRejectsOldSelection() async throws {
+        let lookup = OnlineMetadataLookup(service: service { request in
+            request.url?.host == "api.deezer.com" ? nil : self.results
+        })
+        lookup.search(filename: "One Love.flac", title: "One Love", artist: "嵐", album: "",
+                      onMatch: { _ in XCTFail("Must not apply stale selection") }, onNotFound: {})
+        try await waitUntil { lookup.selection != nil }
+        let previous = try XCTUnwrap(lookup.selection?.candidates.first)
+        lookup.selectSource(.deezer)
+        lookup.choose(previous)
+        XCTAssertFalse(lookup.isLoadingArtwork)
+        lookup.selectSource(.itunes)
+        try await Task.sleep(nanoseconds: 50_000_000)
+        XCTAssertEqual(lookup.selectedSource, .itunes)
+        XCTAssertFalse(lookup.isLoadingSource)
+        XCTAssertEqual(lookup.selection?.candidates.count, 2)
+        lookup.cancel()
+    }
 }

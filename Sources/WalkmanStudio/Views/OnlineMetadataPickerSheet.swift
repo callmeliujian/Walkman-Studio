@@ -3,7 +3,7 @@ import SwiftUI
 struct OnlineMetadataSelection: Identifiable {
     let id = UUID()
     let query: String
-    let candidates: [OnlineTrackMetadata]
+    var candidates: [OnlineTrackMetadata]
 }
 
 /// Owns one lookup, so switching tracks or closing an editor cannot apply a stale result.
@@ -11,10 +11,14 @@ struct OnlineMetadataSelection: Identifiable {
 final class OnlineMetadataLookup: ObservableObject {
     @Published private(set) var isSearching = false
     @Published private(set) var isLoadingArtwork = false
+    @Published private(set) var isLoadingSource = false
+    @Published private(set) var selectedSource: OnlineMetadataSource = .itunes
     @Published var selection: OnlineMetadataSelection?
     private let service: OnlineMetadataService
     private var task: Task<Void, Never>?
     private var onMatch: ((OnlineTrackMetadata) -> Void)?
+    private var searchContext: (filename: String, title: String, artist: String, album: String)?
+    private var cachedCandidates: [OnlineMetadataSource: [OnlineTrackMetadata]] = [:]
 
     init(service: OnlineMetadataService = .shared) {
         self.service = service
@@ -25,11 +29,14 @@ final class OnlineMetadataLookup: ObservableObject {
         cancel()
         isSearching = true
         self.onMatch = onMatch
+        searchContext = (filename, title, artist, album)
         task = Task {
             let candidates = await service.searchMetadata(filename: filename, currentTitle: title,
                                                           currentArtist: artist, currentAlbum: album)
             guard !Task.isCancelled else { return }
             if candidates.count > 1 {
+                selectedSource = OnlineMetadataSource(rawValue: candidates[0].source) ?? .itunes
+                cachedCandidates[selectedSource] = candidates
                 let terms = OnlineMetadataService.cleanSearchTerms(filename: filename, title: title, artist: artist)
                 selection = OnlineMetadataSelection(query: terms.query, candidates: candidates)
             } else if let only = candidates.first {
@@ -41,12 +48,39 @@ final class OnlineMetadataLookup: ObservableObject {
         }
     }
 
+    func selectSource(_ source: OnlineMetadataSource, reload: Bool = false) {
+        guard selection != nil, !isLoadingArtwork, let context = searchContext else { return }
+        guard source != selectedSource || reload else { return }
+        task?.cancel()
+        task = nil
+        selectedSource = source
+        selection?.candidates = []
+        if !reload, let cached = cachedCandidates[source] {
+            selection?.candidates = cached
+            isLoadingSource = false
+            return
+        }
+        isLoadingSource = true
+        task = Task {
+            let candidates = await service.searchMetadata(filename: context.filename, currentTitle: context.title,
+                                                          currentArtist: context.artist, currentAlbum: context.album,
+                                                          source: source)
+            guard !Task.isCancelled else { return }
+            cachedCandidates[source] = candidates
+            selection?.candidates = candidates
+            isLoadingSource = false
+        }
+    }
+
     func choose(_ candidate: OnlineTrackMetadata) {
-        guard !isLoadingArtwork, selection?.candidates.contains(where: { $0.id == candidate.id }) == true else { return }
+        guard !isLoadingSource, !isLoadingArtwork,
+              selection?.candidates.contains(where: { $0.id == candidate.id }) == true else { return }
+        isLoadingArtwork = true
         task = Task { await apply(candidate) }
     }
 
     private func apply(_ candidate: OnlineTrackMetadata) async {
+        guard !Task.isCancelled else { return }
         isLoadingArtwork = true
         let metadata = await service.loadArtwork(for: candidate)
         guard !Task.isCancelled else { return }
@@ -55,6 +89,8 @@ final class OnlineMetadataLookup: ObservableObject {
         isSearching = false
         isLoadingArtwork = false
         onMatch = nil
+        searchContext = nil
+        cachedCandidates = [:]
         task = nil
         completion?(metadata)
     }
@@ -66,6 +102,9 @@ final class OnlineMetadataLookup: ObservableObject {
         onMatch = nil
         isSearching = false
         isLoadingArtwork = false
+        isLoadingSource = false
+        searchContext = nil
+        cachedCandidates = [:]
     }
 }
 
@@ -75,8 +114,12 @@ struct OnlineMetadataPickerSheet: View {
     @ObservedObject var lookup: OnlineMetadataLookup
     @State private var selectedID: String?
 
+    private var candidates: [OnlineTrackMetadata] {
+        lookup.selection?.candidates ?? []
+    }
+
     private var selected: OnlineTrackMetadata? {
-        selection.candidates.first { $0.id == selectedID }
+        candidates.first { $0.id == selectedID }
     }
 
     var body: some View {
@@ -96,13 +139,28 @@ struct OnlineMetadataPickerSheet: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+                Picker(L10n.tr("Metadata Source"), selection: Binding(
+                    get: { lookup.selectedSource },
+                    set: { source in
+                        selectedID = nil
+                        lookup.selectSource(source)
+                    }
+                )) {
+                    ForEach(OnlineMetadataSource.allCases, id: \.self) { source in
+                        Text(source.rawValue).tag(source)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .disabled(lookup.isLoadingArtwork)
+                .padding(.top, 8)
+
                 HStack(alignment: .firstTextBaseline) {
                     Text(selection.query)
                         .font(.callout.weight(.medium))
                         .lineLimit(2)
                         .help(selection.query)
                     Spacer(minLength: 12)
-                    Text(L10n.tr("\(selection.candidates.count) results"))
+                    Text(lookup.isLoadingSource ? L10n.tr("Searching Online...") : L10n.tr("\(candidates.count) results"))
                         .font(.callout)
                         .foregroundStyle(.secondary)
                         .fixedSize()
@@ -113,15 +171,39 @@ struct OnlineMetadataPickerSheet: View {
 
             Divider()
 
-            List(selection: $selectedID) {
-                ForEach(selection.candidates) { candidate in
-                    candidateRow(candidate)
-                        .tag(candidate.id)
+            if lookup.isLoadingSource {
+                VStack(spacing: 12) {
+                    ProgressView()
+                    Text(L10n.tr("Searching Online..."))
+                        .foregroundStyle(.secondary)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if candidates.isEmpty {
+                VStack(spacing: 12) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 28))
+                        .foregroundStyle(.secondary)
+                    Text(L10n.tr("No results available"))
+                        .font(.headline)
+                    Text(L10n.tr("Try again or choose another source."))
+                        .foregroundStyle(.secondary)
+                    Button(L10n.tr("Try Again")) {
+                        selectedID = nil
+                        lookup.selectSource(lookup.selectedSource, reload: true)
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                List(selection: $selectedID) {
+                    ForEach(candidates) { candidate in
+                        candidateRow(candidate)
+                            .tag(candidate.id)
+                    }
+                }
+                .listStyle(.inset)
+                .disabled(lookup.isLoadingArtwork)
+                .accessibilityLabel(L10n.tr("Online metadata matches"))
             }
-            .listStyle(.inset)
-            .disabled(lookup.isLoadingArtwork)
-            .accessibilityLabel(L10n.tr("Online metadata matches"))
 
             Divider()
 
@@ -132,7 +214,7 @@ struct OnlineMetadataPickerSheet: View {
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 } else {
-                    Text("\(selected == nil ? "Select a result to continue." : "Changes are saved when you save the editor.")")
+                    Text(L10n.tr(selected == nil ? "Select a result to continue." : "Changes are saved when you save the editor."))
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }
@@ -144,7 +226,7 @@ struct OnlineMetadataPickerSheet: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.defaultAction)
-                .disabled(selected == nil || lookup.isLoadingArtwork)
+                .disabled(selected == nil || lookup.isLoadingArtwork || lookup.isLoadingSource)
             }
             .controlSize(.large)
             .padding(.horizontal, 24)

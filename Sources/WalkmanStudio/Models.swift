@@ -118,7 +118,7 @@ public enum TransferTargetMode: String, CaseIterable, Identifiable, Sendable {
 
 public struct Track: Identifiable, Hashable, Sendable {
     public var id: String { fullPath }
-    public let filename: String
+    public var filename: String
     public var relativePath: String
     public var fullPath: String
     public let format: String // "FLAC", "MP3", "M4A", etc.

@@ -1258,14 +1258,19 @@ public struct PlaylistsView: View {
             SongMetadataEditorSheet(
                 track: track,
                 trackList: !trackListToEditLocally.isEmpty ? trackListToEditLocally : [track],
-                onSavedTrack: { updatedTrack in
+                onSavedTrack: { updatedTrack, previousFullPath in
                     if self.player.currentTrack?.id == updatedTrack.id {
                         self.player.updateTrackInfo(track: updatedTrack)
+                    }
+                    self.cachedTrackLookup.removeValue(forKey: PlaylistsView.normalizeKey(previousFullPath))
+                    self.cachedTrackLookup.removeValue(forKey: URL(fileURLWithPath: previousFullPath).lastPathComponent.lowercased())
+                    if let idx = self.trackListToEditLocally.firstIndex(where: { $0.id == previousFullPath }) {
+                        self.trackListToEditLocally[idx] = updatedTrack
                     }
                     let key = PlaylistsView.normalizeKey(updatedTrack.fullPath)
                     self.cachedTrackLookup[key] = updatedTrack
                     self.cachedTrackLookup[updatedTrack.filename.lowercased()] = updatedTrack
-                    self.updateResolvedTracks()
+                    self.loadPlaylists()
                 },
                 onDismiss: {
                     trackToEditLocally = nil
