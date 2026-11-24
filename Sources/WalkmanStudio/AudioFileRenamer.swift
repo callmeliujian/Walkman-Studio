@@ -7,7 +7,7 @@ enum AudioFileRenamer {
         let artist = artist.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !title.isEmpty, !artist.isEmpty else { return fileURL }
 
-        var stem = WalkmanEngine.shared.sanitizeFilename("\(title) \(artist)", maxLength: 240)
+        var stem = WalkmanEngine.shared.sanitizeFilename("\(title)-\(artist)", maxLength: 240)
         // Leave room for the extension and collision suffix on UTF-8 filesystems.
         while stem.utf8.count > 230 { stem.removeLast() }
         stem = stem.trimmingCharacters(in: CharacterSet(charactersIn: ". "))
@@ -88,7 +88,10 @@ enum AudioFileRenamer {
                 let original = try Data(contentsOf: playlist)
                 guard let encoding = [String.Encoding.utf8, .utf16, .isoLatin1, .windowsCP1252].first(where: {
                     String(data: original, encoding: $0) != nil
-                }), let content = String(data: original, encoding: encoding) else { continue }
+                }) else { continue }
+                // Foundation's UTF-8 decoder strips the BOM from playlists that have one.
+                let decoded = encoding == .utf8 ? String(decoding: original, as: UTF8.self) : String(data: original, encoding: encoding)
+                guard let content = decoded else { continue }
                 let updated = content.components(separatedBy: "\n").map { line -> String in
                     let path = line.trimmingCharacters(in: .whitespacesAndNewlines.union(CharacterSet(charactersIn: "\u{FEFF}")))
                     guard !path.isEmpty, !path.hasPrefix("#") else { return line }
