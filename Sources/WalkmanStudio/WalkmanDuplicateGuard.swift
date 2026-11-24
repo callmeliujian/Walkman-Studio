@@ -1,69 +1,5 @@
 import Foundation
 
-public struct DuplicateCheckResult: Sendable {
-    public let isDuplicate: Bool
-    public let matchingTrack: Track?
-    public let reason: String?
-
-    public init(isDuplicate: Bool, matchingTrack: Track? = nil, reason: String? = nil) {
-        self.isDuplicate = isDuplicate
-        self.matchingTrack = matchingTrack
-        self.reason = reason
-    }
-}
-
-public struct DuplicateImportCandidate: Identifiable, Sendable {
-    public var id: String { url.path }
-    public let url: URL
-    public let title: String
-    public let artist: String
-    public let album: String
-    public let durationSeconds: Double
-    public let matchingWalkmanTrack: Track?
-    public let matchReason: String
-    public let destinationDriveName: String
-
-    public init(
-        url: URL,
-        title: String,
-        artist: String,
-        album: String,
-        durationSeconds: Double = 0,
-        matchingWalkmanTrack: Track? = nil,
-        matchReason: String,
-        destinationDriveName: String = "Walkman"
-    ) {
-        self.url = url
-        self.title = title
-        self.artist = artist
-        self.album = album
-        self.durationSeconds = durationSeconds
-        self.matchingWalkmanTrack = matchingWalkmanTrack
-        self.matchReason = matchReason
-        self.destinationDriveName = destinationDriveName
-    }
-
-    public var destinationRelativePath: String? {
-        guard let track = matchingWalkmanTrack else { return nil }
-        if !track.relativePath.isEmpty {
-            return track.relativePath.hasPrefix("/") ? track.relativePath : "/\(track.relativePath)"
-        }
-        return (track.fullPath as NSString).lastPathComponent
-    }
-
-    public var destinationQualityDescription: String? {
-        guard let track = matchingWalkmanTrack else { return nil }
-        var parts: [String] = []
-        if !track.format.isEmpty { parts.append(track.format.uppercased()) }
-        if track.bitsPerSample > 0 && track.sampleRate > 0 {
-            parts.append("\(track.bitsPerSample)b/\(track.sampleRate / 1000)k")
-        } else if track.bitrateKbps > 0 {
-            parts.append("\(track.bitrateKbps) kbps")
-        }
-        return parts.isEmpty ? nil : parts.joined(separator: " • ")
-    }
-}
-
 // =============================================================================
 // WALKMAN DUPLICATE GUARD
 // Protects Walkman storage from duplicate audio files during ingestion and sync
@@ -113,7 +49,8 @@ public final class WalkmanDuplicateGuard: Sendable {
         sourceURL: URL? = nil,
         targetDrive: WalkmanDrive?,
         targetMode: TransferTargetMode = .music,
-        existingTracks: [Track] = []
+        existingTracks: [Track] = [],
+        useCachedLibraryIfEmpty: Bool = true
     ) -> DuplicateCheckResult {
         // 1. Physical Target Path & Directory Check on Target Storage
         if let drive = targetDrive {
@@ -145,6 +82,7 @@ public final class WalkmanDuplicateGuard: Sendable {
                         let normCleanTitle = DuplicateFinderService.normalizeTitle(cleanTitle)
                         for f in contents {
                             if f.hasPrefix(".") { continue }
+                            guard LibraryScanner.audioExtensions.contains((f as NSString).pathExtension.lowercased()) else { continue }
                             let fStem = (f as NSString).deletingPathExtension
                             let normFTitle = DuplicateFinderService.normalizeTitle(fStem)
                             let fLower = f.lowercased()
@@ -158,7 +96,8 @@ public final class WalkmanDuplicateGuard: Sendable {
                                 if let src = sourceURL, src.path == candidatePath {
                                     continue
                                 }
-                                if FileManager.default.fileExists(atPath: candidatePath) {
+                                var isDirectory: ObjCBool = false
+                                if FileManager.default.fileExists(atPath: candidatePath, isDirectory: &isDirectory), !isDirectory.boolValue {
                                     let matchedTr = existingTracks.first(where: { $0.fullPath == candidatePath }) ?? {
                                         let tag = AudioTagger.shared.readMetadata(fileURL: URL(fileURLWithPath: candidatePath))
                                         let attr = try? FileManager.default.attributesOfItem(atPath: candidatePath)
@@ -209,17 +148,23 @@ public final class WalkmanDuplicateGuard: Sendable {
         // 2. Target Storage Metadata & Normalized Matching (Strictly Scoped to targetDrive)
         let tracksToCheck: [Track]
         if let drive = targetDrive {
-            let mountPrefix = drive.mountPoint.hasSuffix("/") ? drive.mountPoint : "\(drive.mountPoint)/"
-            // Filter provided existingTracks strictly to the destination drive partition
-            let driveScoped = existingTracks.filter { $0.fullPath.hasPrefix(mountPrefix) }
-            if !driveScoped.isEmpty {
+            let mountURL = URL(fileURLWithPath: drive.mountPoint)
+            let resolvedMount = mountURL.resolvingSymlinksInPath().path
+            let mountPrefix = mountURL.path.hasSuffix("/") ? mountURL.path : mountURL.path + "/"
+            let resolvedPrefix = resolvedMount.hasSuffix("/") ? resolvedMount : resolvedMount + "/"
+            func isOnDrive(_ track: Track) -> Bool {
+                if track.fullPath.hasPrefix(mountPrefix) { return true }
+                return URL(fileURLWithPath: track.fullPath).resolvingSymlinksInPath().path.hasPrefix(resolvedPrefix)
+            }
+            let driveScoped = existingTracks.filter(isOnDrive)
+            if !driveScoped.isEmpty || !useCachedLibraryIfEmpty {
                 tracksToCheck = driveScoped
             } else if drive.type != .local {
                 // If no tracks were provided for this drive, query SQLite cache for THIS specific mount point
-                tracksToCheck = LibraryScanner.shared.loadCachedTracks(forMount: drive.mountPoint)
+                tracksToCheck = LibraryScanner.shared.loadCachedTracks(forMount: drive.mountPoint).filter(isOnDrive)
             } else {
                 // Local destination: check LocalMusicLibraryService tracks inside this folder
-                tracksToCheck = LocalMusicLibraryService.shared.tracks.filter { $0.fullPath.hasPrefix(mountPrefix) }
+                tracksToCheck = LocalMusicLibraryService.shared.tracks.filter(isOnDrive)
             }
         } else {
             // No target drive specified: fallback to provided tracks
@@ -249,10 +194,6 @@ public final class WalkmanDuplicateGuard: Sendable {
 
         let driveName = targetDrive?.name ?? "destination"
         for tr in verifiedTracks {
-            if let drive = targetDrive {
-                let mountPrefix = drive.mountPoint.hasSuffix("/") ? drive.mountPoint : "\(drive.mountPoint)/"
-                guard tr.fullPath.hasPrefix(mountPrefix) else { continue }
-            }
             let trTitle = DuplicateFinderService.normalizeTitle(tr.title)
             let trAlbum = DuplicateFinderService.normalizeAlbum(tr.album)
 

@@ -3,15 +3,6 @@ import AppKit
 import Combine
 import QuartzCore
 
-private struct DriveLibraryCache: Sendable {
-    var tracks: [Track] = []
-    var cachedArtists: [ArtistItem] = []
-    var cachedAlbums: [AlbumItem] = []
-    var cachedRecentTracks: [Track] = []
-    var cachedLanguageTracks: [Track] = []
-    var libraryStats: (albums: Int, artists: Int, hiRes: Int, recentlyAdded: Int, languageStudy: Int) = (0, 0, 0, 0, 0)
-    var isLoaded: Bool = false
-}
 
 public struct ContentView: View {
     @ObservedObject private var localization = AppLocalization.shared
@@ -26,6 +17,7 @@ public struct ContentView: View {
     @State private var selectedTrackId: String?
     @State private var showInspector: Bool = false
     @State private var isEjecting: Bool = false
+    @State private var localImportTarget: WalkmanDrive?
     @State private var queueCount: Int = 0
     @State private var deviceInfo: WalkmanDeviceInfo? = nil
     @State private var showAboutSheet: Bool = false
@@ -982,6 +974,7 @@ public struct ContentView: View {
                                 drives: drives,
                                 activeDrive: activeDrive,
                                 selectedTrackId: $selectedTrackId,
+                                importTarget: $localImportTarget,
                                 onInspectTrack: { track in
                                     self.selectedTrackId = track.id
                                     self.showInspector = true
@@ -1294,6 +1287,18 @@ public struct ContentView: View {
                             }
                             .help(L10n.tr("Refresh connected drives and reload library"))
                             
+                            if selectedTab == .localLibrary {
+                                Button {
+                                    localImportTarget = activeDrive
+                                } label: {
+                                    Label(L10n.tr("One-Click Import"), systemImage: "arrow.down.to.line")
+                                        .labelStyle(.titleAndIcon)
+                                }
+                                .disabled(activeDrive == nil || isEjecting || localLibrary.isScanning || localLibrary.tracks.isEmpty)
+                                .help(activeDrive.map { L10n.tr("Import the entire local library to \($0.name), skipping existing tracks.") }
+                                    ?? L10n.tr("Connect a Walkman to import your local library."))
+                            }
+
                             // Safe Eject (only shown if a device is connected)
                             if !drives.isEmpty {
                                 Button(action: { performCleanAndEject() }) {
@@ -1531,27 +1536,6 @@ public struct ContentView: View {
     }
 }
 
-private struct WindowAccessor: NSViewRepresentable {
-    let onWindow: (NSWindow) -> Void
-
-    func makeNSView(context: Context) -> NSView {
-        let view = NSView()
-        DispatchQueue.main.async {
-            if let w = view.window {
-                onWindow(w)
-            }
-        }
-        return view
-    }
-
-    func updateNSView(_ nsView: NSView, context: Context) {
-        DispatchQueue.main.async {
-            if let w = nsView.window {
-                onWindow(w)
-            }
-        }
-    }
-}
 
 private extension View {
     @ViewBuilder

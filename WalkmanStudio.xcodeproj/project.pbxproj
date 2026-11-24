@@ -1,19 +1,20 @@
 // !$*UTF8*$!
 {
 	archiveVersion = 1;
-	classes = {};
+	classes = {
+	};
 	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
-		32122C8C35856A028CDA5805 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 560737C72BC60145ADB91F3E /* AppIcon.icns */; };
-		31B88C5446C7B8CEE2C97E65 /* devices in Resources */ = {isa = PBXBuildFile; fileRef = 728190E74DB38B003067AC3F /* devices */; };
-		BA8852FC3CAE1BFA122933C0 /* SensMe Channel cover in Resources */ = {isa = PBXBuildFile; fileRef = 7D7BAA7A5056801DD3155E21 /* SensMe Channel cover */; };
-		4360895591A644ACCA0697E5 /* hires_audio_logo.png in Resources */ = {isa = PBXBuildFile; fileRef = F57AEB63410B255B058317AC /* hires_audio_logo.png */; };
-		B599762DCDFE63F50F082ADB /* hires_audio_logo.svg in Resources */ = {isa = PBXBuildFile; fileRef = 1D2C9D7F058F2844A9B89157 /* hires_audio_logo.svg */; };
-		FF46B6EE9F05AE6734702083 /* walkman_device.png in Resources */ = {isa = PBXBuildFile; fileRef = 2493DD34A663CDAD1397FBD0 /* walkman_device.png */; };
 		2B5158CBF9231A6AE92F1CFA /* walkman_device_cropped.png in Resources */ = {isa = PBXBuildFile; fileRef = E55AF82502FCDE80A5484575 /* walkman_device_cropped.png */; };
+		31B88C5446C7B8CEE2C97E65 /* devices in Resources */ = {isa = PBXBuildFile; fileRef = 728190E74DB38B003067AC3F /* devices */; };
+		32122C8C35856A028CDA5805 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 560737C72BC60145ADB91F3E /* AppIcon.icns */; };
+		4360895591A644ACCA0697E5 /* hires_audio_logo.png in Resources */ = {isa = PBXBuildFile; fileRef = F57AEB63410B255B058317AC /* hires_audio_logo.png */; };
 		5A2C901765E977C9EE2E5AFF /* walkman_logo_emblem.png in Resources */ = {isa = PBXBuildFile; fileRef = 34A6206FE1CD43478747402C /* walkman_logo_emblem.png */; };
+		B599762DCDFE63F50F082ADB /* hires_audio_logo.svg in Resources */ = {isa = PBXBuildFile; fileRef = 1D2C9D7F058F2844A9B89157 /* hires_audio_logo.svg */; };
+		BA8852FC3CAE1BFA122933C0 /* SensMe Channel cover in Resources */ = {isa = PBXBuildFile; fileRef = 7D7BAA7A5056801DD3155E21 /* SensMe Channel cover */; };
+		FF46B6EE9F05AE6734702083 /* walkman_device.png in Resources */ = {isa = PBXBuildFile; fileRef = 2493DD34A663CDAD1397FBD0 /* walkman_device.png */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -27,23 +28,28 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		4E783A9E10D2A8ABA38CD11C /* Walkman Studio.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Walkman Studio.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		6C7CCDEB3609F1FAA874E941 /* WalkmanStudioTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WalkmanStudioTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		560737C72BC60145ADB91F3E /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
-		728190E74DB38B003067AC3F /* devices */ = {isa = PBXFileReference; lastKnownFileType = folder; path = devices; sourceTree = "<group>"; };
-		7D7BAA7A5056801DD3155E21 /* SensMe Channel cover */ = {isa = PBXFileReference; lastKnownFileType = folder; path = "SensMe Channel cover"; sourceTree = "<group>"; };
-		F57AEB63410B255B058317AC /* hires_audio_logo.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = hires_audio_logo.png; sourceTree = "<group>"; };
+		0112DAE3F84CB4DF5179BE01 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1D2C9D7F058F2844A9B89157 /* hires_audio_logo.svg */ = {isa = PBXFileReference; lastKnownFileType = text.xml.svg; path = hires_audio_logo.svg; sourceTree = "<group>"; };
 		2493DD34A663CDAD1397FBD0 /* walkman_device.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = walkman_device.png; sourceTree = "<group>"; };
-		E55AF82502FCDE80A5484575 /* walkman_device_cropped.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = walkman_device_cropped.png; sourceTree = "<group>"; };
 		34A6206FE1CD43478747402C /* walkman_logo_emblem.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = walkman_logo_emblem.png; sourceTree = "<group>"; };
-		0112DAE3F84CB4DF5179BE01 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		4E783A9E10D2A8ABA38CD11C /* Walkman Studio.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Walkman Studio.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		560737C72BC60145ADB91F3E /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
+		6C7CCDEB3609F1FAA874E941 /* WalkmanStudioTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WalkmanStudioTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		728190E74DB38B003067AC3F /* devices */ = {isa = PBXFileReference; lastKnownFileType = folder; path = devices; sourceTree = "<group>"; };
+		7D7BAA7A5056801DD3155E21 /* SensMe Channel cover */ = {isa = PBXFileReference; lastKnownFileType = folder; path = "SensMe Channel cover"; sourceTree = "<group>"; };
+		E55AF82502FCDE80A5484575 /* walkman_device_cropped.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = walkman_device_cropped.png; sourceTree = "<group>"; };
+		F57AEB63410B255B058317AC /* hires_audio_logo.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = hires_audio_logo.png; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		77A03FEE20FE96AD9384861E /* WalkmanStudioTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			name = WalkmanStudioTests;
+			path = Tests/WalkmanStudioTests;
+			sourceTree = "<group>";
+		};
 		BCE16DD0260827ECF338C787 /* WalkmanStudio */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			explicitFileTypes = {};
 			explicitFolders = (
 				Resources/Localization,
 			);
@@ -51,27 +57,21 @@
 			path = Sources/WalkmanStudio;
 			sourceTree = "<group>";
 		};
-		77A03FEE20FE96AD9384861E /* WalkmanStudioTests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			explicitFileTypes = {};
-			explicitFolders = ();
-			name = WalkmanStudioTests;
-			path = Tests/WalkmanStudioTests;
-			sourceTree = "<group>";
-		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		99DF9BCC9C17D6B5E59C8079 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = ();
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		1C7265171D31521770FF5C45 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
-			files = ();
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		99DF9BCC9C17D6B5E59C8079 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
@@ -92,6 +92,17 @@
 			path = assets;
 			sourceTree = "<group>";
 		};
+		B28B7AF69320201D1CF206EB = {
+			isa = PBXGroup;
+			children = (
+				BCE16DD0260827ECF338C787 /* WalkmanStudio */,
+				77A03FEE20FE96AD9384861E /* WalkmanStudioTests */,
+				3685E330EC5277A9DD5661C6 /* assets */,
+				DFBA7AADE0868074C2861C98 /* Configuration */,
+				FBDC4F23F93125BBEEAE800C /* Products */,
+			);
+			sourceTree = "<group>";
+		};
 		DFBA7AADE0868074C2861C98 /* Configuration */ = {
 			isa = PBXGroup;
 			children = (
@@ -109,38 +120,9 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		B28B7AF69320201D1CF206EB /* Main group */ = {
-			isa = PBXGroup;
-			children = (
-				BCE16DD0260827ECF338C787 /* WalkmanStudio */,
-				77A03FEE20FE96AD9384861E /* WalkmanStudioTests */,
-				3685E330EC5277A9DD5661C6 /* assets */,
-				DFBA7AADE0868074C2861C98 /* Configuration */,
-				FBDC4F23F93125BBEEAE800C /* Products */,
-			);
-			sourceTree = "<group>";
-		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		F75109BEB4DD8800DA6B45F8 /* Walkman Studio */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = A0EF65A3CC83177256097B04 /* Build configuration list for PBXNativeTarget "Walkman Studio" */;
-			buildPhases = (
-				EC471B9A5160313533595ECF /* Sources */,
-				99DF9BCC9C17D6B5E59C8079 /* Frameworks */,
-				CADEDC04E44BEA2AAE2B4F55 /* Resources */,
-			);
-			buildRules = ();
-			dependencies = ();
-			fileSystemSynchronizedGroups = (
-				BCE16DD0260827ECF338C787 /* WalkmanStudio */,
-			);
-			name = "Walkman Studio";
-			productName = "Walkman Studio";
-			productReference = 4E783A9E10D2A8ABA38CD11C /* Walkman Studio.app */;
-			productType = "com.apple.product-type.application";
-		};
 		C062A5A4A7F4F37DD90F54CB /* WalkmanStudioTests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = D7D7EAAC5FEACF1F2FFF17C2 /* Build configuration list for PBXNativeTarget "WalkmanStudioTests" */;
@@ -149,7 +131,8 @@
 				1C7265171D31521770FF5C45 /* Frameworks */,
 				5ADB13BC5F8425307741B9B0 /* Resources */,
 			);
-			buildRules = ();
+			buildRules = (
+			);
 			dependencies = (
 				DE58E2B17C19600779694943 /* PBXTargetDependency */,
 			);
@@ -160,6 +143,26 @@
 			productName = WalkmanStudioTests;
 			productReference = 6C7CCDEB3609F1FAA874E941 /* WalkmanStudioTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		F75109BEB4DD8800DA6B45F8 /* Walkman Studio */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A0EF65A3CC83177256097B04 /* Build configuration list for PBXNativeTarget "Walkman Studio" */;
+			buildPhases = (
+				EC471B9A5160313533595ECF /* Sources */,
+				99DF9BCC9C17D6B5E59C8079 /* Frameworks */,
+				CADEDC04E44BEA2AAE2B4F55 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				BCE16DD0260827ECF338C787 /* WalkmanStudio */,
+			);
+			name = "Walkman Studio";
+			productName = "Walkman Studio";
+			productReference = 4E783A9E10D2A8ABA38CD11C /* Walkman Studio.app */;
+			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
@@ -183,7 +186,7 @@
 				Base,
 				"zh-Hans",
 			);
-			mainGroup = B28B7AF69320201D1CF206EB /* Main group */;
+			mainGroup = B28B7AF69320201D1CF206EB;
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
 			productRefGroup = FBDC4F23F93125BBEEAE800C /* Products */;
@@ -197,6 +200,13 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		5ADB13BC5F8425307741B9B0 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		CADEDC04E44BEA2AAE2B4F55 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -212,25 +222,21 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		5ADB13BC5F8425307741B9B0 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = ();
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		EC471B9A5160313533595ECF /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = ();
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		430321A0756B86F04593824F /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
-			files = ();
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EC471B9A5160313533595ECF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
@@ -244,54 +250,15 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-		AAC14FD0F8DA0A52213F12C6 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_IDENTITY = "-";
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				SDKROOT = macosx;
-				SWIFT_VERSION = 5.0;
-				DEBUG_INFORMATION_FORMAT = dwarf;
-				ENABLE_TESTABILITY = YES;
-				ONLY_ACTIVE_ARCH = YES;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
-				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-			};
-			name = Debug;
-		};
-		DCD9B71F681BBFB1A5209387 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_IDENTITY = "-";
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				SDKROOT = macosx;
-				SWIFT_VERSION = 5.0;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				SWIFT_COMPILATION_MODE = wholemodule;
-				SWIFT_OPTIMIZATION_LEVEL = "-O";
-			};
-			name = Release;
-		};
-		F98668CD29E6F34AC491B053 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				EXECUTABLE_NAME = WalkmanStudio;
-				INFOPLIST_FILE = Configuration/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = com.sony.walkmanstudio;
-				PRODUCT_MODULE_NAME = WalkmanStudio;
-				PRODUCT_NAME = "Walkman Studio";
-			};
-			name = Debug;
-		};
 		20AE26BCBAD74B1D42A1C005 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXECUTABLE_NAME = WalkmanStudio;
 				INFOPLIST_FILE = Configuration/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.sony.walkmanstudio;
 				PRODUCT_MODULE_NAME = WalkmanStudio;
 				PRODUCT_NAME = "Walkman Studio";
@@ -303,7 +270,11 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				GENERATE_INFOPLIST_FILE = YES;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.sony.walkmanstudio.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -311,18 +282,67 @@
 			};
 			name = Debug;
 		};
+		AAC14FD0F8DA0A52213F12C6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "-";
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		DCD9B71F681BBFB1A5209387 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "-";
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 		F8D4980F6E14BA6D48FCC5AD /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				GENERATE_INFOPLIST_FILE = YES;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.sony.walkmanstudio.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Walkman Studio.app/Contents/MacOS/WalkmanStudio";
 			};
 			name = Release;
+		};
+		F98668CD29E6F34AC491B053 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXECUTABLE_NAME = WalkmanStudio;
+				INFOPLIST_FILE = Configuration/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.sony.walkmanstudio;
+				PRODUCT_MODULE_NAME = WalkmanStudio;
+				PRODUCT_NAME = "Walkman Studio";
+			};
+			name = Debug;
 		};
 /* End XCBuildConfiguration section */
 

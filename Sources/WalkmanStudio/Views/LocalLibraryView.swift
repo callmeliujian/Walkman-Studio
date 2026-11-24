@@ -2,73 +2,6 @@ import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
 
-public enum LocalDisplayMode: String, CaseIterable, Identifiable, Sendable {
-    case songs = "Songs"
-    case albums = "Albums"
-    case artists = "Artists"
-    case recentlyAdded = "Recently Added"
-    case folders = "Folders"
-
-    public var id: String { rawValue }
-
-    public var icon: String {
-        switch self {
-        case .songs: return "music.note.list"
-        case .albums: return "square.stack.fill"
-        case .artists: return "music.mic"
-        case .recentlyAdded: return "clock.arrow.circlepath"
-        case .folders: return "folder.fill"
-        }
-    }
-}
-
-public enum LocalSortOption: String, CaseIterable, Identifiable, Sendable {
-    case titleAZ = "Title (A–Z)"
-    case titleZA = "Title (Z–A)"
-    case artistAZ = "Artist (A–Z)"
-    case albumAZ = "Album (A–Z)"
-    case dateNewest = "Date Added (Newest)"
-    case dateOldest = "Date Added (Oldest)"
-    case duration = "Duration (Longest)"
-    case bitrate = "Audio Quality / Bitrate"
-
-    public var id: String { rawValue }
-
-    public var shortTitle: String {
-        switch self {
-        case .titleAZ: return L10n.tr("Title (A–Z)")
-        case .titleZA: return L10n.tr("Title (Z–A)")
-        case .artistAZ: return L10n.tr("Artist")
-        case .albumAZ: return L10n.tr("Album")
-        case .dateNewest: return L10n.tr("Newest")
-        case .dateOldest: return L10n.tr("Oldest")
-        case .duration: return L10n.tr("Duration")
-        case .bitrate: return L10n.tr("Quality")
-        }
-    }
-
-    public var iconName: String {
-        switch self {
-        case .titleAZ:
-            return "arrow.up.and.down.text.horizontal"
-        case .titleZA:
-            return "arrow.down.and.line.horizontal.and.arrow.up"
-        case .artistAZ:
-            return "person.fill"
-        case .albumAZ:
-            return "square.stack.fill"
-        case .dateNewest:
-            return "clock.fill"
-        case .dateOldest:
-            return "calendar"
-        case .duration:
-            return "timer"
-        case .bitrate:
-            return "waveform"
-        }
-    }
-}
-
 public struct LocalLibraryView: View {
     @ObservedObject private var localization = AppLocalization.shared
     let tracks: [Track]
@@ -77,6 +10,7 @@ public struct LocalLibraryView: View {
     var drives: [WalkmanDrive] = []
     var activeDrive: WalkmanDrive? = nil
     @Binding var selectedTrackId: String?
+    @Binding private var importTarget: WalkmanDrive?
     let onInspectTrack: (Track) -> Void
     var onDeleteTrack: ((Track) -> Void)? = nil
     var onEditTrack: ((Track) -> Void)? = nil
@@ -119,6 +53,7 @@ public struct LocalLibraryView: View {
     @State private var directTransferCurrentTitle: String = ""
     @State private var showDirectTransferSheet: Bool = false
     @State private var directTransferComplete: Bool = false
+    @State private var transferResult = DirectTransferResult()
     @State private var directTransferTargetName: String = "Sony Walkman"
 
     // Missing Folders and Unreachable Files Resilience State
@@ -132,6 +67,7 @@ public struct LocalLibraryView: View {
     @State private var transferWarningMessage: String = ""
     @State private var pendingWarningTracks: [Track] = []
     @State private var supportedTracksForMixedChoice: [Track] = []
+    @State private var pendingTarget: WalkmanDrive?
     @State private var hasMixedFormats: Bool = false
 
     public init(
@@ -141,6 +77,7 @@ public struct LocalLibraryView: View {
         drives: [WalkmanDrive] = [],
         activeDrive: WalkmanDrive? = nil,
         selectedTrackId: Binding<String?>,
+        importTarget: Binding<WalkmanDrive?> = .constant(nil),
         onInspectTrack: @escaping (Track) -> Void,
         onDeleteTrack: ((Track) -> Void)? = nil,
         onEditTrack: ((Track) -> Void)? = nil,
@@ -156,6 +93,7 @@ public struct LocalLibraryView: View {
         self.drives = drives
         self.activeDrive = activeDrive
         self._selectedTrackId = selectedTrackId
+        self._importTarget = importTarget
         self.onInspectTrack = onInspectTrack
         self.onDeleteTrack = onDeleteTrack
         self.onEditTrack = onEditTrack
@@ -538,6 +476,11 @@ public struct LocalLibraryView: View {
         .onAppear {
             syncQueueWithActiveTab()
         }
+        .onChange(of: importTarget) { _, target in
+            guard let target else { return }
+            importTarget = nil
+            handleTransferToWalkman(tracks: effectiveTracks, targetDrive: target)
+        }
         .onDisappear {
             player.activeQueueProvider = nil
         }
@@ -566,10 +509,12 @@ public struct LocalLibraryView: View {
                 currentTitle: directTransferCurrentTitle,
                 progress: directTransferProgress,
                 isComplete: directTransferComplete,
+                result: transferResult,
                 onDone: {
                     showDirectTransferSheet = false
                 }
             )
+            .interactiveDismissDisabled(isDirectTransferring)
         }
         .alert(transferWarningTitle, isPresented: $showTransferWarningAlert) {
             if hasMixedFormats {
@@ -577,18 +522,20 @@ public struct LocalLibraryView: View {
                     TransferQueueService.shared.enqueue(tracks: pendingWarningTracks)
                     onGoToTransfer?()
                 }
-                if let targetDrive = ((activeDrive != nil && activeDrive?.type != .local) ? activeDrive : drives.first(where: { $0.type == .internal || $0.type == .microsd })) {
+                if let targetDrive = pendingTarget, drives.contains(where: { $0.id == targetDrive.id }) {
                     Button(L10n.tr("Transfer \(supportedTracksForMixedChoice.count) Supported Tracks")) {
                         startDirectTransfer(tracks: supportedTracksForMixedChoice, targetDrive: targetDrive)
                     }
                 }
                 Button(L10n.tr("Cancel"), role: .cancel) { }
-            } else {
+            } else if !pendingWarningTracks.isEmpty {
                 Button(L10n.tr("Open Transfer & Convert")) {
                     TransferQueueService.shared.enqueue(tracks: pendingWarningTracks)
                     onGoToTransfer?()
                 }
                 Button(L10n.tr("Cancel"), role: .cancel) { }
+            } else {
+                Button(L10n.tr("Dismiss"), role: .cancel) { }
             }
         } message: {
             Text(transferWarningMessage)
@@ -1718,16 +1665,17 @@ public struct LocalLibraryView: View {
     // -------------------------------------------------------------------------
     // TRANSFER TO WALKMAN ORCHESTRATION
     // -------------------------------------------------------------------------
-    private func handleTransferToWalkman(tracks: [Track]) {
-        guard !tracks.isEmpty else { return }
+    private func handleTransferToWalkman(tracks: [Track], targetDrive requestedDrive: WalkmanDrive? = nil) {
+        guard !tracks.isEmpty, !isDirectTransferring else { return }
 
         // 1. Check if a physical Sony Walkman DAP is mounted
-        let walkmanDrive = (activeDrive != nil && activeDrive?.type != .local) ? activeDrive : drives.first(where: { $0.type == .internal || $0.type == .microsd })
+        let walkmanDrive = requestedDrive ?? (activeDrive?.type == .local ? nil : activeDrive) ?? drives.first(where: { $0.type != .local })
         guard let targetDrive = walkmanDrive else {
             // No Walkman device connected -> Show Warning Alert offering redirect to Transfer & Convert tab
             transferWarningTitle = L10n.tr("No Walkman Connected")
             transferWarningMessage = L10n.tr("Please connect your Sony Walkman DAP via USB to transfer songs directly.\n\nWould you like to redirect to the Transfer & Convert tab to prepare your queue?")
             pendingWarningTracks = tracks
+            pendingTarget = nil
             hasMixedFormats = false
             showTransferWarningAlert = true
             return
@@ -1745,6 +1693,7 @@ public struct LocalLibraryView: View {
         if !unsupported.isEmpty {
             let uniqueExts = Array(Set(unsupported.map { ".\(URL(fileURLWithPath: $0.fullPath).pathExtension.lowercased())" })).sorted().joined(separator: ", ")
             pendingWarningTracks = tracks
+            pendingTarget = targetDrive
 
             let deviceDesc = isTargetAndroid ? L10n.tr("your Android Walkman") : L10n.tr("Sony Walkman firmware")
             if unsupported.count == tracks.count {
@@ -1776,590 +1725,35 @@ public struct LocalLibraryView: View {
         directTransferTotalCount = tracks.count
         directTransferCurrentIndex = 0
         directTransferProgress = 0.0
-        directTransferCurrentTitle = tracks.first?.title ?? ""
+        directTransferCurrentTitle = ""
         directTransferTargetName = targetDrive.name
         directTransferComplete = false
+        transferResult = DirectTransferResult()
         showDirectTransferSheet = true
         isDirectTransferring = true
 
-        Task {
+        Task { @MainActor in
             do {
-                _ = try await TransferQueueService.shared.transferDirectly(
+                transferResult = try await TransferQueueService.shared.transferWithResult(
                     tracks: tracks,
                     to: targetDrive
                 ) { current, total, trackTitle in
-                    Task { @MainActor in
-                        self.directTransferCurrentIndex = current
-                        self.directTransferCurrentTitle = trackTitle
-                        self.directTransferProgress = total > 0 ? Double(current) / Double(total) : 1.0
-                    }
+                    directTransferCurrentIndex = current
+                    directTransferCurrentTitle = trackTitle
+                    directTransferProgress = Double(current - 1) / Double(total)
                 }
-                await MainActor.run {
-                    self.directTransferProgress = 1.0
-                    self.directTransferComplete = true
-                    self.isDirectTransferring = false
-                    self.onTransferComplete?()
-                }
+                directTransferProgress = 1
+                directTransferComplete = true
             } catch {
-                await MainActor.run {
-                    self.isDirectTransferring = false
-                    self.showDirectTransferSheet = false
-                    self.transferWarningTitle = L10n.tr("Transfer Failed")
-                    self.transferWarningMessage = error.localizedDescription
-                    self.showTransferWarningAlert = true
-                }
+                showDirectTransferSheet = false
+                pendingWarningTracks = []
+                hasMixedFormats = false
+                transferWarningTitle = L10n.tr("Transfer Failed")
+                transferWarningMessage = error.localizedDescription
+                showTransferWarningAlert = true
             }
+            isDirectTransferring = false
+            onTransferComplete?()
         }
     }
 }
-
-// -----------------------------------------------------------------------------
-// LOCAL FOLDER ROW CARD
-// -----------------------------------------------------------------------------
-private struct LocalFolderRowCard: View {
-    @ObservedObject private var localization = AppLocalization.shared
-    let folder: LocalMusicFolder
-    var onSelect: (() -> Void)? = nil
-    var onRescan: (() -> Void)? = nil
-    var onRelocate: (() -> Void)? = nil
-    let onReveal: () -> Void
-    let onRemove: () -> Void
-    var onTransfer: (() -> Void)? = nil
-
-    @State private var isHovered = false
-
-    private var isMissing: Bool {
-        folder.isMissing || !folder.existsOnDisk
-    }
-
-    private func formatBytes(_ bytes: Int64) -> String {
-        if bytes <= 0 { return "0 GB" }
-        let gb = Double(bytes) / 1_073_741_824.0
-        if gb >= 1.0 {
-            return String(format: "%.1f GB", gb)
-        }
-        let mb = Double(bytes) / 1_048_576.0
-        return String(format: "%.0f MB", mb)
-    }
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Button(action: { onSelect?() }) {
-                HStack(spacing: 12) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(isMissing ? Color.orange.opacity(0.15) : Color.white.opacity(0.08))
-                            .frame(width: 40, height: 40)
-                        Image(systemName: isMissing ? "folder.badge.questionmark" : "folder.fill")
-                            .font(.system(size: 18))
-                            .foregroundStyle(isMissing ? Color.orange : WalkmanTheme.silverLight)
-                    }
-
-                    VStack(alignment: .leading, spacing: 3) {
-                        HStack(spacing: 6) {
-                            Text(folder.displayName)
-                                .font(.system(size: 13.5, weight: .semibold))
-                                .foregroundStyle(.white)
-
-                            if isMissing {
-                                Text(L10n.tr("MISSING OR RENAMED"))
-                                    .font(.system(size: 9.5, weight: .bold, design: .monospaced))
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(Color.orange.opacity(0.20))
-                                    .foregroundStyle(Color.orange)
-                                    .clipShape(Capsule())
-                            } else {
-                                Text(L10n.tr("\(folder.trackCount) tracks"))
-                                    .font(.system(size: 10.5, weight: .bold, design: .monospaced))
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(Color.white.opacity(0.10))
-                                    .foregroundStyle(WalkmanTheme.silverLight)
-                                    .clipShape(Capsule())
-                            }
-
-                            Text(formatBytes(folder.totalBytes))
-                                .font(.system(size: 10.5, design: .monospaced))
-                                .foregroundStyle(WalkmanTheme.silverMuted)
-                        }
-
-                        Text(isMissing ? L10n.tr("\(folder.path) (Not found on disk)") : folder.path)
-                            .font(.system(size: 11, design: .monospaced))
-                            .foregroundStyle(isMissing ? Color.orange.opacity(0.85) : .secondary)
-                            .lineLimit(1)
-                    }
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-
-            Spacer()
-
-            HStack(spacing: 6) {
-                if isMissing, let onRelocate = onRelocate {
-                    Button(action: onRelocate) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "folder.badge.gearshape")
-                            Text(L10n.tr("Relocate..."))
-                                .font(.system(size: 11, weight: .semibold))
-                        }
-                        .foregroundStyle(Color.orange)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.orange.opacity(0.15))
-                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                    }
-                    .buttonStyle(.plain)
-                    .help(L10n.tr("Choose new directory for renamed or moved folder"))
-                }
-
-                if !isMissing, let onRescan = onRescan {
-                    Button(action: onRescan) {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(WalkmanTheme.silverLight)
-                            .frame(width: 28, height: 28)
-                            .background(Color.white.opacity(0.08))
-                            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                    }
-                    .buttonStyle(.plain)
-                    .help(L10n.tr("Rescan this folder"))
-                }
-
-                Button(action: onReveal) {
-                    Image(systemName: "arrow.up.right.square")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(WalkmanTheme.silverLight)
-                        .frame(width: 28, height: 28)
-                        .background(Color.white.opacity(0.08))
-                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                }
-                .buttonStyle(.plain)
-                .help(L10n.tr("Reveal in Finder"))
-
-                Button(action: onRemove) {
-                    Image(systemName: "trash")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(Color.red.opacity(0.85))
-                        .frame(width: 28, height: 28)
-                        .background(Color.red.opacity(0.12))
-                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                }
-                .buttonStyle(.plain)
-                .help(L10n.tr("Remove folder from Local Music Library"))
-            }
-        }
-        .padding(12)
-        .background(WalkmanTheme.card)
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(isMissing ? Color.orange.opacity(0.40) : Color.white.opacity(isHovered ? 0.16 : 0.06), lineWidth: isMissing ? 1.0 : 0.8)
-        )
-        .onHover { isHovered = $0 }
-        .contextMenu {
-            if isMissing, let onRelocate = onRelocate {
-                Button(L10n.tr("Relocate Folder..."), action: onRelocate)
-                Divider()
-            }
-            if let onTransfer = onTransfer {
-                Button {
-                    onTransfer()
-                } label: {
-                    Label(L10n.tr("Transfer Folder to Walkman"), systemImage: "arrow.right.circle.fill")
-                }
-                Divider()
-            }
-            Button(L10n.tr("Open Folder in Songs View")) {
-                onSelect?()
-            }
-            Button(L10n.tr("Reveal in Finder"), action: onReveal)
-            Divider()
-            Button(L10n.tr("Remove from Local Library"), role: .destructive, action: onRemove)
-        }
-    }
-}
-
-// MARK: - Liquid Glass Combined Filter & Sort Dropdown
-private struct LocalFilterSortDropdown: View {
-    @ObservedObject private var localization = AppLocalization.shared
-    @Binding var formatFilter: String
-    @Binding var sortOption: LocalSortOption
-    let formatOptions: [(id: String, label: String)]
-
-    @State private var isHovered = false
-
-    private var isFormatActive: Bool {
-        formatFilter != "ALL"
-    }
-
-    private var isSortActive: Bool {
-        sortOption != .artistAZ
-    }
-
-    private var isFilterOrSortActive: Bool {
-        isFormatActive || isSortActive
-    }
-
-    private var activeFormatLabel: String {
-        formatOptions.first(where: { $0.id == formatFilter })?.label ?? formatFilter
-    }
-
-    var body: some View {
-        Menu {
-            // -------------------------------------------------------------
-            // SECTION 1: Audio Formats
-            // -------------------------------------------------------------
-            Section(L10n.tr("Audio Format")) {
-                ForEach(formatOptions, id: \.id) { opt in
-                    Button {
-                        formatFilter = opt.id
-                    } label: {
-                        HStack {
-                            if formatFilter == opt.id {
-                                Image(systemName: "checkmark")
-                            }
-                            if opt.id == "HI-RES" {
-                                Label(opt.label, systemImage: "waveform")
-                            } else {
-                                Text(opt.label)
-                            }
-                        }
-                    }
-                }
-            }
-
-            // -------------------------------------------------------------
-            // SECTION 2: Sort Criteria
-            // -------------------------------------------------------------
-            Section(L10n.tr("Sort By")) {
-                ForEach(LocalSortOption.allCases) { opt in
-                    Button {
-                        sortOption = opt
-                    } label: {
-                        HStack {
-                            if sortOption == opt {
-                                Image(systemName: "checkmark")
-                            }
-                            Label(L10n.lookup(opt.rawValue), systemImage: opt.iconName)
-                        }
-                    }
-                }
-            }
-
-            // -------------------------------------------------------------
-            // SECTION 3: Reset
-            // -------------------------------------------------------------
-            if isFilterOrSortActive {
-                Divider()
-                Button(role: .destructive) {
-                    formatFilter = "ALL"
-                    sortOption = .artistAZ
-                } label: {
-                    Label(L10n.tr("Reset Filter & Sort"), systemImage: "arrow.counterclockwise")
-                }
-            }
-        } label: {
-            ZStack {
-                // Circular Liquid Glass foundation fill
-                Circle()
-                    .fill(
-                        isFilterOrSortActive ?
-                            Color.white.opacity(isHovered ? 0.16 : 0.10) :
-                            Color.white.opacity(isHovered ? 0.09 : 0.045)
-                    )
-
-                // Top specular refraction sheen
-                VStack(spacing: 0) {
-                    LinearGradient(
-                        stops: [
-                            .init(color: .white.opacity(isHovered ? 0.32 : (isFilterOrSortActive ? 0.24 : 0.14)), location: 0.0),
-                            .init(color: .clear, location: 1.0)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .frame(height: 7)
-                    Spacer(minLength: 0)
-                }
-                .clipShape(Circle())
-
-                // Filter icon (3 horizontal decreasing lines), enlarged
-                Image(systemName: "line.3.horizontal.decrease")
-                    .font(.system(size: 16.5, weight: .semibold))
-                    .foregroundStyle(
-                        isFilterOrSortActive ?
-                            WalkmanTheme.hiResGold :
-                            (isHovered ? Color.white : WalkmanTheme.silverLight)
-                    )
-
-                // Active beacon indicator (gold dot at top right when filter or sort is active)
-                if isFilterOrSortActive {
-                    VStack {
-                        HStack {
-                            Spacer()
-                            Circle()
-                                .fill(WalkmanTheme.hiResGold)
-                                .frame(width: 5.5, height: 5.5)
-                                .shadow(color: Color.black.opacity(0.4), radius: 1, x: 0, y: 1)
-                        }
-                        Spacer()
-                    }
-                    .padding(5.5)
-                }
-            }
-            .frame(width: 36, height: 36)
-            .clipShape(Circle())
-            .overlay(
-                Circle()
-                    .stroke(
-                        isFilterOrSortActive ?
-                            WalkmanTheme.hiResGold.opacity(isHovered ? 0.60 : 0.38) :
-                            Color.white.opacity(isHovered ? 0.26 : 0.11),
-                        lineWidth: 0.85
-                    )
-            )
-            .shadow(color: Color.black.opacity(isHovered ? 0.22 : 0.12), radius: isHovered ? 3.5 : 2, x: 0, y: 1)
-            .scaleEffect(isHovered ? 1.03 : 1.0)
-        }
-        .menuIndicator(.hidden)
-        .buttonStyle(.plain)
-        .contentShape(Circle())
-        .help(L10n.tr("Filter & Sort: \(activeFormatLabel) • \(L10n.lookup(sortOption.rawValue))"))
-        .onHover { hovering in
-            guard isHovered != hovering else { return }
-            isHovered = hovering
-            if hovering {
-                NSCursor.pointingHand.push()
-            } else {
-                NSCursor.pop()
-            }
-        }
-        .onDisappear {
-            if isHovered {
-                isHovered = false
-                NSCursor.pop()
-            }
-        }
-        .animation(.spring(response: 0.22, dampingFraction: 0.72), value: isHovered)
-        .fixedSize()
-    }
-}
-
-// MARK: - Liquid Glass Display Mode Segmented Control
-private struct LocalDisplayModeSegmentedControl: View {
-    @ObservedObject private var localization = AppLocalization.shared
-    @Binding var displayMode: LocalDisplayMode
-    @Namespace private var highlightNamespace
-    @State private var activeHighlightId: LocalDisplayMode = .songs
-
-    var body: some View {
-        HStack(spacing: 4) {
-            ForEach(LocalDisplayMode.allCases) { mode in
-                LocalDisplayModePillView(
-                    mode: mode,
-                    isSelected: activeHighlightId == mode,
-                    namespace: highlightNamespace,
-                    onSelect: {
-                        guard displayMode != mode else { return }
-                        withAnimation(.spring(response: 0.30, dampingFraction: 0.78)) {
-                            activeHighlightId = mode
-                        }
-                        displayMode = mode
-                    }
-                )
-            }
-        }
-        .padding(3)
-        .background(Color.white.opacity(0.04))
-        .clipShape(Capsule())
-        .overlay(Capsule().stroke(Color.white.opacity(0.10), lineWidth: 0.8))
-        .fixedSize(horizontal: true, vertical: false)
-        .onAppear {
-            activeHighlightId = displayMode
-        }
-        .onChange(of: displayMode) { _, newMode in
-            if activeHighlightId != newMode {
-                withAnimation(.spring(response: 0.30, dampingFraction: 0.78)) {
-                    activeHighlightId = newMode
-                }
-            }
-        }
-    }
-}
-
-private struct LocalDisplayModePillView: View {
-    @ObservedObject private var localization = AppLocalization.shared
-    let mode: LocalDisplayMode
-    let isSelected: Bool
-    let namespace: Namespace.ID
-    let onSelect: () -> Void
-
-    @State private var isHovered = false
-
-    var body: some View {
-        Button(action: onSelect) {
-            HStack(spacing: 6) {
-                Image(systemName: mode.icon)
-                    .font(.system(size: 11.5, weight: isSelected ? .bold : .medium))
-                Text(L10n.lookup(mode.rawValue))
-                    .font(.system(size: 12.5, weight: isSelected ? .semibold : .regular))
-                    .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .frame(minHeight: 32)
-            .fixedSize(horizontal: true, vertical: false)
-            .foregroundStyle(isSelected ? Color.white : (isHovered ? Color.white : Color.white.opacity(0.70)))
-            .background(
-                ZStack {
-                    if isSelected {
-                        LiquidGlassActivePill(isHiRes: false, isHovered: isHovered)
-                            .matchedGeometryEffect(id: "activeDisplayModeHighlight", in: namespace)
-                    } else if isHovered {
-                        LiquidGlassHoverPill()
-                    } else {
-                        Color.white.opacity(0.001)
-                    }
-                }
-            )
-            .scaleEffect(isHovered ? 1.03 : 1.0)
-            .contentShape(Capsule())
-        }
-        .buttonStyle(.plain)
-        .contentShape(Capsule())
-        .onHover { hovering in
-            guard isHovered != hovering else { return }
-            isHovered = hovering
-            if hovering {
-                NSCursor.pointingHand.push()
-            } else {
-                NSCursor.pop()
-            }
-        }
-        .onDisappear {
-            if isHovered {
-                isHovered = false
-                NSCursor.pop()
-            }
-        }
-        .animation(.spring(response: 0.22, dampingFraction: 0.72), value: isHovered)
-    }
-}
-
-// -----------------------------------------------------------------------------
-// DIRECT TRANSFER PROGRESS SHEET
-// -----------------------------------------------------------------------------
-private struct DirectTransferSheet: View {
-    @ObservedObject private var localization = AppLocalization.shared
-    let targetName: String
-    let current: Int
-    let total: Int
-    let currentTitle: String
-    let progress: Double
-    let isComplete: Bool
-    let onDone: () -> Void
-
-    var body: some View {
-        VStack(spacing: 18) {
-            // Header with Icon
-            HStack(spacing: 12) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(WalkmanTheme.hiResGoldGradient)
-                        .frame(width: 44, height: 44)
-                        .shadow(color: WalkmanTheme.hiResGold.opacity(0.3), radius: 6, x: 0, y: 2)
-
-                    Image(systemName: isComplete ? "checkmark.circle.fill" : "arrow.right.circle.fill")
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundStyle(Color.black)
-                }
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(isComplete ? L10n.tr("Transfer Complete") : L10n.tr("Transferring to Walkman..."))
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(Color.white)
-
-                    Text(targetName)
-                        .font(.system(size: 12))
-                        .foregroundStyle(WalkmanTheme.silverMuted)
-                }
-
-                Spacer()
-            }
-
-            // Progress Details
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text(isComplete ? L10n.tr("\(total) track\(L10n.pluralSuffix(total)) transferred") : "Track \(current) of \(total)")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(WalkmanTheme.silverLight)
-
-                    Spacer()
-
-                    Text("\(Int((progress * 100).rounded()))%")
-                        .font(.system(size: 12, design: .monospaced))
-                        .foregroundStyle(WalkmanTheme.hiResGold)
-                }
-
-                // Progress Bar
-                GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .fill(Color.white.opacity(0.08))
-                            .frame(height: 7)
-
-                        RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .fill(WalkmanTheme.hiResGoldGradient)
-                            .frame(width: max(0, min(geo.size.width, geo.size.width * CGFloat(progress))), height: 7)
-                            .animation(.linear(duration: 0.15), value: progress)
-                    }
-                }
-                .frame(height: 7)
-
-                if !isComplete && !currentTitle.isEmpty {
-                    Text(currentTitle)
-                        .font(.system(size: 11))
-                        .foregroundStyle(WalkmanTheme.silverMuted)
-                        .lineLimit(1)
-                }
-            }
-            .padding(14)
-            .background(Color.white.opacity(0.03))
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(Color.white.opacity(0.07), lineWidth: 0.8)
-            )
-
-            // Hardware compliance caption
-            HStack(spacing: 6) {
-                Image(systemName: "checkmark.shield.fill")
-                    .font(.system(size: 11))
-                    .foregroundStyle(WalkmanTheme.hiResGold)
-                Text(L10n.tr("Baseline RGB 800x800 JPEG • Strict ID3v2.3 UTF-16 • AppleDouble Cleaned"))
-                    .font(.system(size: 10))
-                    .foregroundStyle(WalkmanTheme.silverDark)
-            }
-
-            if isComplete {
-                Button(action: onDone) {
-                    Text(L10n.tr("Done"))
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(Color.black)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
-                        .background(WalkmanTheme.hiResGoldGradient)
-                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(24)
-        .frame(width: 440)
-        .background(WalkmanTheme.background)
-    }
-}
-

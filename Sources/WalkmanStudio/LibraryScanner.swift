@@ -5,8 +5,8 @@ public final class LibraryScanner: @unchecked Sendable {
     public static let shared = LibraryScanner()
     private init() {}
 
-    private let supportedExts: Set<String> = [
-        "flac", "mp3", "m4a", "m4b", "aac", "alac", "wav", "aif", "aiff", "dsf", "dff", "ape", "wma"
+    static let audioExtensions: Set<String> = [
+        "flac", "mp3", "m4a", "m4b", "aac", "alac", "wav", "aif", "aiff", "dsf", "dff", "ape", "wma", "ogg", "opus"
     ]
 
     private let dbPath: String = {
@@ -178,7 +178,7 @@ public final class LibraryScanner: @unchecked Sendable {
                             if filename.hasPrefix("._") || filename.hasPrefix(".") { continue }
 
                             let ext = fileURL.pathExtension.lowercased()
-                            guard self.supportedExts.contains(ext) else { continue }
+                            guard Self.audioExtensions.contains(ext) else { continue }
 
                             let fullPath = fileURL.path
                             let rValues = try? fileURL.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])

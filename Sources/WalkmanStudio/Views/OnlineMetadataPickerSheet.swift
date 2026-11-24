@@ -1,113 +1,5 @@
 import SwiftUI
 
-struct OnlineMetadataSelection: Identifiable {
-    let id = UUID()
-    let query: String
-    var candidates: [OnlineTrackMetadata]
-}
-
-/// Owns one lookup, so switching tracks or closing an editor cannot apply a stale result.
-@MainActor
-final class OnlineMetadataLookup: ObservableObject {
-    @Published private(set) var isSearching = false
-    @Published private(set) var isLoadingArtwork = false
-    @Published private(set) var isLoadingSource = false
-    @Published private(set) var selectedSource: OnlineMetadataSource = .itunes
-    @Published var selection: OnlineMetadataSelection?
-    private let service: OnlineMetadataService
-    private var task: Task<Void, Never>?
-    private var onMatch: ((OnlineTrackMetadata) -> Void)?
-    private var searchContext: (filename: String, title: String, artist: String, album: String)?
-    private var cachedCandidates: [OnlineMetadataSource: [OnlineTrackMetadata]] = [:]
-
-    init(service: OnlineMetadataService = .shared) {
-        self.service = service
-    }
-
-    func search(filename: String, title: String, artist: String, album: String,
-                onMatch: @escaping (OnlineTrackMetadata) -> Void, onNotFound: @escaping () -> Void) {
-        cancel()
-        isSearching = true
-        self.onMatch = onMatch
-        searchContext = (filename, title, artist, album)
-        task = Task {
-            let candidates = await service.searchMetadata(filename: filename, currentTitle: title,
-                                                          currentArtist: artist, currentAlbum: album)
-            guard !Task.isCancelled else { return }
-            if candidates.count > 1 {
-                selectedSource = OnlineMetadataSource(rawValue: candidates[0].source) ?? .itunes
-                cachedCandidates[selectedSource] = candidates
-                let terms = OnlineMetadataService.cleanSearchTerms(filename: filename, title: title, artist: artist)
-                selection = OnlineMetadataSelection(query: terms.query, candidates: candidates)
-            } else if let only = candidates.first {
-                await apply(only)
-            } else {
-                cancel()
-                onNotFound()
-            }
-        }
-    }
-
-    func selectSource(_ source: OnlineMetadataSource, reload: Bool = false) {
-        guard selection != nil, !isLoadingArtwork, let context = searchContext else { return }
-        guard source != selectedSource || reload else { return }
-        task?.cancel()
-        task = nil
-        selectedSource = source
-        selection?.candidates = []
-        if !reload, let cached = cachedCandidates[source] {
-            selection?.candidates = cached
-            isLoadingSource = false
-            return
-        }
-        isLoadingSource = true
-        task = Task {
-            let candidates = await service.searchMetadata(filename: context.filename, currentTitle: context.title,
-                                                          currentArtist: context.artist, currentAlbum: context.album,
-                                                          source: source)
-            guard !Task.isCancelled else { return }
-            cachedCandidates[source] = candidates
-            selection?.candidates = candidates
-            isLoadingSource = false
-        }
-    }
-
-    func choose(_ candidate: OnlineTrackMetadata) {
-        guard !isLoadingSource, !isLoadingArtwork,
-              selection?.candidates.contains(where: { $0.id == candidate.id }) == true else { return }
-        isLoadingArtwork = true
-        task = Task { await apply(candidate) }
-    }
-
-    private func apply(_ candidate: OnlineTrackMetadata) async {
-        guard !Task.isCancelled else { return }
-        isLoadingArtwork = true
-        let metadata = await service.loadArtwork(for: candidate)
-        guard !Task.isCancelled else { return }
-        let completion = onMatch
-        selection = nil
-        isSearching = false
-        isLoadingArtwork = false
-        onMatch = nil
-        searchContext = nil
-        cachedCandidates = [:]
-        task = nil
-        completion?(metadata)
-    }
-
-    func cancel() {
-        task?.cancel()
-        task = nil
-        selection = nil
-        onMatch = nil
-        isSearching = false
-        isLoadingArtwork = false
-        isLoadingSource = false
-        searchContext = nil
-        cachedCandidates = [:]
-    }
-}
-
 struct OnlineMetadataPickerSheet: View {
     @ObservedObject private var localization = AppLocalization.shared
     let selection: OnlineMetadataSelection
@@ -154,6 +46,17 @@ struct OnlineMetadataPickerSheet: View {
                 .disabled(lookup.isLoadingArtwork)
                 .padding(.top, 8)
 
+                if lookup.selectedSource == .itunes {
+                    ITunesStorefrontPicker(selection: Binding(
+                        get: { lookup.storefront },
+                        set: { storefront in
+                            selectedID = nil
+                            lookup.selectStorefront(storefront)
+                        }
+                    ), locale: localization.locale)
+                    .disabled(lookup.isLoadingArtwork)
+                }
+
                 HStack(alignment: .firstTextBaseline) {
                     Text(selection.query)
                         .font(.callout.weight(.medium))
@@ -185,7 +88,9 @@ struct OnlineMetadataPickerSheet: View {
                         .foregroundStyle(.secondary)
                     Text(L10n.tr("No results available"))
                         .font(.headline)
-                    Text(L10n.tr("Try again or choose another source."))
+                    Text(lookup.selectedSource == .itunes
+                         ? L10n.tr("Try another region or metadata source.")
+                         : L10n.tr("Try again or choose another source."))
                         .foregroundStyle(.secondary)
                     Button(L10n.tr("Try Again")) {
                         selectedID = nil
@@ -295,25 +200,5 @@ struct OnlineMetadataPickerSheet: View {
         }
         if !candidate.trackNumber.isEmpty { parts.append(L10n.tr("Track \(candidate.trackNumber)")) }
         return parts.isEmpty ? L10n.tr("Additional details unavailable") : parts.joined(separator: " · ")
-    }
-}
-
-private struct OnlineMetadataPickerModifier<ID: Equatable>: ViewModifier {
-    @ObservedObject var lookup: OnlineMetadataLookup
-    let identity: ID
-
-    func body(content: Content) -> some View {
-        content
-            .sheet(item: $lookup.selection, onDismiss: { lookup.cancel() }) { selection in
-                OnlineMetadataPickerSheet(selection: selection, lookup: lookup)
-            }
-            .onChange(of: identity) { _ in lookup.cancel() }
-            .onDisappear { lookup.cancel() }
-    }
-}
-
-extension View {
-    func onlineMetadataPicker<ID: Equatable>(_ lookup: OnlineMetadataLookup, identity: ID) -> some View {
-        modifier(OnlineMetadataPickerModifier(lookup: lookup, identity: identity))
     }
 }

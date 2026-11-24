@@ -1,55 +1,4 @@
 import Foundation
-import CoreGraphics
-import ImageIO
-import AppKit
-
-public enum OnlineMetadataSource: String, CaseIterable, Sendable {
-    case itunes = "iTunes"
-    case deezer = "Deezer"
-}
-
-public struct OnlineTrackMetadata: Sendable, Identifiable {
-    public let id: String
-    public let durationSeconds: Double?
-    public let previewArtworkURL: URL?
-    public let title: String
-    public let artist: String
-    public let album: String
-    public let trackNumber: String
-    public let year: String
-    public let genre: String
-    public let artworkData: Data?
-    public let artworkURL: URL?
-    public let source: String
-
-    public init(
-        title: String,
-        artist: String,
-        album: String,
-        trackNumber: String = "",
-        year: String = "",
-        genre: String = "",
-        artworkData: Data? = nil,
-        artworkURL: URL? = nil,
-        source: String = "iTunes",
-        id: String = UUID().uuidString,
-        durationSeconds: Double? = nil,
-        previewArtworkURL: URL? = nil
-    ) {
-        self.id = id
-        self.durationSeconds = durationSeconds
-        self.previewArtworkURL = previewArtworkURL
-        self.title = title
-        self.artist = artist
-        self.album = album
-        self.trackNumber = trackNumber
-        self.year = year
-        self.genre = genre
-        self.artworkData = artworkData
-        self.artworkURL = artworkURL
-        self.source = source
-    }
-}
 
 /// Service to query public music databases (Apple iTunes Search API & Deezer API)
 /// to fetch track metadata (Title, Artist, Album, Track #, Year, Genre) and high-resolution album artwork.
@@ -139,35 +88,36 @@ public final class OnlineMetadataService: @unchecked Sendable {
         currentTitle: String? = nil,
         currentArtist: String? = nil,
         currentAlbum: String? = nil,
-        source: OnlineMetadataSource? = nil
+        source: OnlineMetadataSource? = nil,
+        storefront: ITunesStorefront = .unitedStates
     ) async -> [OnlineTrackMetadata] {
         let terms = Self.cleanSearchTerms(filename: filename, title: currentTitle, artist: currentArtist)
         guard !terms.query.isEmpty, !Task.isCancelled else { return [] }
 
         // A manually selected tab must never silently fall back to another provider.
         if let source {
-            var candidates = await query(source: source, terms: terms.query)
+            var candidates = await query(source: source, terms: terms.query, storefront: storefront)
             if candidates.isEmpty && !Task.isCancelled && !terms.artist.isEmpty && !terms.title.isEmpty {
-                candidates = await query(source: source, terms: terms.title)
+                candidates = await query(source: source, terms: terms.title, storefront: storefront)
             }
             guard !Task.isCancelled else { return [] }
             return Self.rankedCandidates(candidates, title: terms.title, artist: terms.artist, album: currentAlbum ?? "")
         }
 
-        var candidates = await queryiTunes(query: terms.query)
+        var candidates = await queryiTunes(query: terms.query, storefront: storefront)
         if candidates.isEmpty && !Task.isCancelled {
             candidates = await queryDeezer(query: terms.query)
         }
         if candidates.isEmpty && !Task.isCancelled && !terms.artist.isEmpty && !terms.title.isEmpty {
-            candidates = await queryiTunes(query: terms.title)
+            candidates = await queryiTunes(query: terms.title, storefront: storefront)
         }
         guard !Task.isCancelled else { return [] }
         return Self.rankedCandidates(candidates, title: terms.title, artist: terms.artist, album: currentAlbum ?? "")
     }
 
-    private func query(source: OnlineMetadataSource, terms: String) async -> [OnlineTrackMetadata] {
+    private func query(source: OnlineMetadataSource, terms: String, storefront: ITunesStorefront) async -> [OnlineTrackMetadata] {
         switch source {
-        case .itunes: return await queryiTunes(query: terms)
+        case .itunes: return await queryiTunes(query: terms, storefront: storefront, cachePolicy: .reloadIgnoringLocalCacheData)
         case .deezer: return await queryDeezer(query: terms)
         }
     }
@@ -207,9 +157,15 @@ public final class OnlineMetadataService: @unchecked Sendable {
         return nil
     }
 
-    private func queryiTunes(query: String) async -> [OnlineTrackMetadata] {
+    private func queryiTunes(query: String, storefront: ITunesStorefront = .unitedStates,
+                             cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy) async -> [OnlineTrackMetadata] {
+        let parameters = [
+            URLQueryItem(name: "entity", value: "song"),
+            URLQueryItem(name: "country", value: storefront.countryCode),
+            URLQueryItem(name: "lang", value: storefront.countryCode == "JP" ? "ja_jp" : "en_us")
+        ]
         let results = await search(query: query, endpoint: "https://itunes.apple.com/search",
-                                   queryName: "term", extra: [URLQueryItem(name: "entity", value: "song")], resultKey: "results")
+                                   queryName: "term", extra: parameters, resultKey: "results", cachePolicy: cachePolicy)
         return results.compactMap { item in
             guard let trackID = item["trackId"] as? Int,
                   let title = item["trackName"] as? String, !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
@@ -225,7 +181,7 @@ public final class OnlineMetadataService: @unchecked Sendable {
                 trackNumber: (item["trackNumber"] as? Int).map(String.init) ?? "",
                 year: (item["releaseDate"] as? String).map { String($0.prefix(4)) } ?? "",
                 genre: item["primaryGenreName"] as? String ?? "",
-                artworkURL: artwork, source: "iTunes", id: "itunes:\(trackID)",
+                artworkURL: artwork, source: "iTunes", id: "itunes:\(storefront.countryCode):\(trackID)",
                 durationSeconds: (item["trackTimeMillis"] as? Double).map { $0 / 1000 },
                 previewArtworkURL: preview
             )
@@ -253,11 +209,12 @@ public final class OnlineMetadataService: @unchecked Sendable {
     }
 
     private func search(query: String, endpoint: String, queryName: String,
-                        extra: [URLQueryItem] = [], resultKey: String) async -> [[String: Any]] {
+                        extra: [URLQueryItem] = [], resultKey: String,
+                        cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy) async -> [[String: Any]] {
         guard !Task.isCancelled, var components = URLComponents(string: endpoint) else { return [] }
         components.queryItems = [URLQueryItem(name: queryName, value: query), URLQueryItem(name: "limit", value: "25")] + extra
         guard let url = components.url else { return [] }
-        var request = URLRequest(url: url)
+        var request = URLRequest(url: url, cachePolicy: cachePolicy)
         request.setValue("WalkmanStudio/3.1.0", forHTTPHeaderField: "User-Agent")
         request.timeoutInterval = 6
         guard let (data, response) = try? await session.data(for: request),

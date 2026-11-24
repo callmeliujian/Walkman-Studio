@@ -1,19 +1,6 @@
 import XCTest
 @testable import WalkmanStudio
 
-private final class MetadataURLProtocol: URLProtocol {
-    static var respond: (URLRequest) -> Data? = { _ in nil }
-    override class func canInit(with request: URLRequest) -> Bool { true }
-    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
-    override func startLoading() {
-        guard let data = Self.respond(request) else { return }
-        client?.urlProtocol(self, didReceive: HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, cacheStoragePolicy: .notAllowed)
-        client?.urlProtocol(self, didLoad: data)
-        client?.urlProtocolDidFinishLoading(self)
-    }
-    override func stopLoading() {}
-}
-
 final class OnlineMetadataTests: XCTestCase {
     private let results = Data(#"{"results":[{"trackId":1,"trackName":"One Love / People Get Ready","artistName":"Bob Marley","collectionName":"Legend"},{"trackId":2,"trackName":"One Love","artistName":"ARASHI","collectionName":"One Love - Single","trackNumber":1,"releaseDate":"2008-06-25","trackTimeMillis":285000,"primaryGenreName":"J-Pop","artworkUrl100":"https://example.test/100x100bb.jpg"}]}"#.utf8)
 
@@ -110,20 +97,95 @@ final class OnlineMetadataTests: XCTestCase {
     }
 
     @MainActor
-    func testSingleResultAppliesDirectlyAndEmptyResultReportsNotFound() async throws {
-        let lookup = OnlineMetadataLookup(service: service { _ in
-            Data(#"{"results":[{"trackId":2,"trackName":"One Love","artistName":"ARASHI"}]}"#.utf8)
+    func testCanChangeRegionWithOneMatchOrNoMatchesAndApplyJapaneseTags() async throws {
+        let lookup = OnlineMetadataLookup(service: service { request in
+            XCTAssertEqual(request.url?.host, "itunes.apple.com")
+            let items = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)!.queryItems!
+            let query = Dictionary(uniqueKeysWithValues: items.map { ($0.name, $0.value ?? "") })
+            switch query["country"] {
+            case "US":
+                XCTAssertEqual(query["lang"], "en_us")
+                XCTAssertEqual(query["term"], "One Love 嵐")
+                return Data(#"{"results":[{"trackId":2,"trackName":"One Love","artistName":"ARASHI"}]}"#.utf8)
+            case "FR":
+                XCTAssertEqual(query["lang"], "en_us")
+                return Data(#"{"results":[]}"#.utf8)
+            case "JP":
+                XCTAssertEqual(query["lang"], "ja_jp")
+                if query["term"] == "One Love 嵐" { return Data(#"{"results":[]}"#.utf8) }
+                XCTAssertEqual(query["term"], "One Love")
+                return Data(#"{"results":[{"trackId":2,"trackName":"One Love","artistName":"嵐"}]}"#.utf8)
+            default:
+                XCTFail("Unexpected storefront")
+                return Data(#"{"results":[]}"#.utf8)
+            }
         })
         var applied: OnlineTrackMetadata?
         lookup.search(filename: "One Love.flac", title: "One Love", artist: "嵐", album: "", onMatch: { applied = $0 }, onNotFound: { XCTFail("Expected single result") })
+        try await waitUntil { lookup.selection != nil }
+        let english = try XCTUnwrap(lookup.selection?.candidates.first)
+        XCTAssertEqual(english.artist, "ARASHI")
+        XCTAssertNil(applied)
+
+        lookup.selectStorefront(ITunesStorefront(countryCode: "FR"))
+        try await waitUntil { !lookup.isLoadingSource }
+        XCTAssertTrue(lookup.selection?.candidates.isEmpty == true)
+        lookup.selectStorefront(ITunesStorefront(countryCode: "JP"))
+        try await waitUntil { !lookup.isLoadingSource }
+        let japanese = try XCTUnwrap(lookup.selection?.candidates.first)
+        lookup.choose(english)
+        XCTAssertFalse(lookup.isLoadingArtwork)
+        lookup.choose(japanese)
         try await waitUntil { applied != nil }
+        XCTAssertEqual(applied?.artist, "嵐")
         XCTAssertNil(lookup.selection)
-        XCTAssertFalse(lookup.isSearching)
-        let empty = OnlineMetadataLookup(service: service { _ in Data(#"{"results":[],"data":[]}"#.utf8) })
-        var notFound = false
-        empty.search(filename: "Missing.flac", title: "Missing", artist: "", album: "", onMatch: { _ in XCTFail("Must not apply") }, onNotFound: { notFound = true })
-        try await waitUntil { notFound }
-        XCTAssertFalse(empty.isSearching)
+
+        lookup.search(filename: "One Love.flac", title: "One Love", artist: "嵐", album: "", onMatch: { _ in }, onNotFound: {})
+        try await waitUntil { lookup.selection != nil }
+        XCTAssertEqual(lookup.storefront, .unitedStates)
+        XCTAssertEqual(lookup.selection?.candidates.first?.artist, "ARASHI")
+        lookup.cancel()
+    }
+
+    @MainActor
+    func testEmptyInitialSearchCanFindARegionalRelease() async throws {
+        let lookup = OnlineMetadataLookup(service: service { request in
+            let items = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?.queryItems
+            if items?.contains(URLQueryItem(name: "country", value: "JP")) == true {
+                return Data(#"{"results":[{"trackId":4,"trackName":"春よ、来い"}]}"#.utf8)
+            }
+            return Data(#"{"results":[],"data":[]}"#.utf8)
+        })
+        lookup.search(filename: "春よ、来い.flac", title: "", artist: "", album: "",
+                      onMatch: { _ in XCTFail("Must wait for selection") }, onNotFound: { XCTFail("Must allow region changes") })
+        try await waitUntil { lookup.selection != nil }
+        XCTAssertTrue(lookup.selection?.candidates.isEmpty == true)
+        lookup.selectStorefront(ITunesStorefront(countryCode: "JP"))
+        try await waitUntil { !lookup.isLoadingSource }
+        XCTAssertEqual(lookup.selection?.candidates.first?.title, "春よ、来い")
+        lookup.cancel()
+    }
+
+    @MainActor
+    func testChangingRegionDuringLookupKeepsOnlyLatestResults() async throws {
+        let lookup = OnlineMetadataLookup(service: service { request in
+            let items = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?.queryItems
+            let country = items?.first { $0.name == "country" }?.value
+            if country == "FR" { return nil }
+            if country == "JP" {
+                return Data(#"{"results":[{"trackId":2,"trackName":"One Love","artistName":"嵐"}]}"#.utf8)
+            }
+            return self.results
+        })
+        lookup.search(filename: "One Love.flac", title: "One Love", artist: "嵐", album: "",
+                      onMatch: { _ in XCTFail("Unexpected automatic selection") }, onNotFound: {})
+        try await waitUntil { lookup.selection != nil }
+        lookup.selectStorefront(ITunesStorefront(countryCode: "FR"))
+        XCTAssertTrue(lookup.isLoadingSource)
+        lookup.selectStorefront(ITunesStorefront(countryCode: "JP"))
+        try await waitUntil { !lookup.isLoadingSource }
+        XCTAssertEqual(lookup.selection?.candidates.map(\.artist), ["嵐"])
+        lookup.cancel()
     }
 
     @MainActor

@@ -12,6 +12,7 @@ public final class TransferQueueService: ObservableObject {
     public static let shared = TransferQueueService()
 
     @Published public var queue: [TransferItem] = []
+    private var directTransferMounts = Set<String>()
 
     // Sony Walkman DAP Supported Audio Formats (Non-Android Firmware: NW-A30/A40/A50, NW-ZX300, NW-WM1A/WM1Z, etc.)
     public static let supportedWalkmanExtensions: Set<String> = [
@@ -203,16 +204,53 @@ public final class TransferQueueService: ObservableObject {
         skipDuplicates: Bool = true,
         progress: @escaping (_ current: Int, _ total: Int, _ trackTitle: String) -> Void
     ) async throws -> Int {
+        let result = try await transferWithResult(tracks: tracks, to: targetDrive, skipDuplicates: skipDuplicates, progress: progress)
+        return result.transferred
+    }
+
+    func transferWithResult(
+        tracks: [Track],
+        to targetDrive: WalkmanDrive,
+        skipDuplicates: Bool = true,
+        progress: @MainActor (_ current: Int, _ total: Int, _ trackTitle: String) -> Void
+    ) async throws -> DirectTransferResult {
+        let mount = URL(fileURLWithPath: targetDrive.mountPoint).resolvingSymlinksInPath().path
+        guard directTransferMounts.insert(mount).inserted else {
+            throw NSError(domain: "WalkmanStudio.Transfer", code: 1, userInfo: [
+                NSLocalizedDescriptionKey: L10n.tr("A transfer to \(targetDrive.name) is already in progress.")
+            ])
+        }
+        defer { directTransferMounts.remove(mount) }
+        return try await copyTracks(tracks, to: targetDrive, skipDuplicates: skipDuplicates, progress: progress)
+    }
+
+    private nonisolated func copyTracks(
+        _ tracks: [Track],
+        to targetDrive: WalkmanDrive,
+        skipDuplicates: Bool,
+        progress: @MainActor (_ current: Int, _ total: Int, _ trackTitle: String) -> Void
+    ) async throws -> DirectTransferResult {
         let targetRootDir = URL(fileURLWithPath: targetDrive.musicDir)
-        var transferredCount = 0
+        var result = DirectTransferResult()
+        var destinationIndex = WalkmanImportIndex(tracks: [])
+        if skipDuplicates {
+            let library = await LibraryScanner.shared.scan(
+                musicDir: targetRootDir,
+                additionalDirs: [URL(fileURLWithPath: targetDrive.learningDir)]
+            )
+            destinationIndex = WalkmanImportIndex(tracks: library.tracks)
+        }
 
         for (index, track) in tracks.enumerated() {
             let src = URL(fileURLWithPath: track.fullPath)
+            await progress(index + 1, tracks.count, track.title.isEmpty ? src.lastPathComponent : track.title)
+            guard FileManager.default.fileExists(atPath: targetDrive.mountPoint) else {
+                throw CocoaError(.fileNoSuchFile, userInfo: [NSFilePathErrorKey: targetDrive.mountPoint])
+            }
             guard FileManager.default.fileExists(atPath: src.path) else {
+                result.missing += 1
                 continue
             }
-
-            progress(index + 1, tracks.count, track.title.isEmpty ? src.lastPathComponent : track.title)
 
             // Sanitize names for Sony Walkman filesystem
             let rawArtist = track.artist.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -247,9 +285,12 @@ public final class TransferQueueService: ObservableObject {
                     durationSeconds: track.durationSeconds,
                     sourceURL: src,
                     targetDrive: targetDrive,
-                    targetMode: .music
+                    targetMode: .music,
+                    existingTracks: destinationIndex.candidates(title: curTitle, filename: src.lastPathComponent),
+                    useCachedLibraryIfEmpty: false
                 )
                 if dupCheck.isDuplicate || FileManager.default.fileExists(atPath: dest.path) {
+                    result.duplicates += 1
                     continue
                 }
             }
@@ -257,11 +298,19 @@ public final class TransferQueueService: ObservableObject {
             let albumDir = dest.deletingLastPathComponent()
             try FileManager.default.createDirectory(at: albumDir, withIntermediateDirectories: true)
 
-            // Copy file directly
-            if FileManager.default.fileExists(atPath: dest.path) {
-                try? FileManager.default.removeItem(at: dest)
+            // Publish only a complete copy so a retry cannot mistake a partial file for a duplicate.
+            let stagingURL = albumDir.appendingPathComponent(".walkman-import-\(UUID().uuidString)")
+            defer { try? FileManager.default.removeItem(at: stagingURL) }
+            try FileManager.default.copyItem(at: src, to: stagingURL)
+            if !skipDuplicates && FileManager.default.fileExists(atPath: dest.path) {
+                try FileManager.default.removeItem(at: dest)
             }
-            try FileManager.default.copyItem(at: src, to: dest)
+            do {
+                try FileManager.default.moveItem(at: stagingURL, to: dest)
+            } catch let error as CocoaError where skipDuplicates && error.code == .fileWriteFileExists {
+                result.duplicates += 1
+                continue
+            }
 
             // Hardware Compliance 1: Strict Baseline RGB JPEG Cover Art (max 800x800)
             var finalArtData: Data? = nil
@@ -307,9 +356,18 @@ public final class TransferQueueService: ObservableObject {
             let dsStore = dest.deletingLastPathComponent().appendingPathComponent(".DS_Store")
             try? FileManager.default.removeItem(at: dsStore)
 
-            transferredCount += 1
+            if skipDuplicates {
+                var imported = track
+                imported.fullPath = dest.path
+                imported.filename = dest.lastPathComponent
+                imported.title = curTitle
+                imported.artist = curArtist
+                imported.album = curAlbum
+                destinationIndex.insert(imported)
+            }
+            result.transferred += 1
         }
 
-        return transferredCount
+        return result
     }
 }
