@@ -31,6 +31,8 @@ public struct ContentView: View {
     @State private var showingMtpHelpSheet: Bool = false
     @State private var driveCache: [String: DriveLibraryCache] = [:]
     @State private var libraryScanTask: Task<Void, Never>? = nil
+    @State private var pendingTrackDeletions: [String: Set<Track.ID>] = [:]
+    @State private var showTrackDeletionError = false
 
     // Window tracking & Track Detail (Inspector) expansion state
     @State private var hostWindow: NSWindow? = nil
@@ -309,6 +311,7 @@ public struct ContentView: View {
     }
     
     private func refreshLibrary() {
+        libraryScanTask?.cancel()
         guard let drive = activeDrive else {
             self.tracks = []
             self.cachedArtists = []
@@ -323,7 +326,8 @@ public struct ContentView: View {
         isScanning = true
         let expectedMount = drive.mountPoint
         
-        libraryScanTask?.cancel()
+        // A requested scan resumes after the last file deletion on this drive finishes.
+        guard pendingTrackDeletions[expectedMount] == nil else { return }
         libraryScanTask = Task {
             var scanDirs: [URL] = [URL(fileURLWithPath: drive.musicDir)]
             let learningURL = URL(fileURLWithPath: drive.learningDir)
@@ -366,6 +370,7 @@ public struct ContentView: View {
             if Task.isCancelled { return }
             
             await MainActor.run {
+                guard !Task.isCancelled, self.activeDrive?.mountPoint == expectedMount else { return }
                 let cacheEntry = DriveLibraryCache(
                     tracks: result.tracks,
                     cachedArtists: precomputedArtists,
@@ -377,7 +382,6 @@ public struct ContentView: View {
                 )
                 self.driveCache[expectedMount] = cacheEntry
                 
-                guard self.activeDrive?.mountPoint == expectedMount else { return }
                 self.tracks = result.tracks
                 self.cachedArtists = precomputedArtists
                 self.cachedAlbums = precomputedAlbums
@@ -449,6 +453,10 @@ public struct ContentView: View {
     }
     
     private func deleteTrackFromDevice(_ track: Track) {
+        guard let mount = activeDrive?.mountPoint,
+              pendingTrackDeletions[mount, default: []].insert(track.id).inserted else { return }
+        libraryScanTask?.cancel()
+
         // 1. If currently playing, stop playback immediately
         if player.currentTrack?.id == track.id {
             player.stopAndClear()
@@ -530,11 +538,24 @@ public struct ContentView: View {
         
         // 4. Physical deletion on device in background
         Task {
-            await WalkmanEngine.shared.deleteTrackFile(atPath: track.fullPath)
-            CoverArtCache.shared.invalidate(forFullPath: track.fullPath, artist: track.primaryArtist, album: track.album)
-            LibraryScanner.shared.removeFromCache(fullPath: track.fullPath)
+            let deleted = await WalkmanEngine.shared.deleteTrackFile(atPath: track.fullPath)
+            if deleted {
+                CoverArtCache.shared.invalidate(forFullPath: track.fullPath, artist: track.primaryArtist, album: track.album)
+                LibraryScanner.shared.removeFromCache(fullPath: track.fullPath)
+            }
             
             await MainActor.run {
+                self.pendingTrackDeletions[mount]?.remove(track.id)
+                if self.pendingTrackDeletions[mount]?.isEmpty == true {
+                    self.pendingTrackDeletions[mount] = nil
+                }
+                if !deleted {
+                    self.driveCache[mount] = nil
+                    self.showTrackDeletionError = true
+                }
+                if self.activeDrive?.mountPoint == mount && (self.isScanning || !deleted) {
+                    self.refreshLibrary()
+                }
                 // Refresh drive free/used space metrics
                 let detected = WalkmanEngine.shared.detectDrives()
                 self.drives = detected
@@ -1397,6 +1418,9 @@ public struct ContentView: View {
                 currentDeviceInfo: deviceInfo,
                 onDismiss: { showAboutSheet = false }
             )
+        }
+        .alert(L10n.tr("Could not delete the song from the device."), isPresented: $showTrackDeletionError) {
+            Button(L10n.tr("Close"), role: .cancel) {}
         }
         .sheet(isPresented: $showManageFoldersSheet) {
             ManageLocalFoldersSheet(

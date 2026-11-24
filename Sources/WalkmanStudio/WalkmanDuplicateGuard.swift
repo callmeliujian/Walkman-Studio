@@ -50,7 +50,8 @@ public final class WalkmanDuplicateGuard: Sendable {
         targetDrive: WalkmanDrive?,
         targetMode: TransferTargetMode = .music,
         existingTracks: [Track] = [],
-        useCachedLibraryIfEmpty: Bool = true
+        useCachedLibraryIfEmpty: Bool = true,
+        canPlayExistingFile: ((URL) -> Bool)? = nil
     ) -> DuplicateCheckResult {
         // 1. Physical Target Path & Directory Check on Target Storage
         if let drive = targetDrive {
@@ -96,6 +97,7 @@ public final class WalkmanDuplicateGuard: Sendable {
                                 if let src = sourceURL, src.path == candidatePath {
                                     continue
                                 }
+                                if canPlayExistingFile?(URL(fileURLWithPath: candidatePath)) == false { continue }
                                 var isDirectory: ObjCBool = false
                                 if FileManager.default.fileExists(atPath: candidatePath, isDirectory: &isDirectory), !isDirectory.boolValue {
                                     let matchedTr = existingTracks.first(where: { $0.fullPath == candidatePath }) ?? {
@@ -208,6 +210,11 @@ public final class WalkmanDuplicateGuard: Sendable {
 
             // CRITICAL: Strict Artist Compatibility Verification
             let artistsMatch = Self.areArtistsCompatible(artistA: artist, artistB: tr.artist)
+
+            // An unplayable copy must not suppress a playable version on this device.
+            let filenameMatches = sourceURL?.lastPathComponent.lowercased() == tr.filename.lowercased()
+            guard trTitle == normTitle || filenameMatches else { continue }
+            if canPlayExistingFile?(URL(fileURLWithPath: tr.fullPath)) == false { continue }
 
             // Case A: Normalized Title and Artist Match
             if trTitle == normTitle && artistsMatch {

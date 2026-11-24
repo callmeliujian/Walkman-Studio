@@ -1,13 +1,6 @@
 import SwiftUI
 import AppKit
 
-fileprivate struct FilterOption: Identifiable {
-    let id: String
-    let title: String
-    let icon: String?
-    let isHiRes: Bool
-}
-
 public struct LibraryView: View {
     @ObservedObject private var localization = AppLocalization.shared
     let tracks: [Track]
@@ -30,7 +23,7 @@ public struct LibraryView: View {
     @State private var searchQuery: String = ""
     @State private var isSearchExpanded: Bool = false
     @State private var sortOrder = defaultSortOrder
-    @State private var displayedTracks: [Track] = []
+    @State private var visibleTracks: [Track] = []
     @State private var sortedBaseTracks: [Track] = []
     @State private var visibleTrackIds: Set<String> = []
     @State private var isBatchAnalyzing: Bool = false
@@ -58,13 +51,6 @@ public struct LibraryView: View {
         self.onTrimCutTrack = onTrimCutTrack
     }
     
-    private var visibleTracks: [Track] {
-        if displayedTracks.isEmpty && !tracks.isEmpty && searchQuery.isEmpty && formatFilter == "ALL" {
-            return sortedBaseTracks.isEmpty ? tracks : sortedBaseTracks
-        }
-        return displayedTracks
-    }
-    
     private static func sortTracksDefault(_ list: [Track]) -> [Track] {
         return list.sorted { a, b in
             if a.artist != b.artist { return a.artist < b.artist }
@@ -73,11 +59,15 @@ public struct LibraryView: View {
         }
     }
     
-    private func recomputeDisplayedTracks(newSortOrder: [KeyPathComparator<Track>]? = nil) {
-        let baseList = sortedBaseTracks.isEmpty ? tracks : sortedBaseTracks
+    private func updateTracks(_ tracks: [Track]) {
+        let sorted = Self.sortTracksDefault(tracks)
+        sortedBaseTracks = sorted
+        recomputeDisplayedTracks(from: sorted)
+    }
+
+    private func recomputeDisplayedTracks(from baseList: [Track]) {
         let q = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        let activeSort = newSortOrder ?? sortOrder
-        let isDefaultSort = (activeSort == Self.defaultSortOrder)
+        let isDefaultSort = (sortOrder == Self.defaultSortOrder)
         
         let filtered: [Track]
         if q.isEmpty {
@@ -110,19 +100,14 @@ public struct LibraryView: View {
             // stable filtering preserves the sorted order with ZERO sorting cost!
             finalTracks = filtered
         } else {
-            finalTracks = filtered.sorted(using: activeSort)
+            finalTracks = filtered.sorted(using: sortOrder)
         }
         
-        self.displayedTracks = finalTracks
+        self.visibleTracks = finalTracks
         self.visibleTrackIds = Set(finalTracks.map(\.id))
-        syncQueue()
-    }
-
-    private func syncQueue() {
-        let currentVisible = visibleTracks
-        player.activeQueueProvider = { currentVisible }
+        player.activeQueueProvider = { finalTracks }
         if player.isPlaying {
-            player.currentQueue = currentVisible
+            player.currentQueue = finalTracks
         }
     }
     
@@ -160,12 +145,12 @@ public struct LibraryView: View {
         }
     }
     
-    private let filterOptions: [FilterOption] = [
-        FilterOption(id: "ALL", title: "All Formats", icon: nil, isHiRes: false),
-        FilterOption(id: "FLAC", title: "FLAC", icon: nil, isHiRes: false),
-        FilterOption(id: "MP3", title: "MP3", icon: nil, isHiRes: false),
-        FilterOption(id: "M4A", title: "M4A", icon: nil, isHiRes: false),
-        FilterOption(id: "HI-RES", title: "Hi-Res", icon: "waveform", isHiRes: true)
+    private let filterOptions: [LibraryFormatOption] = [
+        LibraryFormatOption(id: "ALL", title: "All Formats", icon: nil, isHiRes: false),
+        LibraryFormatOption(id: "FLAC", title: "FLAC", icon: nil, isHiRes: false),
+        LibraryFormatOption(id: "MP3", title: "MP3", icon: nil, isHiRes: false),
+        LibraryFormatOption(id: "M4A", title: "M4A", icon: nil, isHiRes: false),
+        LibraryFormatOption(id: "HI-RES", title: "Hi-Res", icon: "waveform", isHiRes: true)
     ]
     
     public var body: some View {
@@ -203,23 +188,19 @@ public struct LibraryView: View {
             }
         }
         .onAppear {
-            if sortedBaseTracks.isEmpty && !tracks.isEmpty {
-                sortedBaseTracks = Self.sortTracksDefault(tracks)
-            }
-            recomputeDisplayedTracks()
+            updateTracks(tracks)
         }
-        .onChange(of: tracks) {
-            sortedBaseTracks = Self.sortTracksDefault(tracks)
-            recomputeDisplayedTracks()
+        .onChange(of: tracks) { newTracks in
+            updateTracks(newTracks)
         }
         .onChange(of: searchQuery) {
-            recomputeDisplayedTracks()
+            recomputeDisplayedTracks(from: sortedBaseTracks)
         }
         .onChange(of: formatFilter) {
-            recomputeDisplayedTracks()
+            recomputeDisplayedTracks(from: sortedBaseTracks)
         }
         .onChange(of: sortOrder) {
-            recomputeDisplayedTracks()
+            recomputeDisplayedTracks(from: sortedBaseTracks)
         }
         .onDisappear {
             player.activeQueueProvider = nil
@@ -363,7 +344,7 @@ public struct LibraryView: View {
     }
     
     private var formatSegmentedBar: some View {
-        FormatSegmentedBarView(
+        LibraryFormatSegmentedBarView(
             options: filterOptions,
             selectedFilter: $formatFilter,
             onSelectFilter: { newFilter in
@@ -830,15 +811,8 @@ public struct LibraryView: View {
                 Divider()
                 
                 Button(role: .destructive) {
-                    let targets = tracks.filter { selection.contains($0.id) }
-                    let toDelete = targets.isEmpty ? [track] : targets
-                    let idsToDelete = Set(toDelete.map { $0.id })
-                    displayedTracks.removeAll(where: { idsToDelete.contains($0.id) })
-                    if let sel = selectedTrackId, idsToDelete.contains(sel) {
-                        selectedTrackId = nil
-                    }
-                    for tr in toDelete {
-                        onDeleteTrack?(tr)
+                    for target in tracks where selection.contains(target.id) {
+                        onDeleteTrack?(target)
                     }
                 } label: {
                     Label(selection.count > 1 ? L10n.tr("Delete \(selection.count) Songs from Device") : L10n.tr("Delete from Device"), systemImage: "trash")
@@ -871,13 +845,13 @@ public struct LibraryView: View {
                 if let info = try? await SenseMeEngine.shared.analyzeAndInject(fileURL: url) {
                     LibraryScanner.shared.updateCachedSenseMe(fullPath: tr.fullPath, info: info)
                     await MainActor.run {
-                        if let index = self.displayedTracks.firstIndex(where: { $0.id == tr.id }) {
-                            self.displayedTracks[index].isSenseMeAnalyzed = true
-                            self.displayedTracks[index].senseMeBpm = info.bpm
-                            self.displayedTracks[index].senseMeValence = info.valence
-                            self.displayedTracks[index].senseMeArousal = info.arousal
-                            self.displayedTracks[index].senseMeChannels = info.channels
-                            self.displayedTracks[index].senseMeHighlightSec = info.highlightSec
+                        if let index = self.visibleTracks.firstIndex(where: { $0.id == tr.id }) {
+                            self.visibleTracks[index].isSenseMeAnalyzed = true
+                            self.visibleTracks[index].senseMeBpm = info.bpm
+                            self.visibleTracks[index].senseMeValence = info.valence
+                            self.visibleTracks[index].senseMeArousal = info.arousal
+                            self.visibleTracks[index].senseMeChannels = info.channels
+                            self.visibleTracks[index].senseMeHighlightSec = info.highlightSec
                         }
                     }
                 }
@@ -890,209 +864,5 @@ public struct LibraryView: View {
                 }
             }
         }
-    }
-}
-
-// -----------------------------------------------------------------------------
-// FORMAT SEGMENTED BAR VIEW (LIQUID GLASS SLIDING PILL TRANSITION)
-// -----------------------------------------------------------------------------
-private struct FormatSegmentedBarView: View {
-    @ObservedObject private var localization = AppLocalization.shared
-    let options: [FilterOption]
-    @Binding var selectedFilter: String
-    let onSelectFilter: (String) -> Void
-    
-    @Namespace private var highlightNamespace
-    @State private var activeHighlightId: String = "ALL"
-    
-    var body: some View {
-        HStack(spacing: 4) {
-            ForEach(options) { opt in
-                FormatTabPillView(
-                    option: opt,
-                    isSelected: activeHighlightId == opt.id,
-                    namespace: highlightNamespace,
-                    onSelect: {
-                        guard selectedFilter != opt.id else { return }
-                        withAnimation(.spring(response: 0.30, dampingFraction: 0.78)) {
-                            activeHighlightId = opt.id
-                        }
-                        onSelectFilter(opt.id)
-                    }
-                )
-            }
-        }
-        .padding(3)
-        .frame(height: 38)
-        .background(Color.white.opacity(0.04))
-        .clipShape(Capsule())
-        .overlay(
-            Capsule()
-                .stroke(Color.white.opacity(0.10), lineWidth: 0.8)
-        )
-        .fixedSize(horizontal: true, vertical: false)
-        .onAppear {
-            activeHighlightId = selectedFilter
-        }
-        .onChange(of: selectedFilter) { _, newFilter in
-            if activeHighlightId != newFilter {
-                withAnimation(.spring(response: 0.30, dampingFraction: 0.78)) {
-                    activeHighlightId = newFilter
-                }
-            }
-        }
-    }
-}
-
-// -----------------------------------------------------------------------------
-// FORMAT TAB PILL VIEW (ROUND LIQUID GLASS CLICK BOX WITH HOVER & SLIDING PILL)
-// -----------------------------------------------------------------------------
-private struct FormatTabPillView: View {
-    @ObservedObject private var localization = AppLocalization.shared
-    let option: FilterOption
-    let isSelected: Bool
-    let namespace: Namespace.ID
-    let onSelect: () -> Void
-    
-    @State private var isHovered = false
-    
-    var body: some View {
-        Button(action: onSelect) {
-            HStack(spacing: 5.5) {
-                if let icon = option.icon {
-                    Image(systemName: icon)
-                        .font(.system(size: 11, weight: isSelected ? .bold : .semibold))
-                }
-                Text(L10n.lookup(option.title))
-                    .font(.system(size: 12.5, weight: isSelected ? .bold : .medium))
-                    .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 7)
-            .frame(height: 32)
-            .fixedSize(horizontal: true, vertical: false)
-            .foregroundStyle(
-                isSelected ?
-                    (option.isHiRes ? WalkmanTheme.hiResGoldLight : Color.white) :
-                    (isHovered ? Color.white : Color.white.opacity(0.70))
-            )
-            .background(
-                ZStack {
-                    if isSelected {
-                        // Liquid Glass Active Pill Highlight — smoothly transfers via matched geometry
-                        ActivePillBackground(isHiRes: option.isHiRes, isHovered: isHovered)
-                            .matchedGeometryEffect(id: "activeTabHighlight", in: namespace)
-                    } else if isHovered {
-                        // Liquid Glass Hover Pill (Round frosted glass box)
-                        HoverPillBackground()
-                    } else {
-                        // Transparent hit-testable canvas
-                        Color.white.opacity(0.001)
-                    }
-                }
-            )
-            .scaleEffect(isHovered ? 1.03 : 1.0)
-            .contentShape(Capsule())
-        }
-        .buttonStyle(.plain)
-        .contentShape(Capsule())
-        .onHover { hovering in
-            guard isHovered != hovering else { return }
-            isHovered = hovering
-            if hovering {
-                NSCursor.pointingHand.push()
-            } else {
-                NSCursor.pop()
-            }
-        }
-        .onDisappear {
-            if isHovered {
-                isHovered = false
-                NSCursor.pop()
-            }
-        }
-        .animation(.spring(response: 0.22, dampingFraction: 0.72), value: isHovered)
-    }
-}
-
-// -----------------------------------------------------------------------------
-// ACTIVE LIQUID GLASS PILL BACKGROUND
-// -----------------------------------------------------------------------------
-private struct ActivePillBackground: View {
-    @ObservedObject private var localization = AppLocalization.shared
-    let isHiRes: Bool
-    let isHovered: Bool
-    
-    var body: some View {
-        ZStack {
-            // Liquid Glass Translucent Body Fill
-            Color.white.opacity(isHiRes ? 0.13 : 0.16)
-            
-            // Top specular refraction sheen
-            VStack(spacing: 0) {
-                LinearGradient(
-                    stops: [
-                        .init(color: .white.opacity(isHovered ? 0.42 : 0.35), location: 0.0),
-                        .init(color: .clear, location: 1.0)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .frame(height: 6)
-                Spacer(minLength: 0)
-            }
-        }
-        .clipShape(Capsule())
-        .overlay(
-            Capsule()
-                .stroke(
-                    isHiRes ? WalkmanTheme.hiResGold.opacity(0.55) : Color.white.opacity(isHovered ? 0.45 : 0.34),
-                    lineWidth: 0.85
-                )
-        )
-        .shadow(
-            color: Color.black.opacity(0.25),
-            radius: 3,
-            x: 0,
-            y: 1
-        )
-    }
-}
-
-// -----------------------------------------------------------------------------
-// HOVER LIQUID GLASS PILL BACKGROUND
-// -----------------------------------------------------------------------------
-private struct HoverPillBackground: View {
-    @ObservedObject private var localization = AppLocalization.shared
-    var body: some View {
-        ZStack {
-            Color.white.opacity(0.09)
-            
-            // Subtle specular refraction on top edge
-            VStack(spacing: 0) {
-                LinearGradient(
-                    stops: [
-                        .init(color: .white.opacity(0.20), location: 0.0),
-                        .init(color: .clear, location: 1.0)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .frame(height: 5.5)
-                Spacer(minLength: 0)
-            }
-        }
-        .clipShape(Capsule())
-        .overlay(
-            Capsule()
-                .stroke(Color.white.opacity(0.22), lineWidth: 0.85)
-        )
-        .shadow(
-            color: Color.black.opacity(0.15),
-            radius: 2,
-            x: 0,
-            y: 1
-        )
     }
 }

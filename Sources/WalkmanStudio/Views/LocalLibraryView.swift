@@ -48,6 +48,7 @@ public struct LocalLibraryView: View {
     // Direct Transfer to Walkman State
     @State private var isDirectTransferring: Bool = false
     @State private var directTransferProgress: Double = 0.0
+    @State private var conversionProgress: AudioConversionProgress?
     @State private var directTransferCurrentIndex: Int = 0
     @State private var directTransferTotalCount: Int = 0
     @State private var directTransferCurrentTitle: String = ""
@@ -66,9 +67,8 @@ public struct LocalLibraryView: View {
     @State private var transferWarningTitle: String = ""
     @State private var transferWarningMessage: String = ""
     @State private var pendingWarningTracks: [Track] = []
-    @State private var supportedTracksForMixedChoice: [Track] = []
-    @State private var pendingTarget: WalkmanDrive?
-    @State private var hasMixedFormats: Bool = false
+    @State private var compatibilityPlan: TransferCompatibilityPlan?
+    @State private var isCheckingCompatibility = false
 
     public init(
         tracks: [Track],
@@ -450,6 +450,12 @@ public struct LocalLibraryView: View {
             }
         }
         .background(WalkmanTheme.background.ignoresSafeArea())
+        .overlay {
+            if isCheckingCompatibility {
+                ProgressView(L10n.tr("Checking audio compatibility…"))
+                    .padding().background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
+            }
+        }
         .onChange(of: sortOption) { _, _ in
             if displayMode == .songs {
                 songsSortOrder = Self.defaultSongsSortOrder
@@ -501,34 +507,31 @@ public struct LocalLibraryView: View {
         } message: { folder in
             Text(L10n.tr("This will remove \"\(folder.displayName)\" and its indexed tracks from your Walkman Studio database. Files on disk will NOT be deleted."))
         }
-        .sheet(isPresented: $showDirectTransferSheet) {
-            DirectTransferSheet(
-                targetName: directTransferTargetName,
-                current: directTransferCurrentIndex,
-                total: directTransferTotalCount,
-                currentTitle: directTransferCurrentTitle,
-                progress: directTransferProgress,
-                isComplete: directTransferComplete,
-                result: transferResult,
-                onDone: {
+        .sheet(isPresented: $showDirectTransferSheet, onDismiss: { compatibilityPlan = nil }) {
+            if let plan = compatibilityPlan {
+                TransferCompatibilitySheet(plan: plan) { choice in
+                    compatibilityPlan = nil
+                    startDirectTransfer(plan: plan, conversion: choice)
+                } onCancel: {
                     showDirectTransferSheet = false
                 }
-            )
-            .interactiveDismissDisabled(isDirectTransferring)
+            } else {
+                DirectTransferSheet(
+                    targetName: directTransferTargetName,
+                    current: directTransferCurrentIndex,
+                    total: directTransferTotalCount,
+                    currentTitle: directTransferCurrentTitle,
+                    progress: directTransferProgress,
+                    conversionProgress: conversionProgress,
+                    isComplete: directTransferComplete,
+                    result: transferResult,
+                    onDone: { showDirectTransferSheet = false }
+                )
+                .interactiveDismissDisabled(isDirectTransferring)
+            }
         }
         .alert(transferWarningTitle, isPresented: $showTransferWarningAlert) {
-            if hasMixedFormats {
-                Button(L10n.tr("Transfer & Convert (All)")) {
-                    TransferQueueService.shared.enqueue(tracks: pendingWarningTracks)
-                    onGoToTransfer?()
-                }
-                if let targetDrive = pendingTarget, drives.contains(where: { $0.id == targetDrive.id }) {
-                    Button(L10n.tr("Transfer \(supportedTracksForMixedChoice.count) Supported Tracks")) {
-                        startDirectTransfer(tracks: supportedTracksForMixedChoice, targetDrive: targetDrive)
-                    }
-                }
-                Button(L10n.tr("Cancel"), role: .cancel) { }
-            } else if !pendingWarningTracks.isEmpty {
+            if !pendingWarningTracks.isEmpty {
                 Button(L10n.tr("Open Transfer & Convert")) {
                     TransferQueueService.shared.enqueue(tracks: pendingWarningTracks)
                     onGoToTransfer?()
@@ -1666,7 +1669,7 @@ public struct LocalLibraryView: View {
     // TRANSFER TO WALKMAN ORCHESTRATION
     // -------------------------------------------------------------------------
     private func handleTransferToWalkman(tracks: [Track], targetDrive requestedDrive: WalkmanDrive? = nil) {
-        guard !tracks.isEmpty, !isDirectTransferring else { return }
+        guard !tracks.isEmpty, !isDirectTransferring, !isCheckingCompatibility, compatibilityPlan == nil else { return }
 
         // 1. Check if a physical Sony Walkman DAP is mounted
         let walkmanDrive = requestedDrive ?? (activeDrive?.type == .local ? nil : activeDrive) ?? drives.first(where: { $0.type != .local })
@@ -1675,56 +1678,33 @@ public struct LocalLibraryView: View {
             transferWarningTitle = L10n.tr("No Walkman Connected")
             transferWarningMessage = L10n.tr("Please connect your Sony Walkman DAP via USB to transfer songs directly.\n\nWould you like to redirect to the Transfer & Convert tab to prepare your queue?")
             pendingWarningTracks = tracks
-            pendingTarget = nil
-            hasMixedFormats = false
             showTransferWarningAlert = true
             return
         }
 
-        let isTargetAndroid = WalkmanDeviceDetector.isAndroidModel(modelRaw: targetDrive.name)
-            || WalkmanUSBDetector.shared.connectedDevices.contains(where: { $0.isAndroid })
-
-        // 2. Format Support Check
-        let unsupported = tracks.filter { track in
-            let ext = URL(fileURLWithPath: track.fullPath).pathExtension.lowercased()
-            return !TransferQueueService.isFormatSupported(ext: ext, isAndroid: isTargetAndroid)
-        }
-
-        if !unsupported.isEmpty {
-            let uniqueExts = Array(Set(unsupported.map { ".\(URL(fileURLWithPath: $0.fullPath).pathExtension.lowercased())" })).sorted().joined(separator: ", ")
-            pendingWarningTracks = tracks
-            pendingTarget = targetDrive
-
-            let deviceDesc = isTargetAndroid ? L10n.tr("your Android Walkman") : L10n.tr("Sony Walkman firmware")
-            if unsupported.count == tracks.count {
-                // ALL selected tracks are unsupported
-                hasMixedFormats = false
-                transferWarningTitle = L10n.tr("Unsupported Audio Format")
-                transferWarningMessage = L10n.tr("The selected track\(L10n.currentLanguage.resolvedIdentifier() == "zh-Hans" ? "" : (tracks.count == 1 ? " is" : "s are")) in an audio format (\(uniqueExts)) not natively supported by \(deviceDesc).\n\nRedirect to the Transfer & Convert tab to optimize and convert \(tracks.count == 1 ? L10n.tr("this track") : L10n.tr("these tracks")) before transferring to your Walkman?")
-                showTransferWarningAlert = true
+        isCheckingCompatibility = true
+        let availableDrives = drives
+        Task { @MainActor in
+            let plan = await Task.detached(priority: .userInitiated) {
+                TransferCompatibilityPlan(tracks: tracks, target: targetDrive, drives: availableDrives)
+            }.value
+            isCheckingCompatibility = false
+            if plan.affected.isEmpty {
+                startDirectTransfer(plan: plan)
             } else {
-                // MIXED: some supported, some unsupported
-                hasMixedFormats = true
-                let supported = tracks.filter { track in
-                    let ext = URL(fileURLWithPath: track.fullPath).pathExtension.lowercased()
-                    return TransferQueueService.isFormatSupported(ext: ext, isAndroid: isTargetAndroid)
-                }
-                supportedTracksForMixedChoice = supported
-                transferWarningTitle = L10n.tr("Unsupported Formats Detected")
-                transferWarningMessage = L10n.tr("\(unsupported.count) of \(tracks.count) selected tracks are in formats (\(uniqueExts)) not natively playable on \(deviceDesc).\n\nWould you like to redirect to the Transfer & Convert tab to optimize all tracks, or transfer only the \(supported.count) supported track\(L10n.pluralSuffix(supported.count)) directly?")
-                showTransferWarningAlert = true
+                compatibilityPlan = plan
+                showDirectTransferSheet = true
             }
-            return
         }
-
-        // 3. ALL tracks are supported -> Execute Direct Transfer to Walkman
-        startDirectTransfer(tracks: tracks, targetDrive: targetDrive)
     }
 
-    private func startDirectTransfer(tracks: [Track], targetDrive: WalkmanDrive) {
+    private func startDirectTransfer(plan: TransferCompatibilityPlan, conversion: String? = nil) {
+        let tracks = plan.tracks
+        let targetDrive = plan.target
         directTransferTotalCount = tracks.count
         directTransferCurrentIndex = 0
         directTransferProgress = 0.0
+        conversionProgress = nil
         directTransferCurrentTitle = ""
         directTransferTargetName = targetDrive.name
         directTransferComplete = false
@@ -1735,9 +1715,10 @@ public struct LocalLibraryView: View {
         Task { @MainActor in
             do {
                 transferResult = try await TransferQueueService.shared.transferWithResult(
-                    tracks: tracks,
-                    to: targetDrive
+                    plan: plan, conversion: conversion,
+                    onConversionProgress: { conversionProgress = $0 }
                 ) { current, total, trackTitle in
+                    conversionProgress = nil
                     directTransferCurrentIndex = current
                     directTransferCurrentTitle = trackTitle
                     directTransferProgress = Double(current - 1) / Double(total)
@@ -1747,7 +1728,6 @@ public struct LocalLibraryView: View {
             } catch {
                 showDirectTransferSheet = false
                 pendingWarningTracks = []
-                hasMixedFormats = false
                 transferWarningTitle = L10n.tr("Transfer Failed")
                 transferWarningMessage = error.localizedDescription
                 showTransferWarningAlert = true

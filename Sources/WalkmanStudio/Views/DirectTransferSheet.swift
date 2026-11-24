@@ -7,6 +7,7 @@ struct DirectTransferSheet: View {
     let total: Int
     let currentTitle: String
     let progress: Double
+    let conversionProgress: AudioConversionProgress?
     let isComplete: Bool
     let result: DirectTransferResult
     let onDone: () -> Void
@@ -85,6 +86,9 @@ struct DirectTransferSheet: View {
                         .font(.system(size: 11))
                         .foregroundStyle(WalkmanTheme.silverMuted)
                         .lineLimit(1)
+                }
+                if !isComplete, let conversionProgress {
+                    AudioConversionProgressView(progress: conversionProgress)
                 }
             }
             .padding(14)

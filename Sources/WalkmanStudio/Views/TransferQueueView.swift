@@ -18,6 +18,9 @@ public struct TransferQueueView: View {
         get { queueService.queue }
         nonmutating set { queueService.queue = newValue }
     }
+    @State private var compatibilityPlan: TransferCompatibilityPlan?
+    @State private var checkingCompatibility = false
+    @State private var writtenURLs: [URL: URL] = [:]
     @State private var isProcessing: Bool = false
     @State private var isTargeted: Bool = false
     @State private var queueSearchText: String = ""
@@ -63,6 +66,7 @@ public struct TransferQueueView: View {
     @State private var transferCurrentArtist: String = ""
     @State private var transferCurrentStage: String = ""
     @State private var transferProgress: Double = 0.0
+    @State private var conversionProgress: AudioConversionProgress?
     @State private var transferSuccessCount: Int = 0
     @State private var transferSkippedCount: Int = 0
     @State private var transferFailedCount: Int = 0
@@ -103,7 +107,7 @@ public struct TransferQueueView: View {
     }
 
     private var isLocalDestination: Bool {
-        targetDriveId == "local_library" || targetDriveId.hasPrefix("local_folder_") || (drives.isEmpty && !targetDriveId.hasPrefix("/Volumes"))
+        targetDriveId == "local_library" || targetDriveId.hasPrefix("local_folder_")
     }
 
     private var selectedTarget: WalkmanDrive? {
@@ -116,7 +120,7 @@ public struct TransferQueueView: View {
             }
             return WalkmanDrive.localLibrary(at: defaultLocalURL, name: "Local Music Library")
         }
-        return drives.first(where: { $0.mountPoint == targetDriveId }) ?? activeDrive ?? (drives.isEmpty ? WalkmanDrive.localLibrary(at: defaultLocalURL) : nil)
+        return drives.first(where: { $0.mountPoint == targetDriveId })
     }
 
     private var queueTotalBytes: Int64 {
@@ -323,7 +327,7 @@ public struct TransferQueueView: View {
                                         showTransferProgressModal = true
                                     }
                                 } else {
-                                    startBatchTransfer(skipExistingDuplicates: true)
+                                    checkBatchCompatibility()
                                 }
                             }) {
                                 HStack(spacing: 8) {
@@ -363,7 +367,7 @@ public struct TransferQueueView: View {
                                 )
                             )
                             .frame(maxWidth: .infinity)
-                            .disabled((queue.isEmpty && !isProcessing) || isBatchOptimizing || isBatchFetchingLyrics)
+                            .disabled(((queue.isEmpty || selectedTarget == nil) && !isProcessing) || isBatchOptimizing || isBatchFetchingLyrics)
 
                             Spacer(minLength: 0)
 
@@ -609,6 +613,12 @@ public struct TransferQueueView: View {
                 }
             }
 
+            .disabled(checkingCompatibility)
+
+            if checkingCompatibility {
+                ProgressView(L10n.tr("Checking audio compatibility…")).padding().background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
+            }
+
             // Drag & Drop Hover Overlay (illuminates over the entire view when files are dragged)
             if isTargeted {
                 ZStack {
@@ -647,6 +657,14 @@ public struct TransferQueueView: View {
         .onDrop(of: ["public.file-url"], isTargeted: $isTargeted) { providers in
             handleDrop(providers: providers)
             return true
+        }
+        .sheet(item: $compatibilityPlan) { plan in
+            TransferCompatibilitySheet(plan: plan) { choice in
+                compatibilityPlan = nil
+                startBatchTransfer(plan: plan, conversion: choice)
+            } onCancel: {
+                compatibilityPlan = nil
+            }
         }
         .sheet(item: $itemToEdit) { item in
             QueueItemEditorSheet(
@@ -993,6 +1011,10 @@ public struct TransferQueueView: View {
                                         .lineLimit(1)
                                 }
                             }
+                            if let conversionProgress {
+                                AudioConversionProgressView(progress: conversionProgress)
+                                    .frame(maxWidth: 420)
+                            }
                         }
                     }
 
@@ -1141,13 +1163,8 @@ public struct TransferQueueView: View {
     private func cancelTransfer() {
         transferTask?.cancel()
         withAnimation(.easeInOut(duration: 0.20)) {
-            isProcessing = false
             showTransferProgressModal = false
-            for i in 0..<queue.count {
-                if queue[i].status == .converting {
-                    queue[i].status = .pending
-                }
-            }
+            conversionProgress = nil
         }
     }
 
@@ -1572,23 +1589,8 @@ public struct TransferQueueView: View {
         }
     }
 
-    private func destinationExtension(for sourceURL: URL) -> String {
-        switch selectedPreset {
-        case "copy_optimize", "copy_raw":
-            let ext = sourceURL.pathExtension.lowercased()
-            if ext == "m4b" { return "m4a" } // Remux .m4b audiobooks into .m4a for Walkman hardware playback
-            return ext
-        case "flac_16", "flac_24_48", "flac_24_96", "flac_24", "flac_24_192":
-            return "flac"
-        case "mp3_320", "mp3_256", "mp3_v0", "mp3_192", "mp3_128":
-            return "mp3"
-        case "aac_320", "aac_256", "aac_128", "alac_16":
-            return "m4a"
-        case "wav_16":
-            return "wav"
-        default:
-            return "flac"
-        }
+    private func destinationExtension(for sourceURL: URL, preset: String? = nil) -> String {
+        TransferAudioFormat.output(preset: preset ?? selectedPreset, source: .init(ext: sourceURL.pathExtension.lowercased(), codec: "")).ext
     }
 
     private func destinationTracks(for drive: WalkmanDrive?) -> [Track] {
@@ -1610,6 +1612,7 @@ public struct TransferQueueView: View {
         let target = selectedTarget
         let mode = targetMode
         let destTracks = destinationTracks(for: target)
+        let profile = target.flatMap { WalkmanPlaybackProfile.load(for: $0, drives: drives) }
 
         for i in 0..<queue.count {
             guard queue[i].status == .pending else { continue }
@@ -1621,7 +1624,7 @@ public struct TransferQueueView: View {
                 sourceURL: queue[i].sourceURL,
                 targetDrive: target,
                 targetMode: mode,
-                existingTracks: destTracks
+                existingTracks: destTracks, canPlayExistingFile: profile?.canPlay
             )
             queue[i].isDuplicateOnWalkman = check.isDuplicate
             queue[i].duplicateMatchInfo = check.reason
@@ -1712,6 +1715,7 @@ public struct TransferQueueView: View {
         let target = selectedTarget
         let mode = targetMode
         let libTracks = destinationTracks(for: target)
+        let profile = target.flatMap { WalkmanPlaybackProfile.load(for: $0, drives: drives) }
 
         importTask = Task.detached(priority: .userInitiated) {
             let supportedExtensions: Set<String> = [
@@ -1790,7 +1794,7 @@ public struct TransferQueueView: View {
                                 fileURL: fileURL,
                                 target: target,
                                 mode: mode,
-                                existingTracks: libTracks
+                                existingTracks: libTracks, playbackProfile: profile
                             )
                             return (idx, res.item, res.duplicateCandidate)
                         }
@@ -1823,7 +1827,7 @@ public struct TransferQueueView: View {
                                 fileURL: fileURL,
                                 target: target,
                                 mode: mode,
-                                existingTracks: libTracks
+                                existingTracks: libTracks, playbackProfile: profile
                             )
                             return (idx, res.item, res.duplicateCandidate)
                         }
@@ -1984,7 +1988,7 @@ public struct TransferQueueView: View {
         fileURL: URL,
         target: WalkmanDrive?,
         mode: TransferTargetMode,
-        existingTracks: [Track]
+        existingTracks: [Track], playbackProfile: WalkmanPlaybackProfile?
     ) -> (item: TransferItem, duplicateCandidate: DuplicateImportCandidate?) {
         var item = TransferItem(sourceURL: fileURL)
         item.title = WalkmanEngine.sanitizeWalkmanText(fileURL.deletingPathExtension().lastPathComponent)
@@ -2049,7 +2053,7 @@ public struct TransferQueueView: View {
             sourceURL: fileURL,
             targetDrive: target,
             targetMode: mode,
-            existingTracks: existingTracks
+            existingTracks: existingTracks, canPlayExistingFile: playbackProfile?.canPlay
         )
 
         var candidate: DuplicateImportCandidate? = nil
@@ -2078,11 +2082,12 @@ public struct TransferQueueView: View {
         let target = selectedTarget
         let mode = targetMode
         let libTracks = destinationTracks(for: target)
+        let profile = target.flatMap { WalkmanPlaybackProfile.load(for: $0, drives: drives) }
         let res = Self.prepareSingleTransferItem(
             fileURL: url,
             target: target,
             mode: mode,
-            existingTracks: libTracks
+            existingTracks: libTracks, playbackProfile: profile
         )
         var item = res.item
         if isDuplicate {
@@ -2314,9 +2319,32 @@ public struct TransferQueueView: View {
         }
     }
 
-    private func startBatchTransfer(skipExistingDuplicates: Bool = true) {
-        guard let target = selectedTarget else { return }
-        let pendingIndices = queue.indices.filter { queue[$0].status == .pending }
+    private func checkBatchCompatibility() {
+        guard !checkingCompatibility, !isProcessing, let target = selectedTarget else { return }
+        let tracks = queue.filter { $0.status == .pending }.map { $0.toPreviewTrack() }
+        guard !tracks.isEmpty else { return }
+        let preset = selectedPreset
+        let availableDrives = drives
+        checkingCompatibility = true
+        Task { @MainActor in
+            let plan = await Task.detached(priority: .userInitiated) {
+                TransferCompatibilityPlan(tracks: tracks, target: target, drives: availableDrives, requestedPreset: preset, remuxAudiobooks: true)
+            }.value
+            checkingCompatibility = false
+            guard selectedTarget?.id == target.id else { return }
+            if plan.affected.isEmpty {
+                startBatchTransfer(plan: plan)
+            } else {
+                compatibilityPlan = plan
+            }
+        }
+    }
+
+    private func startBatchTransfer(plan: TransferCompatibilityPlan, conversion: String? = nil) {
+        let target = plan.target
+        guard selectedTarget?.id == target.id else { return }
+        let plannedPaths = Set(plan.tracks.map(\.fullPath))
+        let pendingIndices = queue.indices.filter { queue[$0].status == .pending && plannedPaths.contains(queue[$0].sourceURL.path) }
         guard !pendingIndices.isEmpty else { return }
 
         transferTask?.cancel()
@@ -2332,6 +2360,7 @@ public struct TransferQueueView: View {
         transferCurrentArtist = ""
         transferCurrentStage = L10n.tr("Initializing transfer...")
         transferProgress = 0.0
+        conversionProgress = nil
         transferSuccessCount = 0
         transferSkippedCount = 0
         transferFailedCount = 0
@@ -2343,7 +2372,7 @@ public struct TransferQueueView: View {
 
             var processedIndex = 0
 
-            for i in 0..<queue.count {
+            for i in pendingIndices {
                 if Task.isCancelled { break }
                 guard queue[i].status == .pending else { continue }
 
@@ -2354,6 +2383,7 @@ public struct TransferQueueView: View {
 
                 await MainActor.run {
                     self.transferCurrentIndex = currentIndex
+                    self.conversionProgress = nil
                     self.transferCurrentTitle = rawSrcTitle
                     self.transferCurrentArtist = rawSrcArtist
                     self.transferCurrentStage = L10n.tr("Checking destination...")
@@ -2362,6 +2392,7 @@ public struct TransferQueueView: View {
                 }
 
                 let src = queue[i].sourceURL
+                let preset = plan.preset(for: src, selection: conversion)
 
                 // Last-mile metadata recovery defense:
                 var curArtist = WalkmanEngine.sanitizeWalkmanText(queue[i].artist, stripExplicitMarkers: false).trimmingCharacters(in: .whitespacesAndNewlines)
@@ -2449,9 +2480,9 @@ public struct TransferQueueView: View {
                     self.transferCurrentArtist = curArtist
                 }
 
-                let ext = destinationExtension(for: src)
+                let ext = destinationExtension(for: src, preset: preset)
 
-                let dest = WalkmanEngine.shared.targetTrackURL(
+                let requested = WalkmanEngine.shared.targetTrackURL(
                     musicRoot: targetRootDir,
                     artist: cleanArtist,
                     album: cleanAlbum,
@@ -2460,69 +2491,76 @@ public struct TransferQueueView: View {
                     ext: ext
                 )
 
+                let dest = plan.profile?.destination(for: requested) ?? requested
                 let albumDir = dest.deletingLastPathComponent()
 
                 // Duplicate Guardrail: Check if track is already present on target Walkman storage
-                if skipExistingDuplicates {
-                    let dupCheck = WalkmanDuplicateGuard.shared.checkTrack(
-                        title: curTitle,
-                        artist: curArtist,
-                        album: curAlbum,
-                        durationSeconds: queue[i].durationSeconds,
-                        sourceURL: src,
-                        targetDrive: target,
-                        targetMode: targetMode,
-                        existingTracks: destinationTracks(for: target)
-                    )
-                    if dupCheck.isDuplicate || FileManager.default.fileExists(atPath: dest.path) {
-                        let reason = dupCheck.reason ?? L10n.tr("Already exists on \(target.name)")
-                        await MainActor.run {
-                            if i < self.queue.count {
-                                self.queue[i].status = .skipped(reason)
-                                self.queue[i].isDuplicateOnWalkman = true
-                                self.queue[i].duplicateMatchInfo = reason
-                                self.queue[i].duplicateMatchedTrack = dupCheck.matchingTrack
-                                self.transferSkippedCount += 1
-                                self.transferProgress = Double(currentIndex) / Double(max(1, self.transferTotalCount))
-                            }
+                let dupCheck = WalkmanDuplicateGuard.shared.checkTrack(
+                    title: curTitle,
+                    artist: curArtist,
+                    album: curAlbum,
+                    durationSeconds: queue[i].durationSeconds,
+                    sourceURL: src,
+                    targetDrive: target,
+                    targetMode: targetMode,
+                    existingTracks: destinationTracks(for: target),
+                    canPlayExistingFile: plan.profile?.canPlay
+                )
+                if dupCheck.isDuplicate || FileManager.default.fileExists(atPath: dest.path) {
+                    let reason = dupCheck.reason ?? L10n.tr("Already exists on \(target.name)")
+                    await MainActor.run {
+                        if i < self.queue.count {
+                            self.queue[i].status = .skipped(reason)
+                            self.queue[i].isDuplicateOnWalkman = true
+                            self.queue[i].duplicateMatchInfo = reason
+                            self.queue[i].duplicateMatchedTrack = dupCheck.matchingTrack
+                            self.transferSkippedCount += 1
+                            self.transferProgress = Double(currentIndex) / Double(max(1, self.transferTotalCount))
                         }
-                        continue
                     }
+                    continue
                 }
 
                 do {
+                    guard FileManager.default.fileExists(atPath: target.mountPoint) else {
+                        throw CocoaError(.fileNoSuchFile, userInfo: [NSFilePathErrorKey: target.mountPoint])
+                    }
                     try FileManager.default.createDirectory(at: albumDir, withIntermediateDirectories: true)
 
                     // 1. Audio Transfer / Transcode
                     await MainActor.run {
-                        self.transferCurrentStage = (self.selectedPreset == "copy_optimize" || self.selectedPreset == "copy_raw")
+                        self.transferCurrentStage = (preset == "copy_optimize" || preset == "copy_raw")
                             ? L10n.tr("Copying audio file to \(target.name)...")
-                            : L10n.tr("Transcoding audio (\(self.presetDisplayName(self.selectedPreset)))...")
+                            : L10n.tr("Transcoding audio (\(self.presetDisplayName(preset)))...")
                     }
 
-                    if selectedPreset == "copy_optimize" || selectedPreset == "copy_raw" {
+                    if preset == "copy_optimize" || preset == "copy_raw" {
                         if src.pathExtension.lowercased() == ext.lowercased() {
-                            try? FileManager.default.removeItem(at: dest)
                             try FileManager.default.copyItem(at: src, to: dest)
                         } else {
                             try await WalkmanEngine.shared.transcodeAudio(
                                 sourceURL: src,
                                 destinationURL: dest,
                                 preset: "copy",
-                                normalizeVolume: false
+                                normalizeVolume: false, overwrite: false
                             )
                         }
                     } else {
                         try await WalkmanEngine.shared.transcodeAudio(
                             sourceURL: src,
                             destinationURL: dest,
-                            preset: selectedPreset,
-                            normalizeVolume: normalizeVolume
-                        )
+                            preset: preset,
+                            normalizeVolume: normalizeVolume,
+                            compatibleStereo: plan.affectedPaths.contains(src.path), overwrite: false,
+                            durationSeconds: plan.sizesByPath[src.path]?.duration ?? queue[i].durationSeconds
+                        ) { progress in
+                            if !Task.isCancelled { self.conversionProgress = progress }
+                        }
+                        conversionProgress = nil
                     }
 
                     // 2. Hardware Metadata & Baseline JPEG Embedding
-                    if selectedPreset != "copy_raw" {
+                    if preset != "copy_raw" {
                         await MainActor.run {
                             self.transferCurrentStage = L10n.tr("Embedding metadata & Baseline RGB artwork...")
                         }
@@ -2665,12 +2703,15 @@ public struct TransferQueueView: View {
 
                     await MainActor.run {
                         if i < self.queue.count {
+                            self.writtenURLs[src] = dest
                             self.queue[i].status = .success
                             self.transferSuccessCount += 1
                             self.transferProgress = Double(currentIndex) / Double(max(1, self.transferTotalCount))
                         }
                     }
                 } catch {
+                    if Task.isCancelled { break }
+                    conversionProgress = nil
                     await MainActor.run {
                         if i < self.queue.count {
                             self.queue[i].status = .failed(error.localizedDescription)
@@ -2687,14 +2728,11 @@ public struct TransferQueueView: View {
             if targetMode == .learning {
                 var albumGroups: [String: [String]] = [:]
                 for itm in queue where itm.status == .success {
-                    let cArtist = WalkmanEngine.shared.sanitizeFilename(itm.artist.isEmpty ? "Unknown Artist" : itm.artist)
                     let cAlbum = WalkmanEngine.shared.sanitizeFilename(itm.album.isEmpty ? "Unknown Album" : itm.album)
-                    let ext = destinationExtension(for: itm.sourceURL)
-                    let tInt = Int(itm.trackNumber.components(separatedBy: "/").first ?? "1") ?? 1
-                    let trackPrefix = String(format: "%02d", tInt)
-                    let cTitle = WalkmanEngine.shared.sanitizeFilename(itm.title.isEmpty ? itm.sourceURL.deletingPathExtension().lastPathComponent : itm.title)
-                    let filename = "\(trackPrefix) - \(cTitle).\(ext)"
-                    let relPath = "\(cArtist)/\(cAlbum)/\(filename)"
+                    guard let dest = writtenURLs[itm.sourceURL] else { continue }
+                    let prefix = targetRootDir.path + "/"
+                    guard dest.path.hasPrefix(prefix) else { continue }
+                    let relPath = String(dest.path.dropFirst(prefix.count))
                     albumGroups[cAlbum, default: []].append(relPath)
                 }
                 
@@ -2707,13 +2745,17 @@ public struct TransferQueueView: View {
                 }
             }
 
-            if isLocalDestination {
+            if target.type == .local {
                 LocalMusicLibraryService.shared.addFolders(urls: [targetRootDir])
                 LocalMusicLibraryService.shared.rescanFolder(url: targetRootDir)
             }
 
             await MainActor.run {
                 if Task.isCancelled {
+                    self.conversionProgress = nil
+                    for i in self.queue.indices where self.queue[i].status == .converting {
+                        self.queue[i].status = .pending
+                    }
                     self.isProcessing = false
                     self.showTransferProgressModal = false
                 } else {
@@ -2724,1041 +2766,6 @@ public struct TransferQueueView: View {
                     self.onTransferComplete()
                 }
             }
-        }
-    }
-}
-
-// -----------------------------------------------------------------------------
-// ENHANCED QUEUE ITEM ROW (PREMIUM GLASS CARD DESIGN)
-// -----------------------------------------------------------------------------
-private struct QueueItemRow: View {
-    @ObservedObject private var localization = AppLocalization.shared
-    @Binding var item: TransferItem
-    let isThisPlaying: Bool
-    let destinationExtension: String
-    var rootFolderName: String = "MUSIC"
-    var isLearningMode: Bool = false
-    var destinationDriveName: String = "Walkman"
-    let onTogglePlay: () -> Void
-    let onPickArtwork: () -> Void
-    let onOptimize: () -> Void
-    let onFetchLyrics: () -> Void
-    let onEdit: () -> Void
-    let onRemove: () -> Void
-
-    @State private var isHovered = false
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 12) {
-                // Play / Pause preview button
-                Button(action: onTogglePlay) {
-                    ZStack {
-                        Circle()
-                            .fill(isThisPlaying ? AnyShapeStyle(WalkmanTheme.silverGradient) : AnyShapeStyle(Color.white.opacity(isHovered ? 0.16 : 0.09)))
-                            .frame(width: 32, height: 32)
-
-                        Image(systemName: isThisPlaying ? "pause.fill" : "play.fill")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(isThisPlaying ? Color(red: 20/255, green: 20/255, blue: 24/255) : Color.white)
-                            .offset(x: isThisPlaying ? 0 : 1)
-                    }
-                }
-                .buttonStyle(.plain)
-                .help(isThisPlaying ? L10n.tr("Pause audio preview") : L10n.tr("Play audio preview"))
-
-                // Cover Artwork Thumbnail with Hardware Compliance Badge
-                ZStack(alignment: .bottomTrailing) {
-                    if let artData = item.artworkData, let img = NSImage(data: artData) {
-                        Image(nsImage: img)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 46, height: 46)
-                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    } else {
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(Color.white.opacity(0.08))
-                            .frame(width: 46, height: 46)
-                            .overlay(
-                                Image(systemName: "music.note")
-                                    .font(.system(size: 18))
-                                    .foregroundStyle(.tertiary)
-                            )
-                    }
-
-                    // Compliance indicator dot
-                    if item.artworkData != nil {
-                        Circle()
-                            .fill(item.isArtworkOptimized ? Color.green : Color.orange)
-                            .frame(width: 10, height: 10)
-                            .overlay(Circle().stroke(Color.black, lineWidth: 1.5))
-                            .offset(x: 2, y: 2)
-                    }
-                }
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(isThisPlaying ? WalkmanTheme.silver : Color.white.opacity(0.12), lineWidth: 1)
-                )
-                .shadow(color: Color.black.opacity(0.25), radius: 3, x: 0, y: 1)
-                .onTapGesture {
-                    onPickArtwork()
-                }
-                .help(L10n.tr("Click to select custom album art or inspect compliance"))
-
-                // Track Details & Metadata Hierarchy
-                VStack(alignment: .leading, spacing: 3) {
-                    // Line 1: Track Number Badge + Title & Badges
-                    HStack(spacing: 6) {
-                        let tNum = item.trackNumber.components(separatedBy: "/").first?.trimmingCharacters(in: .whitespaces) ?? ""
-                        if !tNum.isEmpty, let numInt = Int(tNum), numInt > 0 {
-                            Text(String(format: "%02d", numInt))
-                                .font(WalkmanFont.monoSmall)
-                                .foregroundStyle(WalkmanTheme.hiResGoldLight)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 1.5)
-                                .background(WalkmanTheme.hiResGold.opacity(0.14))
-                                .clipShape(RoundedRectangle(cornerRadius: 3.5, style: .continuous))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 3.5, style: .continuous)
-                                        .stroke(WalkmanTheme.hiResGold.opacity(0.35), lineWidth: 0.75)
-                                )
-                                .help(L10n.tr("Track \(numInt)"))
-                        }
-
-                        Text(item.title.isEmpty ? item.sourceURL.deletingPathExtension().lastPathComponent : item.title)
-                            .font(WalkmanFont.bodyBold)
-                            .foregroundStyle(.white)
-                            .lineLimit(1)
-
-                        if item.bitsPerSample > 16 || item.sampleRate > 48000 {
-                            Text(L10n.tr("Hi-Res"))
-                                .font(WalkmanFont.badge)
-                                .padding(.horizontal, 4.5)
-                                .padding(.vertical, 1.5)
-                                .background(WalkmanTheme.hiResGoldGradient)
-                                .foregroundStyle(Color(red: 20/255, green: 20/255, blue: 24/255))
-                                .clipShape(RoundedRectangle(cornerRadius: 2.5))
-                        }
-
-                        if item.isDuplicateOnWalkman {
-                            HStack(spacing: 3) {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .font(.system(size: 8))
-                                Text(L10n.tr("On \(destinationDriveName)"))
-                                    .font(WalkmanFont.badge)
-                            }
-                            .padding(.horizontal, 4.5)
-                            .padding(.vertical, 1.5)
-                            .background(Color.orange.opacity(0.18))
-                            .foregroundStyle(.orange)
-                            .clipShape(RoundedRectangle(cornerRadius: 2.5))
-                            .overlay(RoundedRectangle(cornerRadius: 2.5).stroke(Color.orange.opacity(0.4), lineWidth: 0.6))
-                            .help(item.duplicateMatchInfo ?? L10n.tr("Already present on \(destinationDriveName)"))
-                        }
-                    }
-
-                    // Line 2: Artist • Album (Year)
-                    HStack(spacing: 5) {
-                        let artistText = item.artist.isEmpty ? "Unknown Artist" : item.artist
-                        let albumText = item.album.isEmpty ? "Unknown Album" : item.album
-                        Text("\(artistText) • \(albumText)")
-                            .font(WalkmanFont.subheadline)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-
-                        if !item.year.isEmpty {
-                            Text("(\(item.year))")
-                                .font(WalkmanFont.monoSmall)
-                                .foregroundStyle(.tertiary)
-                        }
-                    }
-
-                    // Duplicate Match Detail Callout
-                    if item.isDuplicateOnWalkman, let matchInfo = item.duplicateMatchInfo {
-                        HStack(spacing: 5) {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .font(.system(size: 8.5))
-                                .foregroundStyle(.orange)
-                            Text(L10n.tr("Duplicate: \(matchInfo)"))
-                                .font(WalkmanFont.monoSmall)
-                                .foregroundStyle(.orange.opacity(0.95))
-                                .lineLimit(1)
-                                .truncationMode(.middle)
-                        }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2.5)
-                        .background(Color.orange.opacity(0.12))
-                        .clipShape(RoundedRectangle(cornerRadius: 3.5, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 3.5, style: .continuous)
-                                .stroke(Color.orange.opacity(0.28), lineWidth: 0.65)
-                        )
-                    }
-
-                    // Line 3: Tech Specs & Route Preview
-                    HStack(spacing: 6) {
-                        let quality = item.sampleRate > 0 ? "\(item.bitsPerSample)b/\(item.sampleRate/1000)k" : item.format
-                        Text(quality)
-                            .font(WalkmanFont.badge)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1.5)
-                            .background(Color.white.opacity(0.08))
-                            .clipShape(RoundedRectangle(cornerRadius: 3))
-                            .foregroundStyle(.white.opacity(0.85))
-
-                        if item.bitrateKbps > 0 {
-                            Text("\(item.bitrateKbps)k")
-                                .font(WalkmanFont.monoSmall)
-                                .foregroundStyle(.tertiary)
-                        }
-
-                        if item.durationSeconds > 0 {
-                            Text(WalkmanEngine.formatDuration(item.durationSeconds))
-                                .font(WalkmanFont.monoSmall)
-                                .foregroundStyle(.tertiary)
-                        }
-
-                        if let lyr = item.lyrics, !lyr.isEmpty {
-                            HStack(spacing: 3) {
-                                Image(systemName: "quote.bubble.fill")
-                                    .font(.system(size: 8))
-                                Text(item.isLyricsSynced ? L10n.tr("Synced .LRC") : L10n.tr("Plain Lyrics"))
-                                    .font(WalkmanFont.badge)
-                            }
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1.5)
-                            .background(Color.green.opacity(0.15))
-                            .foregroundStyle(.green)
-                            .clipShape(Capsule())
-                        }
-
-                        // Subtle clean destination breadcrumb
-                        HStack(spacing: 3) {
-                            Image(systemName: "arrow.right")
-                                .font(.system(size: 8))
-                            let cleanArtist = WalkmanEngine.shared.sanitizeFilename(item.artist.isEmpty ? "Unknown Artist" : item.artist)
-                            let cleanAlbum = WalkmanEngine.shared.sanitizeFilename(item.album.isEmpty ? "Unknown Album" : item.album)
-                            let cleanTitle = WalkmanEngine.shared.sanitizeFilename(item.title.isEmpty ? item.sourceURL.deletingPathExtension().lastPathComponent : item.title)
-                            let tInt = Int(item.trackNumber.components(separatedBy: "/").first ?? "1") ?? 1
-                            let trackPrefix = String(format: "%02d", tInt)
-                            Text("/\(rootFolderName)/\(cleanArtist)/\(cleanAlbum)/\(trackPrefix) - \(cleanTitle).\(destinationExtension)")
-                                .font(WalkmanFont.monoSmall)
-                                .lineLimit(1)
-                                .truncationMode(.middle)
-                        }
-                        .foregroundStyle(.secondary.opacity(0.65))
-                    }
-                }
-
-                Spacer()
-
-                // Status Badge
-                switch item.status {
-                case .pending:
-                    HStack(spacing: 4) {
-                        Circle()
-                            .fill(Color.white.opacity(0.3))
-                            .frame(width: 5, height: 5)
-                        Text(L10n.tr("Ready"))
-                            .font(WalkmanFont.badge)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 3)
-                    .background(Color.white.opacity(0.06))
-                    .clipShape(Capsule())
-
-                case .optimizing:
-                    HStack(spacing: 4) {
-                        ProgressView().scaleEffect(0.55).frame(width: 12, height: 12)
-                        Text(L10n.tr("Optimizing..."))
-                            .font(WalkmanFont.badge)
-                            .foregroundStyle(WalkmanTheme.silverLight)
-                    }
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 3)
-                    .background(Color.white.opacity(0.08))
-                    .clipShape(Capsule())
-
-                case .converting:
-                    HStack(spacing: 5) {
-                        ProgressView().scaleEffect(0.6).frame(width: 12, height: 12)
-                        Text(L10n.tr("Transferring..."))
-                            .font(WalkmanFont.badge)
-                            .foregroundStyle(WalkmanTheme.silverLight)
-                    }
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 3)
-                    .background(WalkmanTheme.hiResGold.opacity(0.15))
-                    .foregroundStyle(WalkmanTheme.hiResGold)
-                    .clipShape(Capsule())
-
-                case .success:
-                    HStack(spacing: 4) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 11))
-                            .foregroundStyle(.green)
-                        Text(L10n.tr("Transferred"))
-                            .font(WalkmanFont.badge)
-                            .foregroundStyle(.green)
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(Color.green.opacity(0.12))
-                    .clipShape(Capsule())
-
-                case .skipped(let reason):
-                    HStack(spacing: 4) {
-                        Image(systemName: "arrow.uturn.right.circle.fill")
-                            .font(.system(size: 11))
-                            .foregroundStyle(.orange)
-                        Text(reason)
-                            .font(WalkmanFont.badge)
-                            .foregroundStyle(.orange)
-                            .lineLimit(1)
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(Color.orange.opacity(0.12))
-                    .clipShape(Capsule())
-                    .help(reason)
-
-                case .failed(let err):
-                    HStack(spacing: 4) {
-                        Image(systemName: "exclamationmark.circle.fill")
-                            .font(.system(size: 11))
-                            .foregroundStyle(.red)
-                        Text(err)
-                            .font(WalkmanFont.subheadline)
-                            .foregroundStyle(.red)
-                            .lineLimit(1)
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(Color.red.opacity(0.12))
-                    .clipShape(Capsule())
-                }
-
-                // Row Action Buttons
-                HStack(spacing: 4) {
-                    if !isLearningMode && item.isMissingMetadata {
-                        Button(action: onOptimize) {
-                            Image(systemName: "sparkles")
-                                .font(.system(size: 10))
-                                .foregroundStyle(.orange)
-                                .padding(6)
-                                .background(Color.orange.opacity(0.15))
-                                .clipShape(Circle())
-                        }
-                        .buttonStyle(.plain)
-                        .help(L10n.tr("Auto-fetch missing metadata from internet"))
-                    }
-
-                    Button(action: onEdit) {
-                        Image(systemName: "pencil")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(isHovered ? .white : .secondary)
-                            .padding(6)
-                            .background(Color.white.opacity(isHovered ? 0.12 : 0.05))
-                            .clipShape(Circle())
-                    }
-                    .buttonStyle(.plain)
-                    .help(L10n.tr("Edit tags, artwork, lyrics, and destination in popup window"))
-
-                    Button(action: onRemove) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(.secondary)
-                            .padding(6)
-                            .background(Color.white.opacity(isHovered ? 0.08 : 0.04))
-                            .clipShape(Circle())
-                    }
-                    .buttonStyle(.plain)
-                    .help(L10n.tr("Remove from queue"))
-                }
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(isThisPlaying ? Color.white.opacity(0.08) : (isHovered ? WalkmanTheme.cardHover : WalkmanTheme.card.opacity(0.55)))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(isThisPlaying ? WalkmanTheme.silver.opacity(0.4) : (isHovered ? Color.white.opacity(0.12) : Color.white.opacity(0.04)), lineWidth: 1)
-        )
-        .onHover { h in isHovered = h }
-        .onTapGesture(count: 2) {
-            onEdit()
-        }
-        .contextMenu {
-            Button(action: onTogglePlay) {
-                Label(isThisPlaying ? L10n.tr("Pause Preview") : L10n.tr("Play Preview"), systemImage: isThisPlaying ? "pause.fill" : "play.fill")
-            }
-            Divider()
-            if !isLearningMode {
-                Button(action: onOptimize) {
-                    Label(L10n.tr("Fetch Online Tags & Cover Art"), systemImage: "sparkles")
-                }
-                Button(action: onFetchLyrics) {
-                    Label(L10n.tr("Fetch Synchronized Lyrics (.LRC)"), systemImage: "quote.bubble")
-                }
-            }
-            Button(action: onPickArtwork) {
-                Label(L10n.tr("Choose Custom Album Art..."), systemImage: "photo")
-            }
-            Button(action: onEdit) {
-                Label(L10n.tr("Edit Metadata & Artwork..."), systemImage: "pencil")
-            }
-            Divider()
-            Button(role: .destructive, action: onRemove) {
-                Label(L10n.tr("Remove from Queue"), systemImage: "trash")
-            }
-        }
-    }
-}
-
-// MARK: - Transfer Mode Segmented Bar View (Liquid Glass Matched Geometry)
-private struct TransferModeSegmentedBarView: View {
-    @ObservedObject private var localization = AppLocalization.shared
-    @Binding var targetMode: TransferTargetMode
-    let onSelectMode: (TransferTargetMode) -> Void
-
-    @Namespace private var modeNamespace
-    @State private var activeModeId: String = TransferTargetMode.music.id
-
-    var body: some View {
-        HStack(spacing: 4) {
-            ForEach(TransferTargetMode.allCases) { mode in
-                TransferModeTabPillView(
-                    mode: mode,
-                    isSelected: activeModeId == mode.id,
-                    namespace: modeNamespace,
-                    onSelect: {
-                        guard targetMode != mode else { return }
-                        withAnimation(.spring(response: 0.30, dampingFraction: 0.78)) {
-                            activeModeId = mode.id
-                        }
-                        onSelectMode(mode)
-                    }
-                )
-            }
-        }
-        .padding(3)
-        .frame(height: 38)
-        .background(Color.white.opacity(0.04))
-        .clipShape(Capsule())
-        .overlay(
-            Capsule()
-                .stroke(Color.white.opacity(0.10), lineWidth: 0.8)
-        )
-        .fixedSize(horizontal: true, vertical: false)
-        .onAppear {
-            activeModeId = targetMode.id
-        }
-        .onChange(of: targetMode) { _, newMode in
-            if activeModeId != newMode.id {
-                withAnimation(.spring(response: 0.30, dampingFraction: 0.78)) {
-                    activeModeId = newMode.id
-                }
-            }
-        }
-    }
-}
-
-private struct TransferModeTabPillView: View {
-    @ObservedObject private var localization = AppLocalization.shared
-    let mode: TransferTargetMode
-    let isSelected: Bool
-    let namespace: Namespace.ID
-    let onSelect: () -> Void
-
-    @State private var isHovered = false
-
-    private var labelTitle: String {
-        switch mode {
-        case .music:
-            return L10n.tr("Music Library")
-        case .learning:
-            return L10n.tr("Language Study")
-        }
-    }
-
-    private var isGold: Bool {
-        mode == .learning
-    }
-
-    var body: some View {
-        Button(action: onSelect) {
-            HStack(spacing: 6) {
-                Image(systemName: mode.icon)
-                    .font(.system(size: 11, weight: isSelected ? .bold : .semibold))
-                Text(labelTitle)
-                    .font(.system(size: 12.5, weight: isSelected ? .bold : .medium))
-                    .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 7)
-            .frame(height: 32)
-            .fixedSize(horizontal: true, vertical: false)
-            .foregroundStyle(
-                isSelected ?
-                    (isGold ? WalkmanTheme.hiResGoldLight : Color.white) :
-                    (isHovered ? (isGold ? WalkmanTheme.hiResGoldLight : Color.white) : Color.white.opacity(0.70))
-            )
-            .background(
-                ZStack {
-                    if isSelected {
-                        ActiveModePillBackground(isGold: isGold, isHovered: isHovered)
-                            .matchedGeometryEffect(id: "activeTransferModeHighlight", in: namespace)
-                    } else if isHovered {
-                        HoverModePillBackground()
-                    } else {
-                        Color.white.opacity(0.001)
-                    }
-                }
-            )
-            .scaleEffect(isHovered ? 1.03 : 1.0)
-            .contentShape(Capsule())
-        }
-        .buttonStyle(.plain)
-        .contentShape(Capsule())
-        .onHover { hovering in
-            guard isHovered != hovering else { return }
-            isHovered = hovering
-            if hovering {
-                NSCursor.pointingHand.push()
-            } else {
-                NSCursor.pop()
-            }
-        }
-        .onDisappear {
-            if isHovered {
-                isHovered = false
-                NSCursor.pop()
-            }
-        }
-        .animation(.spring(response: 0.22, dampingFraction: 0.72), value: isHovered)
-    }
-}
-
-// MARK: - Active & Hover Mode Pill Backgrounds (Liquid Glass Sliding Lens)
-private struct ActiveModePillBackground: View {
-    @ObservedObject private var localization = AppLocalization.shared
-    let isGold: Bool
-    var isHovered: Bool = false
-
-    var body: some View {
-        ZStack {
-            // Translucent Body Fill
-            if isGold {
-                WalkmanTheme.hiResGold.opacity(isHovered ? 0.24 : 0.18)
-            } else {
-                Color.white.opacity(isHovered ? 0.20 : 0.16)
-            }
-
-            // Top specular refraction sheen
-            VStack(spacing: 0) {
-                LinearGradient(
-                    stops: [
-                        .init(color: .white.opacity(isHovered ? 0.42 : 0.35), location: 0.0),
-                        .init(color: .clear, location: 1.0)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .frame(height: 6)
-                Spacer(minLength: 0)
-            }
-        }
-        .clipShape(Capsule())
-        .overlay(
-            Capsule()
-                .stroke(
-                    isGold ?
-                        WalkmanTheme.hiResGold.opacity(isHovered ? 0.70 : 0.55) :
-                        Color.white.opacity(isHovered ? 0.45 : 0.34),
-                    lineWidth: 0.85
-                )
-        )
-        .shadow(
-            color: Color.black.opacity(isHovered ? 0.30 : 0.22),
-            radius: isHovered ? 4 : 2.5,
-            x: 0,
-            y: 1
-        )
-    }
-}
-
-private struct HoverModePillBackground: View {
-    @ObservedObject private var localization = AppLocalization.shared
-    var body: some View {
-        ZStack {
-            Color.white.opacity(0.09)
-            VStack(spacing: 0) {
-                LinearGradient(
-                    stops: [
-                        .init(color: .white.opacity(0.20), location: 0.0),
-                        .init(color: .clear, location: 1.0)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .frame(height: 5.5)
-                Spacer(minLength: 0)
-            }
-        }
-        .clipShape(Capsule())
-        .overlay(
-            Capsule().stroke(Color.white.opacity(0.22), lineWidth: 0.85)
-        )
-        .shadow(color: Color.black.opacity(0.15), radius: 2, x: 0, y: 1)
-    }
-}
-
-// MARK: - Hardware Optimization Toggle Chip View (32pt Liquid Glass Capsule)
-private struct HardwareOptimizationToggleChipView: View {
-    @ObservedObject private var localization = AppLocalization.shared
-    let title: String
-    let icon: String
-    @Binding var isOn: Bool
-    let help: String
-    var disabled: Bool = false
-    var onToggled: ((Bool) -> Void)? = nil
-
-    @State private var isHovered = false
-
-    private var isEffectivelyOn: Bool {
-        !disabled && isOn
-    }
-
-    var body: some View {
-        Button(action: {
-            isOn.toggle()
-            onToggled?(isOn)
-        }) {
-            HStack(spacing: 5.5) {
-                Image(systemName: isEffectivelyOn ? "\(icon).fill" : icon)
-                    .font(.system(size: 10.5, weight: isEffectivelyOn ? .semibold : .regular))
-                    .foregroundStyle(
-                        isEffectivelyOn ?
-                            WalkmanTheme.silverLight :
-                            (isHovered ? Color.white : WalkmanTheme.silverLight.opacity(0.85))
-                    )
-
-                Text(title)
-                    .font(.system(size: 12, weight: isEffectivelyOn ? .semibold : .medium))
-                    .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
-                    .foregroundStyle(
-                        isEffectivelyOn ?
-                            Color.white :
-                            (isHovered ? Color.white : WalkmanTheme.silverLight.opacity(0.85))
-                    )
-
-                if isEffectivelyOn {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 8.5, weight: .bold))
-                        .foregroundStyle(WalkmanTheme.silverLight)
-                }
-            }
-            .padding(.horizontal, 11)
-            .padding(.vertical, 6)
-            .frame(height: 32)
-            .fixedSize(horizontal: true, vertical: false)
-            .background(
-                ZStack {
-                    if isEffectivelyOn {
-                        Color.white.opacity(isHovered ? 0.18 : 0.14)
-                        VStack(spacing: 0) {
-                            LinearGradient(
-                                stops: [
-                                    .init(color: .white.opacity(isHovered ? 0.38 : 0.28), location: 0.0),
-                                    .init(color: .clear, location: 1.0)
-                                ],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                            .frame(height: 5.5)
-                            Spacer(minLength: 0)
-                        }
-                    } else if isHovered {
-                        Color.white.opacity(0.09)
-                        VStack(spacing: 0) {
-                            LinearGradient(
-                                stops: [
-                                    .init(color: .white.opacity(0.18), location: 0.0),
-                                    .init(color: .clear, location: 1.0)
-                                ],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                            .frame(height: 5)
-                            Spacer(minLength: 0)
-                        }
-                    } else {
-                        Color.white.opacity(0.06)
-                    }
-                }
-            )
-            .clipShape(Capsule())
-            .overlay(
-                Capsule()
-                    .stroke(
-                        isEffectivelyOn ?
-                            Color.white.opacity(isHovered ? 0.48 : 0.38) :
-                            (isHovered ? Color.white.opacity(0.28) : Color.white.opacity(0.14)),
-                        lineWidth: 0.85
-                    )
-            )
-            .shadow(
-                color: Color.black.opacity(isEffectivelyOn ? (isHovered ? 0.25 : 0.16) : (isHovered ? 0.12 : 0)),
-                radius: isHovered ? 3 : 2,
-                x: 0,
-                y: 1
-            )
-            .scaleEffect(isHovered ? 1.02 : 1.0)
-            .contentShape(Capsule())
-        }
-        .buttonStyle(.plain)
-        .contentShape(Capsule())
-        .zIndex(isHovered ? 2 : 1)
-        .disabled(disabled)
-        .opacity(disabled ? 0.38 : 1.0)
-        .help(help)
-        .onHover { hovering in
-            guard !disabled else { return }
-            guard isHovered != hovering else { return }
-            isHovered = hovering
-            if hovering {
-                NSCursor.pointingHand.push()
-            } else {
-                NSCursor.pop()
-            }
-        }
-        .onDisappear {
-            if isHovered {
-                isHovered = false
-                NSCursor.pop()
-            }
-        }
-        .animation(.spring(response: 0.22, dampingFraction: 0.72), value: isHovered)
-    }
-}
-
-// MARK: - Transfer Batch Action Button (32pt Liquid Glass Capsule)
-private struct TransferBatchActionButton: View {
-    @ObservedObject private var localization = AppLocalization.shared
-    let title: String
-    let icon: String
-    var isLoading: Bool = false
-    var isDestructive: Bool = false
-    var isDisabled: Bool = false
-    let help: String
-    let action: () -> Void
-
-    @State private var isHovered = false
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 4.5) {
-                if isLoading {
-                    ProgressView().scaleEffect(0.55).frame(width: 12, height: 12)
-                } else {
-                    Image(systemName: icon)
-                        .font(.system(size: 10, weight: .semibold))
-                }
-                Text(title)
-                    .font(.system(size: 11.5, weight: .medium))
-                    .lineLimit(1)
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .frame(height: 32)
-            .foregroundStyle(
-                isDestructive ?
-                    (isHovered ? Color(red: 255/255, green: 130/255, blue: 120/255) : Color(red: 255/255, green: 105/255, blue: 95/255)) :
-                    (isHovered ? Color.white : WalkmanTheme.silverLight)
-            )
-            .background(
-                ZStack {
-                    if isDestructive {
-                        Color.red.opacity(isHovered ? 0.18 : 0.10)
-                    } else {
-                        Color.white.opacity(isHovered ? 0.12 : 0.06)
-                    }
-
-                    VStack(spacing: 0) {
-                        LinearGradient(
-                            stops: [
-                                .init(color: .white.opacity(isHovered ? 0.20 : 0.10), location: 0.0),
-                                .init(color: .clear, location: 1.0)
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                        .frame(height: 5)
-                        Spacer(minLength: 0)
-                    }
-                }
-            )
-            .clipShape(Capsule())
-            .overlay(
-                Capsule()
-                    .stroke(
-                        isDestructive ?
-                            Color.red.opacity(isHovered ? 0.40 : 0.22) :
-                            Color.white.opacity(isHovered ? 0.22 : 0.10),
-                        lineWidth: 0.85
-                    )
-            )
-            .shadow(color: Color.black.opacity(isHovered ? 0.15 : 0), radius: 2, y: 1)
-            .scaleEffect(isHovered ? 1.02 : 1.0)
-            .contentShape(Capsule())
-        }
-        .buttonStyle(.plain)
-        .contentShape(Capsule())
-        .zIndex(isHovered ? 2 : 1)
-        .disabled(isDisabled)
-        .opacity(isDisabled ? 0.4 : 1.0)
-        .help(help)
-        .onHover { hovering in
-            guard !isDisabled else { return }
-            guard isHovered != hovering else { return }
-            isHovered = hovering
-            if hovering {
-                NSCursor.pointingHand.push()
-            } else {
-                NSCursor.pop()
-            }
-        }
-        .onDisappear {
-            if isHovered {
-                isHovered = false
-                NSCursor.pop()
-            }
-        }
-        .animation(.spring(response: 0.22, dampingFraction: 0.72), value: isHovered)
-    }
-}
-
-// MARK: - Sort Menu Pill Label (32pt Liquid Glass Capsule)
-private struct SortMenuPillLabel: View {
-    @ObservedObject private var localization = AppLocalization.shared
-    @State private var isHovered = false
-
-    var body: some View {
-        HStack(spacing: 4.5) {
-            Image(systemName: "arrow.up.arrow.down")
-                .font(.system(size: 10, weight: .semibold))
-            Text(L10n.tr("Sort"))
-                .font(.system(size: 11.5, weight: .medium))
-                .lineLimit(1)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
-        .frame(height: 32)
-        .foregroundStyle(isHovered ? Color.white : WalkmanTheme.silverLight)
-        .background(
-            ZStack {
-                Color.white.opacity(isHovered ? 0.12 : 0.06)
-                VStack(spacing: 0) {
-                    LinearGradient(
-                        stops: [
-                            .init(color: .white.opacity(isHovered ? 0.20 : 0.10), location: 0.0),
-                            .init(color: .clear, location: 1.0)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .frame(height: 5)
-                    Spacer(minLength: 0)
-                }
-            }
-        )
-        .clipShape(Capsule())
-        .overlay(
-            Capsule()
-                .stroke(Color.white.opacity(isHovered ? 0.22 : 0.10), lineWidth: 0.85)
-        )
-        .shadow(color: Color.black.opacity(isHovered ? 0.15 : 0), radius: 2, y: 1)
-        .scaleEffect(isHovered ? 1.02 : 1.0)
-        .contentShape(Capsule())
-        .onHover { hovering in
-            guard isHovered != hovering else { return }
-            isHovered = hovering
-            if hovering {
-                NSCursor.pointingHand.push()
-            } else {
-                NSCursor.pop()
-            }
-        }
-        .onDisappear {
-            if isHovered {
-                isHovered = false
-                NSCursor.pop()
-            }
-        }
-        .animation(.spring(response: 0.22, dampingFraction: 0.72), value: isHovered)
-    }
-}
-
-// MARK: - Liquid Glass Dropdown Menu (38pt Standard Dropdown)
-private struct LiquidGlassDropdownMenu<Content: View>: View {
-    @ObservedObject private var localization = AppLocalization.shared
-    let title: String
-    @ViewBuilder let menuContent: () -> Content
-
-    @State private var isHovered = false
-
-    var body: some View {
-        Menu {
-            menuContent()
-        } label: {
-            HStack(spacing: 8) {
-                Text(title)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(Color.white)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-
-                Spacer(minLength: 4)
-
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(isHovered ? WalkmanTheme.silverLight : WalkmanTheme.silverMuted)
-            }
-            .padding(.horizontal, 12)
-            .frame(maxWidth: .infinity)
-            .frame(height: 38)
-            .background(
-                ZStack {
-                    Color.white.opacity(isHovered ? 0.12 : 0.07)
-                    VStack(spacing: 0) {
-                        LinearGradient(
-                            stops: [
-                                .init(color: .white.opacity(isHovered ? 0.24 : 0.14), location: 0.0),
-                                .init(color: .clear, location: 1.0)
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                        .frame(height: 7)
-                        Spacer(minLength: 0)
-                    }
-                }
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(Color.white.opacity(isHovered ? 0.32 : 0.14), lineWidth: 0.85)
-            )
-            .shadow(color: Color.black.opacity(isHovered ? 0.20 : 0.10), radius: 2, y: 1)
-            .scaleEffect(isHovered ? 1.015 : 1.0)
-        }
-        .menuIndicator(.hidden)
-        .buttonStyle(.plain)
-        .onHover { hovering in
-            guard isHovered != hovering else { return }
-            isHovered = hovering
-            if hovering {
-                NSCursor.pointingHand.push()
-            } else {
-                NSCursor.pop()
-            }
-        }
-        .onDisappear {
-            if isHovered {
-                isHovered = false
-                NSCursor.pop()
-            }
-        }
-        .animation(.spring(response: 0.22, dampingFraction: 0.72), value: isHovered)
-    }
-}
-
-// MARK: - Import Progress Bar (Liquid Glass)
-private struct ImportProgressBar: View {
-    @ObservedObject private var localization = AppLocalization.shared
-    let progress: Double
-    let isIndeterminate: Bool
-
-    var body: some View {
-        GeometryReader { geo in
-            ZStack(alignment: .leading) {
-                // Capsule Track
-                Capsule()
-                    .fill(Color.white.opacity(0.08))
-                    .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 0.85))
-
-                // Fill Bar
-                if !isIndeterminate {
-                    let fillWidth = max(8, geo.size.width * CGFloat(min(max(progress, 0.0), 1.0)))
-                    Capsule()
-                        .fill(
-                            LinearGradient(
-                                stops: [
-                                    .init(color: WalkmanTheme.silverLight, location: 0.0),
-                                    .init(color: WalkmanTheme.silver, location: 1.0)
-                                ],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .frame(width: fillWidth)
-                        .overlay(
-                            VStack(spacing: 0) {
-                                LinearGradient(
-                                    stops: [
-                                        .init(color: Color.white.opacity(0.60), location: 0.0),
-                                        .init(color: Color.clear, location: 1.0)
-                                    ],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
-                                .frame(height: 3)
-                                Spacer(minLength: 0)
-                            }
-                            .clipShape(Capsule())
-                        )
-                        .shadow(color: Color.black.opacity(0.25), radius: 3, x: 0, y: 1)
-                } else {
-                    IndeterminateLiquidGlassBar()
-                }
-            }
-        }
-        .frame(height: 8)
-        .animation(.interactiveSpring(response: 0.32, dampingFraction: 0.82), value: progress)
-    }
-}
-
-// MARK: - Indeterminate Liquid Glass Bar
-private struct IndeterminateLiquidGlassBar: View {
-    @ObservedObject private var localization = AppLocalization.shared
-    @State private var phase: CGFloat = -0.3
-
-    var body: some View {
-        GeometryReader { _ in
-            Capsule()
-                .fill(
-                    LinearGradient(
-                        stops: [
-                            .init(color: Color.white.opacity(0.0), location: max(0.0, phase - 0.2)),
-                            .init(color: Color.white.opacity(0.55), location: min(max(0.0, phase), 1.0)),
-                            .init(color: Color.white.opacity(0.0), location: min(1.0, phase + 0.2))
-                        ],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .clipShape(Capsule())
-                .onAppear {
-                    withAnimation(.linear(duration: 1.4).repeatForever(autoreverses: false)) {
-                        phase = 1.3
-                    }
-                }
         }
     }
 }

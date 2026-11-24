@@ -214,6 +214,20 @@ public final class TransferQueueService: ObservableObject {
         skipDuplicates: Bool = true,
         progress: @MainActor (_ current: Int, _ total: Int, _ trackTitle: String) -> Void
     ) async throws -> DirectTransferResult {
+        let plan = await Task.detached {
+            TransferCompatibilityPlan(tracks: tracks, target: targetDrive, drives: [targetDrive])
+        }.value
+        return try await transferWithResult(plan: plan, skipDuplicates: skipDuplicates, progress: progress)
+    }
+
+    func transferWithResult(
+        plan: TransferCompatibilityPlan,
+        conversion: String? = nil,
+        skipDuplicates: Bool = true,
+        onConversionProgress: (@MainActor @Sendable (AudioConversionProgress) -> Void)? = nil,
+        progress: @MainActor (_ current: Int, _ total: Int, _ trackTitle: String) -> Void
+    ) async throws -> DirectTransferResult {
+        let targetDrive = plan.target
         let mount = URL(fileURLWithPath: targetDrive.mountPoint).resolvingSymlinksInPath().path
         guard directTransferMounts.insert(mount).inserted else {
             throw NSError(domain: "WalkmanStudio.Transfer", code: 1, userInfo: [
@@ -221,15 +235,24 @@ public final class TransferQueueService: ObservableObject {
             ])
         }
         defer { directTransferMounts.remove(mount) }
-        return try await copyTracks(tracks, to: targetDrive, skipDuplicates: skipDuplicates, progress: progress)
+        guard plan.affected.isEmpty || conversion.map(plan.choices.contains) == true else {
+            throw NSError(domain: "WalkmanStudio.Transfer", code: 2, userInfo: [
+                NSLocalizedDescriptionKey: L10n.tr("Choose a compatible audio format")
+            ])
+        }
+        return try await copyTracks(plan, conversion: conversion, skipDuplicates: skipDuplicates,
+                                    onConversionProgress: onConversionProgress, progress: progress)
     }
 
     private nonisolated func copyTracks(
-        _ tracks: [Track],
-        to targetDrive: WalkmanDrive,
+        _ plan: TransferCompatibilityPlan,
+        conversion: String?,
         skipDuplicates: Bool,
+        onConversionProgress: (@MainActor @Sendable (AudioConversionProgress) -> Void)?,
         progress: @MainActor (_ current: Int, _ total: Int, _ trackTitle: String) -> Void
     ) async throws -> DirectTransferResult {
+        let targetDrive = plan.target
+        let tracks = plan.tracks
         let targetRootDir = URL(fileURLWithPath: targetDrive.musicDir)
         var result = DirectTransferResult()
         var destinationIndex = WalkmanImportIndex(tracks: [])
@@ -265,9 +288,11 @@ public final class TransferQueueService: ObservableObject {
             let cleanAlbum = WalkmanEngine.shared.sanitizeFilename(curAlbum)
             let cleanTitle = WalkmanEngine.shared.sanitizeFilename(curTitle)
             let trackNum = curTrackNum.isEmpty ? "01" : curTrackNum
-            let ext = src.pathExtension.lowercased()
+            let needsConversion = plan.affectedPaths.contains(src.path)
+            let preset = plan.preset(for: src, selection: conversion)
+            let ext = needsConversion ? TransferAudioFormat.output(preset: preset, source: .init(ext: src.pathExtension, codec: "")).ext : src.pathExtension.lowercased()
 
-            let dest = WalkmanEngine.shared.targetTrackURL(
+            let requested = WalkmanEngine.shared.targetTrackURL(
                 musicRoot: targetRootDir,
                 artist: cleanArtist,
                 album: cleanAlbum,
@@ -275,6 +300,8 @@ public final class TransferQueueService: ObservableObject {
                 title: cleanTitle,
                 ext: ext
             )
+
+            let dest = plan.profile?.destination(for: requested) ?? requested
 
             // Duplicate Guardrail Check
             if skipDuplicates {
@@ -287,7 +314,8 @@ public final class TransferQueueService: ObservableObject {
                     targetDrive: targetDrive,
                     targetMode: .music,
                     existingTracks: destinationIndex.candidates(title: curTitle, filename: src.lastPathComponent),
-                    useCachedLibraryIfEmpty: false
+                    useCachedLibraryIfEmpty: false,
+                    canPlayExistingFile: plan.profile?.canPlay
                 )
                 if dupCheck.isDuplicate || FileManager.default.fileExists(atPath: dest.path) {
                     result.duplicates += 1
@@ -299,9 +327,16 @@ public final class TransferQueueService: ObservableObject {
             try FileManager.default.createDirectory(at: albumDir, withIntermediateDirectories: true)
 
             // Publish only a complete copy so a retry cannot mistake a partial file for a duplicate.
-            let stagingURL = albumDir.appendingPathComponent(".walkman-import-\(UUID().uuidString)")
+            let stagingURL = albumDir.appendingPathComponent(".walkman-import-\(UUID().uuidString)").appendingPathExtension(ext)
             defer { try? FileManager.default.removeItem(at: stagingURL) }
-            try FileManager.default.copyItem(at: src, to: stagingURL)
+            if needsConversion {
+                try await WalkmanEngine.shared.transcodeAudio(
+                    sourceURL: src, destinationURL: stagingURL, preset: preset, compatibleStereo: true,
+                    durationSeconds: plan.sizesByPath[src.path]?.duration, onProgress: onConversionProgress
+                )
+            } else {
+                try FileManager.default.copyItem(at: src, to: stagingURL)
+            }
             if !skipDuplicates && FileManager.default.fileExists(atPath: dest.path) {
                 try FileManager.default.removeItem(at: dest)
             }

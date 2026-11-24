@@ -4,16 +4,6 @@ import AppKit
 import Combine
 import MediaPlayer
 
-public final class PlaybackProgress: ObservableObject, @unchecked Sendable {
-    @Published public var currentTime: Double = 0.0
-    @Published public var duration: Double = 0.0
-
-    public init(currentTime: Double = 0.0, duration: Double = 0.0) {
-        self.currentTime = currentTime
-        self.duration = duration
-    }
-}
-
 public final class AudioPlayerService: NSObject, ObservableObject, @unchecked Sendable {
     public static let shared = AudioPlayerService()
 
@@ -30,8 +20,12 @@ public final class AudioPlayerService: NSObject, ObservableObject, @unchecked Se
     }
     @Published public var currentCoverArt: NSImage?
     @Published public var isSeeking: Bool = false
-    @Published public var isShuffle: Bool = false
-    @Published public var isRepeat: Bool = false
+    @Published public var isShuffle: Bool = false {
+        didSet {
+            if oldValue != isShuffle { shuffledTrackIDs.removeAll() }
+        }
+    }
+    @Published var repeatMode: PlaybackRepeatMode = .off
     
     /// Timestamp where the current track started (e.g. SensMe highlight position)
     @Published public var currentHighlightStartTime: Double? = nil
@@ -54,6 +48,12 @@ public final class AudioPlayerService: NSObject, ObservableObject, @unchecked Se
 
     private var player: AVPlayer = AVPlayer()
     private var timeObserverToken: Any?
+    private var endObserverToken: NSObjectProtocol? {
+        didSet {
+            if let oldValue { NotificationCenter.default.removeObserver(oldValue) }
+        }
+    }
+    private var shuffledTrackIDs: Set<Track.ID> = []
     private var localKeyMonitor: Any?
     public var currentQueue: [Track] = []
 
@@ -85,7 +85,6 @@ public final class AudioPlayerService: NSObject, ObservableObject, @unchecked Se
         super.init()
         player.volume = volume
         setupTimeObserver()
-        setupEndObserver()
         setupRemoteCommands()
         setupSystemMediaKeyMonitor()
     }
@@ -97,7 +96,9 @@ public final class AudioPlayerService: NSObject, ObservableObject, @unchecked Se
         if let token = timeObserverToken {
             player.removeTimeObserver(token)
         }
-        NotificationCenter.default.removeObserver(self)
+        if let endObserverToken {
+            NotificationCenter.default.removeObserver(endObserverToken)
+        }
     }
 
     private func setupTimeObserver() {
@@ -108,21 +109,23 @@ public final class AudioPlayerService: NSObject, ObservableObject, @unchecked Se
             self.progress.currentTime = sec
             
             // Check if SensMe Highlight Preview duration has elapsed (e.g. 45 seconds from highlight start)
-            if let start = self.currentHighlightStartTime, let maxDur = self.highlightPreviewDuration, maxDur > 0 {
+            if self.isPlaying, let start = self.currentHighlightStartTime, let maxDur = self.highlightPreviewDuration, maxDur > 0 {
                 if sec >= (start + maxDur) {
-                    self.playNext()
+                    self.playNext(isManualSkip: false)
                 }
             }
         }
     }
 
-    private func setupEndObserver() {
-        NotificationCenter.default.addObserver(
+    private func observeEnd(of item: AVPlayerItem, for trackID: Track.ID) {
+        endObserverToken = NotificationCenter.default.addObserver(
             forName: .AVPlayerItemDidPlayToEndTime,
-            object: nil,
+            object: item,
             queue: .main
-        ) { [weak self] _ in
-            self?.playNext(isManualSkip: false)
+        ) { [weak self, weak item] _ in
+            guard let self, let item, self.player.currentItem === item,
+                  self.currentTrack?.id == trackID, self.isPlaying else { return }
+            self.playNext(isManualSkip: false)
         }
     }
 
@@ -136,9 +139,7 @@ public final class AudioPlayerService: NSObject, ObservableObject, @unchecked Se
         // Toggle Play / Pause (Media Key Play/Pause, Touch Bar, AirPods, Bluetooth headsets)
         commandCenter.togglePlayPauseCommand.isEnabled = true
         commandCenter.togglePlayPauseCommand.addTarget { [weak self] _ in
-            guard let self = self else { return .commandFailed }
-            self.togglePlayPause()
-            return .success
+            self?.handleRemoteTogglePlayPause() ?? .commandFailed
         }
 
         commandCenter.playCommand.isEnabled = true
@@ -182,6 +183,11 @@ public final class AudioPlayerService: NSObject, ObservableObject, @unchecked Se
         }
     }
 
+    func handleRemoteTogglePlayPause() -> MPRemoteCommandHandlerStatus {
+        togglePlayPause()
+        return .success
+    }
+
     // =========================================================================
     // HARDWARE KEYBOARD EVENT MONITOR: SPACEBAR & FUNCTION ROW MEDIA KEYS
     // =========================================================================
@@ -199,7 +205,9 @@ public final class AudioPlayerService: NSObject, ObservableObject, @unchecked Se
                         return event
                     }
                 }
-                self.togglePlayPause()
+                if !event.isARepeat {
+                    self.togglePlayPause()
+                }
                 return nil // Consumed: prevents table selection jump or audio beep
             }
 
@@ -212,7 +220,9 @@ public final class AudioPlayerService: NSObject, ObservableObject, @unchecked Se
                 }
                 // F8 (keyCode 100) -> Play / Pause
                 if event.keyCode == 100 {
-                    self.togglePlayPause()
+                    if !event.isARepeat {
+                        self.togglePlayPause()
+                    }
                     return nil
                 }
                 // F9 (keyCode 101) -> Next Track
@@ -236,14 +246,15 @@ public final class AudioPlayerService: NSObject, ObservableObject, @unchecked Se
             // 3. SYSTEM-DEFINED HARDWARE MEDIA KEYS (NSSystemDefined Subtype 8)
             if event.type == .systemDefined && event.subtype.rawValue == 8 {
                 let keyCode = Int32((event.data1 & 0xFFFF0000) >> 16)
+                if keyCode == NX_KEYTYPE_PLAY {
+                    // The same press is delivered through MPRemoteCommandCenter.
+                    return nil
+                }
+
                 let keyFlags = (event.data1 & 0x0000FFFF)
                 let isKeyDown = (((keyFlags & 0xFF00) >> 8)) == 0xA
-
                 if isKeyDown {
                     switch keyCode {
-                    case NX_KEYTYPE_PLAY:
-                        self.togglePlayPause()
-                        return nil
                     case NX_KEYTYPE_NEXT, NX_KEYTYPE_FAST:
                         self.playNext()
                         return nil
@@ -261,8 +272,10 @@ public final class AudioPlayerService: NSObject, ObservableObject, @unchecked Se
     }
 
     public func updateNowPlayingInfo() {
+        let center = MPNowPlayingInfoCenter.default()
         guard let track = currentTrack else {
-            MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+            center.nowPlayingInfo = nil
+            center.playbackState = .stopped
             return
         }
 
@@ -280,7 +293,9 @@ public final class AudioPlayerService: NSObject, ObservableObject, @unchecked Se
             info[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: art.size) { _ in art }
         }
 
-        MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+        center.nowPlayingInfo = info
+        // macOS uses this explicit state to route play and pause commands.
+        center.playbackState = isPlaying ? .playing : .paused
     }
 
     public func prepare(track: Track, in queue: [Track] = [], autoPlay: Bool = false, startTime: Double? = nil) {
@@ -337,6 +352,7 @@ public final class AudioPlayerService: NSObject, ObservableObject, @unchecked Se
                     self.isSeeking = true
                 }
                 self.player.replaceCurrentItem(with: item)
+                self.observeEnd(of: item, for: track.id)
                 if initialTime > 0 {
                     let target = CMTime(seconds: initialTime, preferredTimescale: 600)
                     let tolerance = CMTime(seconds: 0.05, preferredTimescale: 600)
@@ -434,8 +450,11 @@ public final class AudioPlayerService: NSObject, ObservableObject, @unchecked Se
     }
 
     public func stopAndClear() {
-        pause()
+        player.pause()
+        isPlaying = false
+        endObserverToken = nil
         player.replaceCurrentItem(with: nil)
+        shuffledTrackIDs.removeAll()
         currentTrack = nil
         currentQueue = []
         currentHighlightStartTime = nil
@@ -444,7 +463,7 @@ public final class AudioPlayerService: NSObject, ObservableObject, @unchecked Se
         progress.currentTime = 0.0
         progress.duration = 0.0
         currentCoverArt = nil
-        MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+        updateNowPlayingInfo()
     }
 
     public func togglePlayPause() {
@@ -502,49 +521,54 @@ public final class AudioPlayerService: NSObject, ObservableObject, @unchecked Se
     }
 
     public func playNext(isManualSkip: Bool = true) {
-        let queue: [Track]
-        if Thread.isMainThread, let active = MainActor.assumeIsolated({ activeQueueProvider?() }), !active.isEmpty {
-            queue = active
-            self.currentQueue = active
-        } else {
-            queue = effectiveQueue
+        if !isManualSkip, repeatMode == .one, currentTrack != nil {
+            let start = highlightPreviewDuration == nil ? 0 : currentHighlightStartTime ?? 0
+            restartCurrentTrack(at: start)
+            return
         }
-        guard !queue.isEmpty else { return }
 
-        guard let current = currentTrack else {
-            if let first = queue.first {
-                let start = onAdvanceToNextTrack?(first, isManualSkip)
-                play(track: first, in: queue, startTime: start)
+        let queue = effectiveQueue
+        let canWrap = isManualSkip || repeatMode == .all
+        guard let next = nextTrack(in: queue, canWrap: canWrap) else {
+            if !isManualSkip, currentTrack != nil {
+                pause()
+                seek(to: 0)
             }
             return
         }
 
-        if isShuffle && queue.count > 1 {
-            let candidates = queue.filter { $0.id != current.id }
-            if let random = candidates.randomElement() {
-                let start = onAdvanceToNextTrack?(random, isManualSkip)
-                play(track: random, in: queue, startTime: start)
-                return
+        let start = onAdvanceToNextTrack?(next, isManualSkip)
+        if next.id == currentTrack?.id {
+            currentQueue = queue
+            restartCurrentTrack(at: start ?? 0)
+        } else {
+            play(track: next, in: queue, startTime: start)
+        }
+    }
+
+    private func restartCurrentTrack(at start: Double) {
+        currentHighlightStartTime = start > 0 ? start : nil
+        seek(to: start)
+        play()
+    }
+
+    private func nextTrack(in queue: [Track], canWrap: Bool) -> Track? {
+        guard let current = currentTrack else { return queue.first }
+
+        if isShuffle {
+            shuffledTrackIDs.insert(current.id)
+            if let next = queue.filter({ !shuffledTrackIDs.contains($0.id) }).randomElement() {
+                return next
             }
+            shuffledTrackIDs.removeAll()
+            guard canWrap else { return nil }
+            return queue.filter { $0.id != current.id }.randomElement() ?? queue.first
         }
 
-        if let idx = queue.firstIndex(where: { $0.id == current.id }) {
-            let nextIdx = idx + 1
-            if nextIdx < queue.count {
-                let next = queue[nextIdx]
-                let start = onAdvanceToNextTrack?(next, isManualSkip)
-                play(track: next, in: queue, startTime: start)
-            } else if let first = queue.first {
-                // Loop around queue
-                let start = onAdvanceToNextTrack?(first, isManualSkip)
-                play(track: first, in: queue, startTime: start)
-            }
-        } else {
-            if let first = queue.first {
-                let start = onAdvanceToNextTrack?(first, isManualSkip)
-                play(track: first, in: queue, startTime: start)
-            }
-        }
+        guard let index = queue.firstIndex(where: { $0.id == current.id }) else { return queue.first }
+        let nextIndex = index + 1
+        if nextIndex < queue.count { return queue[nextIndex] }
+        return canWrap ? queue.first : nil
     }
 
     public func playPrevious(isManualSkip: Bool = true) {

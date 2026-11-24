@@ -830,14 +830,28 @@ public final class WalkmanEngine: @unchecked Sendable {
         sourceURL: URL,
         destinationURL: URL,
         preset: String,
-        normalizeVolume: Bool = false
+        normalizeVolume: Bool = false,
+        compatibleStereo: Bool = false,
+        overwrite: Bool = true,
+        durationSeconds: Double? = nil,
+        onProgress: (@MainActor @Sendable (AudioConversionProgress) -> Void)? = nil
     ) async throws {
         try FileManager.default.createDirectory(at: destinationURL.deletingLastPathComponent(), withIntermediateDirectories: true)
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: ffmpegPath)
 
-        var args = ["-y", "-i", sourceURL.path]
+        let staging = destinationURL.deletingLastPathComponent()
+            .appendingPathComponent(".walkman-convert-\(UUID().uuidString)")
+            .appendingPathExtension(destinationURL.pathExtension)
+        defer { try? FileManager.default.removeItem(at: staging) }
+        var args = ["-nostdin", "-v", "error"]
+        let progressPipe = onProgress.map { _ in Pipe() }
+        if let progressPipe {
+            process.standardOutput = progressPipe
+            args += ["-nostats", "-stats_period", "0.15", "-progress", "pipe:1"]
+        }
+        args += ["-i", sourceURL.path, "-map", "0:a:0"]
         switch preset {
         case "copy", "copy_optimize", "copy_raw":
             args.append(contentsOf: ["-c:a", "copy"])
@@ -877,19 +891,67 @@ public final class WalkmanEngine: @unchecked Sendable {
             args.append(contentsOf: ["-af", "loudnorm=I=-16:TP=-1.5:LRA=11"])
         }
 
-        args.append(contentsOf: ["-vn", destinationURL.path])
+        if compatibleStereo { args.append(contentsOf: ["-ac", "2", "-ar", "44100"]) }
+        args.append(contentsOf: ["-vn", staging.path])
 
         process.arguments = args
         let pipe = Pipe()
         process.standardError = pipe
 
+        var duration = durationSeconds
+        if onProgress != nil && (duration?.isFinite != true || (duration ?? 0) <= 0) {
+            let measured = TransferAudioFormat.read(sourceURL).durationSeconds
+            duration = measured.isFinite && measured > 0 ? measured : nil
+        }
+        var processedSeconds = 0.0
+        await onProgress?(.init(processedSeconds: 0, durationSeconds: duration, isComplete: false))
+        try Task.checkCancellation()
         try process.run()
-        process.waitUntilExit()
+        let data = try await withTaskCancellationHandler {
+            async let diagnostics = readFFmpegDiagnostics(pipe.fileHandleForReading)
+            if let progressPipe, let onProgress {
+                do {
+                    for try await line in progressPipe.fileHandleForReading.bytes.lines {
+                        guard line.hasPrefix("out_time_us="),
+                              let micros = Int64(line.dropFirst("out_time_us=".count)) else { continue }
+                        let seconds = Double(micros) / 1_000_000
+                        if seconds > processedSeconds && !Task.isCancelled {
+                            processedSeconds = seconds
+                            await onProgress(.init(processedSeconds: seconds, durationSeconds: duration, isComplete: false))
+                        }
+                    }
+                } catch {
+                    if process.isRunning { process.terminate() }
+                    process.waitUntilExit()
+                    throw error
+                }
+            }
+            let errors = await diagnostics
+            process.waitUntilExit()
+            try Task.checkCancellation()
+            return errors
+        } onCancel: {
+            if process.isRunning { process.terminate() }
+        }
 
         if process.terminationStatus != 0 {
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
             let err = String(data: data, encoding: .utf8) ?? "Unknown FFmpeg error"
             throw NSError(domain: "WalkmanEngine", code: Int(process.terminationStatus), userInfo: [NSLocalizedDescriptionKey: err])
+        }
+        if overwrite && FileManager.default.fileExists(atPath: destinationURL.path) {
+            _ = try FileManager.default.replaceItemAt(destinationURL, withItemAt: staging)
+        } else {
+            try FileManager.default.moveItem(at: staging, to: destinationURL)
+        }
+        await onProgress?(.init(processedSeconds: processedSeconds, durationSeconds: duration, isComplete: true))
+    }
+
+    private func readFFmpegDiagnostics(_ handle: FileHandle) async -> Data {
+        // Drain stderr independently so a full error pipe cannot stall progress on stdout.
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .utility).async {
+                continuation.resume(returning: handle.readDataToEndOfFile())
+            }
         }
     }
 
