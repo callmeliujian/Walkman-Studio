@@ -1,5 +1,4 @@
 import Foundation
-import Combine
 
 /// Stable preference values, independent of the translated labels shown in the UI.
 enum AppLanguage: String, CaseIterable, Identifiable {
@@ -20,23 +19,6 @@ enum AppLanguage: String, CaseIterable, Identifiable {
     func resolvedIdentifier(preferredLanguages: [String] = Locale.preferredLanguages) -> String {
         guard self == .system else { return rawValue }
         return preferredLanguages.first?.lowercased().hasPrefix("zh") == true ? "zh-Hans" : "en"
-    }
-}
-
-final class AppLocalization: ObservableObject {
-    static let preferenceKey = "WalkmanStudio.interfaceLanguage"
-    static let shared = AppLocalization()
-
-    private let defaults: UserDefaults
-    @Published var language: AppLanguage {
-        didSet { defaults.set(language.rawValue, forKey: Self.preferenceKey) }
-    }
-
-    var locale: Locale { Locale(identifier: language.resolvedIdentifier()) }
-
-    init(defaults: UserDefaults = .standard) {
-        self.defaults = defaults
-        language = AppLanguage(rawValue: defaults.string(forKey: Self.preferenceKey) ?? "") ?? .system
     }
 }
 
@@ -77,10 +59,14 @@ enum L10n {
     private static let placeholderRegex = try! NSRegularExpression(pattern: #"\{(\d+)\}"#)
 
     static let chineseTranslations: [String: String] = {
-        // Packaged .app builds keep resources in Contents/Resources. SwiftPM runs
-        // and tests use Bundle.module. Neither path depends on the working directory.
-        let url = Bundle.main.url(forResource: "zh-Hans", withExtension: "json", subdirectory: "Localization")
-            ?? Bundle.module.url(forResource: "zh-Hans", withExtension: "json", subdirectory: "Localization")
+        func catalogURL(in bundle: Bundle) -> URL? {
+            bundle.url(forResource: "zh-Hans", withExtension: "json", subdirectory: "Localization")
+        }
+        #if SWIFT_PACKAGE
+        let url = catalogURL(in: .main) ?? catalogURL(in: .module)
+        #else
+        let url = catalogURL(in: .main)
+        #endif
         guard let url, let data = try? Data(contentsOf: url),
               let translations = try? JSONDecoder().decode([String: String].self, from: data) else {
             assertionFailure("Missing or invalid Chinese localization catalog")

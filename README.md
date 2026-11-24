@@ -417,7 +417,10 @@ cd Walkman-Studio
 ```
 
 ### 2. Launch the Application
-Run the startup script:
+
+Open `WalkmanStudio.xcodeproj` in Xcode 16 or later. Select the **Walkman Studio** scheme and **My Mac**, then press **⌘R** to build and open `Walkman Studio.app`. To locate the bundle in Finder, expand **Products**, right-click **Walkman Studio.app**, and choose **Show in Finder**.
+
+To launch a release build from Terminal, run the startup script:
 ```bash
 ./start.sh
 ```
@@ -436,6 +439,8 @@ open "Walkman Studio.app"
 
 ```
 Walkman-Studio/
+├── WalkmanStudio.xcodeproj               # Native macOS application and unit tests
+├── Configuration/Info.plist              # App metadata shared by Xcode and the release packager
 ├── Package.swift                         # Swift Package Manager manifest (macOS 13+)
 ├── senseme_12tone_formula.pdf            # Technical documentation: SenseMe™ 12 Tone analysis formula
 ├── build_app.sh                          # Universal/arm64/x86_64 release packager

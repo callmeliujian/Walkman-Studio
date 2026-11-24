@@ -5,8 +5,6 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$DIR"
 
 ARCH="${1:-universal}"
-VERSION="3.1.0"
-BUILD_NUM="310"
 
 APP_NAME="Walkman Studio"
 APP_BUNDLE="$DIR/$APP_NAME.app"
@@ -17,23 +15,26 @@ echo "Packaging $APP_BUNDLE (Architecture: $ARCH)..."
 rm -rf "$APP_BUNDLE"
 mkdir -p "$MACOS_DIR"
 mkdir -p "$RESOURCES_DIR"
-mkdir -p "$DIR/.build/bin"
+
+# Ask SwiftPM for the output directory for each target architecture.
+build_binary() {
+    local triple="$1-apple-macosx"
+    local destination="$2"
+    local bin_dir
+    swift build -c release --triple "$triple"
+    bin_dir="$(swift build -c release --triple "$triple" --show-bin-path)"
+    cp "$bin_dir/WalkmanStudio" "$destination"
+}
 
 if [ "$ARCH" = "universal" ]; then
-    echo "Building native Swift release binary for Universal (Apple Silicon arm64 + Intel x86_64)..."
-    swift build -c release --triple arm64-apple-macosx
-    cp "$DIR/.build/out/Products/Release/WalkmanStudio" "$DIR/.build/bin/WalkmanStudio-arm64"
-    swift build -c release --triple x86_64-apple-macosx
-    cp "$DIR/.build/out/Products/Release/WalkmanStudio" "$DIR/.build/bin/WalkmanStudio-x86_64"
+    mkdir -p "$DIR/.build/bin"
+    build_binary arm64 "$DIR/.build/bin/WalkmanStudio-arm64"
+    build_binary x86_64 "$DIR/.build/bin/WalkmanStudio-x86_64"
     lipo -create -output "$MACOS_DIR/WalkmanStudio" "$DIR/.build/bin/WalkmanStudio-arm64" "$DIR/.build/bin/WalkmanStudio-x86_64"
 elif [ "$ARCH" = "x86_64" ] || [ "$ARCH" = "intel" ]; then
-    echo "Building native Swift release binary for Intel x86_64..."
-    swift build -c release --triple x86_64-apple-macosx
-    cp "$DIR/.build/out/Products/Release/WalkmanStudio" "$MACOS_DIR/WalkmanStudio"
+    build_binary x86_64 "$MACOS_DIR/WalkmanStudio"
 else
-    echo "Building native Swift release binary for Apple Silicon arm64..."
-    swift build -c release --triple arm64-apple-macosx
-    cp "$DIR/.build/out/Products/Release/WalkmanStudio" "$MACOS_DIR/WalkmanStudio"
+    build_binary arm64 "$MACOS_DIR/WalkmanStudio"
 fi
 chmod +x "$MACOS_DIR/WalkmanStudio"
 
@@ -75,56 +76,7 @@ if [ -d "$DIR/assets/SensMe Channel cover" ]; then
     cp "$DIR/assets/SensMe Channel cover/"*.jpg "$RESOURCES_DIR/" 2>/dev/null || true
 fi
 
-# Create Info.plist
-cat << EOF > "$APP_BUNDLE/Contents/Info.plist"
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>CFBundleExecutable</key>
-    <string>WalkmanStudio</string>
-    <key>CFBundleIconFile</key>
-    <string>AppIcon</string>
-    <key>CFBundleIconName</key>
-    <string>AppIcon</string>
-    <key>CFBundleIdentifier</key>
-    <string>com.sony.walkmanstudio</string>
-    <key>CFBundleName</key>
-    <string>Walkman Studio</string>
-    <key>CFBundleDevelopmentRegion</key>
-    <string>en</string>
-    <key>CFBundleLocalizations</key>
-    <array>
-        <string>en</string>
-        <string>zh-Hans</string>
-    </array>
-    <key>CFBundlePackageType</key>
-    <string>APPL</string>
-    <key>CFBundleShortVersionString</key>
-    <string>${VERSION}</string>
-    <key>CFBundleVersion</key>
-    <string>${BUILD_NUM}</string>
-    <key>LSMinimumSystemVersion</key>
-    <string>13.0</string>
-    <key>NSHighResolutionCapable</key>
-    <true/>
-    <key>NSPrincipalClass</key>
-    <string>NSApplication</string>
-    <key>NSSupportsAutomaticGraphicsSwitching</key>
-    <true/>
-    <key>NSRemovableVolumesUsageDescription</key>
-    <string>Walkman Studio requires access to your Sony Walkman and removable SD card storage to read, write, and update music tags, cover art, and synchronized lyrics.</string>
-    <key>NSDesktopFolderUsageDescription</key>
-    <string>Walkman Studio requires access to your Desktop folder to import music files into your library and transfer them to your Walkman.</string>
-    <key>NSDocumentsFolderUsageDescription</key>
-    <string>Walkman Studio requires access to your Documents folder to import music and save Walkman backups.</string>
-    <key>NSDownloadsFolderUsageDescription</key>
-    <string>Walkman Studio requires access to your Downloads folder to import downloaded music files.</string>
-    <key>NSFileProviderDomainUsageDescription</key>
-    <string>Walkman Studio requires access to files to manage your Walkman music library.</string>
-</dict>
-</plist>
-EOF
+cp "$DIR/Configuration/Info.plist" "$APP_BUNDLE/Contents/Info.plist"
 
 # Create PkgInfo
 echo -n "APPL????" > "$APP_BUNDLE/Contents/PkgInfo"
