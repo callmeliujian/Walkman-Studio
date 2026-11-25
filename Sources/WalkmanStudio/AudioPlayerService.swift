@@ -5,7 +5,12 @@ import Combine
 import MediaPlayer
 
 public final class AudioPlayerService: NSObject, ObservableObject, @unchecked Sendable {
-    public static let shared = AudioPlayerService()
+    public static let shared: AudioPlayerService = {
+        let service = AudioPlayerService(defaults: .standard)
+        service.setupRemoteCommands()
+        service.setupSystemMediaKeyMonitor()
+        return service
+    }()
 
     /// Dedicated high-frequency playback progress object.
     /// Observers of AudioPlayerService won't be invalidated by sub-second timer ticks.
@@ -20,12 +25,20 @@ public final class AudioPlayerService: NSObject, ObservableObject, @unchecked Se
     }
     @Published public var currentCoverArt: NSImage?
     @Published public var isSeeking: Bool = false
-    @Published public var isShuffle: Bool = false {
+    @Published private(set) var abRepeat = ABRepeatState.off
+    @Published public var isShuffle: Bool {
         didSet {
-            if oldValue != isShuffle { shuffledTrackIDs.removeAll() }
+            if oldValue != isShuffle {
+                shuffledTrackIDs.removeAll()
+                savePlaybackSession()
+            }
         }
     }
-    @Published var repeatMode: PlaybackRepeatMode = .off
+    @Published var repeatMode: PlaybackRepeatMode {
+        didSet {
+            if oldValue != repeatMode { savePlaybackSession() }
+        }
+    }
     
     /// Timestamp where the current track started (e.g. SensMe highlight position)
     @Published public var currentHighlightStartTime: Double? = nil
@@ -47,6 +60,11 @@ public final class AudioPlayerService: NSObject, ObservableObject, @unchecked Se
     }
 
     private var player: AVPlayer = AVPlayer()
+    private let defaults: UserDefaults
+    private var pendingSession: PlaybackSession?
+    private var lastSavedPosition: Double = 0
+    private var loadingRequest: UUID?
+    private var seekRequest: UUID?
     private var timeObserverToken: Any?
     private var endObserverToken: NSObjectProtocol? {
         didSet {
@@ -81,12 +99,41 @@ public final class AudioPlayerService: NSObject, ObservableObject, @unchecked Se
         return LocalMusicLibraryService.shared.tracks
     }
 
-    private override init() {
+    init(defaults: UserDefaults) {
+        let session = PlaybackSession.load(from: defaults)
+        self.defaults = defaults
+        pendingSession = session
+        isShuffle = session?.isShuffle ?? false
+        repeatMode = session?.repeatMode ?? .off
         super.init()
         player.volume = volume
         setupTimeObserver()
-        setupRemoteCommands()
-        setupSystemMediaKeyMonitor()
+        NotificationCenter.default.addObserver(self, selector: #selector(applicationWillTerminate(_:)),
+                                               name: NSApplication.willTerminateNotification, object: nil)
+    }
+
+    @objc private func applicationWillTerminate(_ notification: Notification) {
+        savePlaybackSession()
+    }
+
+    func savePlaybackSession() {
+        // Keep the last track, position and markers while its volume is disconnected.
+        let position = currentTrack == nil ? pendingSession?.position ?? 0 : progress.currentTime
+        let markers = currentTrack == nil ? pendingSession?.abRepeat ?? .off : abRepeat
+        let session = PlaybackSession(track: currentTrack ?? pendingSession?.track, position: position,
+                                      isShuffle: isShuffle, repeatMode: repeatMode, abRepeat: markers)
+        session.save(to: defaults)
+        lastSavedPosition = position
+    }
+
+    func restorePlaybackSessionIfAvailable() {
+        guard currentTrack == nil, let session = pendingSession, let track = session.track else { return }
+        let url = URL(fileURLWithPath: track.fullPath).resolvingSymlinksInPath()
+        guard let file = try? url.resourceValues(forKeys: [.isRegularFileKey, .isReadableKey]),
+              file.isRegularFile == true, file.isReadable == true else { return }
+        load(track: track, in: [], autoPlay: false, startTime: session.resumePosition, abRepeat: session.abRepeat)
+        // A saved playhead is independent of the SensMe highlight start.
+        currentHighlightStartTime = nil
     }
 
     deinit {
@@ -103,13 +150,18 @@ public final class AudioPlayerService: NSObject, ObservableObject, @unchecked Se
 
     private func setupTimeObserver() {
         let interval = CMTime(seconds: 0.1, preferredTimescale: 600)
-        timeObserverToken = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
-            guard let self = self, !self.isSeeking else { return }
-            let sec = CMTimeGetSeconds(time)
+        timeObserverToken = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] _ in
+            guard let self, self.loadingRequest == nil, !self.isSeeking,
+                  self.player.currentItem != nil else { return }
+            let sec = self.player.currentTime().seconds
+            guard sec.isFinite, sec >= 0 else { return }
             self.progress.currentTime = sec
+            if self.isPlaying, abs(sec - self.lastSavedPosition) >= 5 {
+                self.savePlaybackSession()
+            }
             
             // Check if SensMe Highlight Preview duration has elapsed (e.g. 45 seconds from highlight start)
-            if self.isPlaying, let start = self.currentHighlightStartTime, let maxDur = self.highlightPreviewDuration, maxDur > 0 {
+            if self.isPlaying, self.abRepeat.range == nil, let start = self.currentHighlightStartTime, let maxDur = self.highlightPreviewDuration, maxDur > 0 {
                 if sec >= (start + maxDur) {
                     self.playNext(isManualSkip: false)
                 }
@@ -118,13 +170,24 @@ public final class AudioPlayerService: NSObject, ObservableObject, @unchecked Se
     }
 
     private func observeEnd(of item: AVPlayerItem, for trackID: Track.ID) {
+        let range = abRepeat.range
+        item.forwardPlaybackEndTime = range.map { CMTime(seconds: $0.upperBound, preferredTimescale: 60000) } ?? .invalid
         endObserverToken = NotificationCenter.default.addObserver(
             forName: .AVPlayerItemDidPlayToEndTime,
             object: item,
             queue: .main
         ) { [weak self, weak item] _ in
             guard let self, let item, self.player.currentItem === item,
-                  self.currentTrack?.id == trackID, self.isPlaying else { return }
+                  self.currentTrack?.id == trackID, self.abRepeat.range == range, self.isPlaying else { return }
+            if let range {
+                // A late end notification can arrive after a seek has already moved inside the loop.
+                // A seek just short of B can also reach the end before its completion runs.
+                let playhead = item.currentTime()
+                if self.seekRequest != nil, playhead < item.forwardPlaybackEndTime, playhead < item.duration { return }
+                self.seek(to: range.lowerBound, savePosition: false)
+                self.player.play()
+                return
+            }
             self.playNext(isManualSkip: false)
         }
     }
@@ -305,28 +368,24 @@ public final class AudioPlayerService: NSObject, ObservableObject, @unchecked Se
             }
             if let start = startTime {
                 self.currentHighlightStartTime = start
-                self.progress.currentTime = start
-                self.isSeeking = true
-                let target = CMTime(seconds: start, preferredTimescale: 600)
-                let tolerance = CMTime(seconds: 0.05, preferredTimescale: 600)
-                player.seek(to: target, toleranceBefore: tolerance, toleranceAfter: tolerance) { [weak self] _ in
-                    guard let self = self else { return }
-                    self.isSeeking = false
-                    let actual = CMTimeGetSeconds(self.player.currentTime())
-                    self.progress.currentTime = (actual.isFinite && actual >= 0) ? actual : start
-                    if autoPlay && !self.isPlaying {
-                        self.player.play()
-                        self.isPlaying = true
-                        self.updateNowPlayingInfo()
-                    }
-                }
-            } else if autoPlay && !isPlaying {
-                player.play()
-                self.isPlaying = true
-                updateNowPlayingInfo()
+                seek(to: start)
+            }
+            if autoPlay && !isPlaying {
+                play()
             }
             return
         }
+        load(track: track, in: queue, autoPlay: autoPlay, startTime: startTime, abRepeat: .off)
+    }
+
+    private func load(track: Track, in queue: [Track], autoPlay: Bool, startTime: Double?, abRepeat: ABRepeatState) {
+        pendingSession = nil
+        self.abRepeat = abRepeat
+        let request = UUID()
+        loadingRequest = request
+        seekRequest = nil
+        isSeeking = false
+        player.pause()
         self.currentTrack = track
         if !queue.isEmpty {
             self.currentQueue = queue
@@ -338,6 +397,7 @@ public final class AudioPlayerService: NSObject, ObservableObject, @unchecked Se
         self.progress.duration = track.durationSeconds
         self.isPlaying = autoPlay
         self.currentHighlightStartTime = (initialTime > 0) ? initialTime : nil
+        savePlaybackSession()
 
         let url = URL(fileURLWithPath: track.fullPath)
         
@@ -347,31 +407,18 @@ public final class AudioPlayerService: NSObject, ObservableObject, @unchecked Se
             let item = AVPlayerItem(asset: asset)
             
             DispatchQueue.main.async {
-                guard let self = self, self.currentTrack?.id == track.id else { return }
-                if initialTime > 0 {
-                    self.isSeeking = true
-                }
+                guard let self, self.loadingRequest == request else { return }
+                self.loadingRequest = nil
                 self.player.replaceCurrentItem(with: item)
                 self.observeEnd(of: item, for: track.id)
-                if initialTime > 0 {
-                    let target = CMTime(seconds: initialTime, preferredTimescale: 600)
-                    let tolerance = CMTime(seconds: 0.05, preferredTimescale: 600)
-                    self.player.seek(to: target, toleranceBefore: tolerance, toleranceAfter: tolerance) { [weak self] finished in
-                        guard let self = self else { return }
-                        self.isSeeking = false
-                        let actual = CMTimeGetSeconds(self.player.currentTime())
-                        self.progress.currentTime = (actual.isFinite && actual >= 0) ? actual : initialTime
-                        if self.isPlaying {
-                            self.player.play()
-                        }
-                        self.updateNowPlayingInfo()
-                    }
-                } else {
-                    if self.isPlaying {
-                        self.player.play()
-                    }
-                    self.updateNowPlayingInfo()
+                // A scrub during asset loading supersedes the initial resume position.
+                if self.progress.currentTime > 0 {
+                    self.seek(to: self.progress.currentTime)
                 }
+                if self.isPlaying {
+                    self.player.play()
+                }
+                self.updateNowPlayingInfo()
             }
         }
 
@@ -380,38 +427,6 @@ public final class AudioPlayerService: NSObject, ObservableObject, @unchecked Se
     }
 
     public func play(track: Track, coverArt: NSImage? = nil, in queue: [Track] = [], startTime: Double? = nil) {
-        if currentTrack?.id == track.id {
-            if !queue.isEmpty {
-                self.currentQueue = queue
-            }
-            if let cover = coverArt {
-                self.currentCoverArt = cover
-            }
-            if let start = startTime {
-                self.currentHighlightStartTime = start
-                self.progress.currentTime = start
-                self.isSeeking = true
-                let target = CMTime(seconds: start, preferredTimescale: 600)
-                let tolerance = CMTime(seconds: 0.05, preferredTimescale: 600)
-                player.seek(to: target, toleranceBefore: tolerance, toleranceAfter: tolerance) { [weak self] _ in
-                    guard let self = self else { return }
-                    self.isSeeking = false
-                    let actual = CMTimeGetSeconds(self.player.currentTime())
-                    self.progress.currentTime = (actual.isFinite && actual >= 0) ? actual : start
-                    if !self.isPlaying {
-                        self.player.play()
-                        self.isPlaying = true
-                        self.updateNowPlayingInfo()
-                    }
-                }
-            } else if !isPlaying {
-                player.play()
-                self.isPlaying = true
-                updateNowPlayingInfo()
-            }
-            return
-        }
-
         prepare(track: track, in: queue, autoPlay: true, startTime: startTime)
         if let cover = coverArt {
             self.currentCoverArt = cover
@@ -421,7 +436,12 @@ public final class AudioPlayerService: NSObject, ObservableObject, @unchecked Se
 
     public func play() {
         if currentTrack != nil {
-            player.play()
+            if loadingRequest == nil {
+                if let range = abRepeat.range, seekRequest == nil, player.currentTime().seconds >= range.upperBound {
+                    seek(to: range.lowerBound)
+                }
+                player.play()
+            }
             self.isPlaying = true
             updateNowPlayingInfo()
         } else if let first = effectiveQueue.first {
@@ -446,10 +466,16 @@ public final class AudioPlayerService: NSObject, ObservableObject, @unchecked Se
     public func pause() {
         player.pause()
         self.isPlaying = false
+        savePlaybackSession()
         updateNowPlayingInfo()
     }
 
     public func stopAndClear() {
+        pendingSession = nil
+        abRepeat = .off
+        loadingRequest = nil
+        seekRequest = nil
+        isSeeking = false
         player.pause()
         isPlaying = false
         endObserverToken = nil
@@ -463,6 +489,7 @@ public final class AudioPlayerService: NSObject, ObservableObject, @unchecked Se
         progress.currentTime = 0.0
         progress.duration = 0.0
         currentCoverArt = nil
+        savePlaybackSession()
         updateNowPlayingInfo()
     }
 
@@ -474,19 +501,63 @@ public final class AudioPlayerService: NSObject, ObservableObject, @unchecked Se
         }
     }
 
-    public func seek(to seconds: Double) {
-        self.isSeeking = true
-        progress.currentTime = seconds
-        let targetTime = CMTime(seconds: seconds, preferredTimescale: 600)
-        let tolerance = CMTime(seconds: 0.05, preferredTimescale: 600)
-        player.seek(to: targetTime, toleranceBefore: tolerance, toleranceAfter: tolerance) { [weak self] _ in
-            guard let self = self else { return }
-            self.isSeeking = false
-            let actual = CMTimeGetSeconds(self.player.currentTime())
-            if actual.isFinite && actual >= 0 {
-                self.progress.currentTime = actual
+    func advanceABRepeat() {
+        guard let track = currentTrack, abRepeat.canAdvance(at: currentTime, duration: duration) else { return }
+        switch abRepeat {
+        case .off:
+            abRepeat = .startMarked(currentTime)
+            savePlaybackSession()
+        case .startMarked(let start):
+            abRepeat = .looping(start..<currentTime)
+            if loadingRequest == nil, let item = player.currentItem {
+                observeEnd(of: item, for: track.id)
             }
-            self.updateNowPlayingInfo()
+            seek(to: start)
+            if isPlaying, loadingRequest == nil { player.play() }
+        case .looping:
+            clearABRepeat()
+        }
+    }
+
+    func clearABRepeat() {
+        guard abRepeat != .off else { return }
+        let hadRange = abRepeat.range != nil
+        abRepeat = .off
+        savePlaybackSession()
+        if hadRange, loadingRequest == nil, let item = player.currentItem, let track = currentTrack {
+            observeEnd(of: item, for: track.id)
+            if isPlaying { player.play() }
+        }
+    }
+
+    public func seek(to seconds: Double) {
+        seek(to: seconds, savePosition: true)
+    }
+
+    private func seek(to seconds: Double, savePosition: Bool) {
+        guard currentTrack != nil, seconds.isFinite else { return }
+        if let range = abRepeat.range, !range.contains(seconds) {
+            clearABRepeat()
+        }
+        progress.currentTime = seconds
+        if savePosition { savePlaybackSession() }
+        guard loadingRequest == nil, let item = player.currentItem else { return }
+        let request = UUID()
+        seekRequest = request
+        isSeeking = true
+        let targetTime = CMTime(seconds: seconds, preferredTimescale: 60000)
+        let tolerance = abRepeat.range == nil ? CMTime(seconds: 0.05, preferredTimescale: 600) : .zero
+        player.seek(to: targetTime, toleranceBefore: tolerance, toleranceAfter: tolerance) { [weak self, weak item] finished in
+            DispatchQueue.main.async {
+                guard let self, self.seekRequest == request, self.player.currentItem === item else { return }
+                self.seekRequest = nil
+                self.isSeeking = false
+                let actual = self.player.currentTime().seconds
+                if finished, actual.isFinite, actual >= 0 {
+                    self.progress.currentTime = actual
+                }
+                self.updateNowPlayingInfo()
+            }
         }
         updateNowPlayingInfo()
     }
@@ -496,31 +567,16 @@ public final class AudioPlayerService: NSObject, ObservableObject, @unchecked Se
         let targetTrack = track ?? currentTrack
         guard let target = targetTrack else { return }
 
-        if currentTrack?.id == target.id && player.currentItem != nil {
-            self.isSeeking = true
-            self.progress.currentTime = seconds
-            let targetTime = CMTime(seconds: seconds, preferredTimescale: 600)
-            let tolerance = CMTime(seconds: 0.05, preferredTimescale: 600)
-            player.seek(to: targetTime, toleranceBefore: tolerance, toleranceAfter: tolerance) { [weak self] _ in
-                guard let self = self else { return }
-                self.isSeeking = false
-                let actual = CMTimeGetSeconds(self.player.currentTime())
-                if actual.isFinite && actual >= 0 {
-                    self.progress.currentTime = actual
-                }
-                self.updateNowPlayingInfo()
-            }
-            if !isPlaying {
-                player.play()
-                self.isPlaying = true
-            }
-            updateNowPlayingInfo()
+        if currentTrack?.id == target.id {
+            seek(to: seconds)
+            if !isPlaying { play() }
         } else {
             play(track: target, startTime: seconds)
         }
     }
 
     public func playNext(isManualSkip: Bool = true) {
+        if isManualSkip { clearABRepeat() }
         if !isManualSkip, repeatMode == .one, currentTrack != nil {
             let start = highlightPreviewDuration == nil ? 0 : currentHighlightStartTime ?? 0
             restartCurrentTrack(at: start)
@@ -572,6 +628,7 @@ public final class AudioPlayerService: NSObject, ObservableObject, @unchecked Se
     }
 
     public func playPrevious(isManualSkip: Bool = true) {
+        if isManualSkip { clearABRepeat() }
         let queue: [Track]
         if Thread.isMainThread, let active = MainActor.assumeIsolated({ activeQueueProvider?() }), !active.isEmpty {
             queue = active

@@ -5,6 +5,7 @@ struct FullScreenScrubberBar: View {
     @ObservedObject private var localization = AppLocalization.shared
     @Binding var currentTime: Double
     let duration: Double
+    let abRepeat: ABRepeatState
     let isHiRes: Bool
     let isEnabled: Bool
     let onSeek: (Double) -> Void
@@ -57,6 +58,8 @@ struct FullScreenScrubberBar: View {
                     Capsule()
                         .fill(isHiRes ? WalkmanTheme.hiResGold : Color.white)
                         .frame(width: max(0, min(w, thumbX)), height: trackHeight)
+
+                    ABRepeatMarkers(state: abRepeat, duration: duration)
 
                     // Smooth tracking thumb
                     Circle()

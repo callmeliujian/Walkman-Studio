@@ -4,6 +4,7 @@ struct TrackScrubberRow: View {
     @ObservedObject private var localization = AppLocalization.shared
     @ObservedObject var progress = AudioPlayerService.shared.progress
     let isHiRes: Bool
+    let abRepeat: ABRepeatState
     let onSeek: (Double) -> Void
     let onSeekingChanged: (Bool) -> Void
 
@@ -52,6 +53,10 @@ struct TrackScrubberRow: View {
             )
             .controlSize(.mini)
             .tint(isHiRes ? WalkmanTheme.hiResGold : WalkmanTheme.silver)
+            .overlay {
+                ABRepeatMarkers(state: abRepeat, duration: durTime)
+                    .padding(.horizontal, 5)
+            }
 
             Text(formatTime(durTime))
                 .font(WalkmanFont.monoSmall)

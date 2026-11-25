@@ -219,6 +219,9 @@ public struct ContentView: View {
     private func refreshDrives() {
         isRefreshingDrives = true
         let detected = WalkmanEngine.shared.detectDrives()
+        let removedDrives = drives.filter { previous in
+            !detected.contains { $0.mountPoint == previous.mountPoint }
+        }
         self.drives = detected
         let detectedDevices = WalkmanDeviceDetector.shared.detectDevices(drives: detected)
         self.devices = detectedDevices
@@ -235,9 +238,6 @@ public struct ContentView: View {
             self.libraryStats = (0, 0, 0, 0, 0)
             self.driveCache.removeAll()
             self.isEjecting = false
-            if let current = AudioPlayerService.shared.currentTrack, !localLibrary.tracks.contains(where: { $0.id == current.id }) {
-                AudioPlayerService.shared.stopAndClear()
-            }
             if selectedTab == .overview || selectedTab == .library || selectedTab == .recentlyAdded || selectedTab == .albums || selectedTab == .artists || selectedTab == .hiRes || selectedTab == .languageStudy || selectedTab == .playlists || selectedTab == .backupRestore {
                 self.selectedTab = .localLibrary
             }
@@ -281,16 +281,14 @@ public struct ContentView: View {
                     self.libraryStats = (0, 0, 0, 0, 0)
                 }
             }
-
-            // If the currently playing track was on a drive that is no longer mounted, stop playback
-            if let current = AudioPlayerService.shared.currentTrack {
-                let stillMounted = detected.contains(where: { current.fullPath.hasPrefix($0.mountPoint) })
-                if !stillMounted {
-                    AudioPlayerService.shared.stopAndClear()
-                }
-            }
         }
 
+        if let track = player.currentTrack, removedDrives.contains(where: {
+            track.fullPath.hasPrefix(URL(fileURLWithPath: $0.mountPoint).path + "/")
+        }) {
+            player.stopAndClear()
+        }
+        player.restorePlaybackSessionIfAvailable()
         isRefreshingDrives = false
         refreshLibrary()
     }
@@ -1371,9 +1369,15 @@ public struct ContentView: View {
             }
         }
         .onAppear {
-            refreshDrives()
-            AudioPlayerService.shared.fallbackTracksProvider = {
+            player.fallbackTracksProvider = {
                 !tracks.isEmpty ? tracks : localLibrary.tracks
+            }
+            refreshDrives()
+            selectedTrackId = player.currentTrack?.id
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.willCloseNotification)) { notification in
+            if let window = notification.object as? NSWindow, window === hostWindow {
+                player.savePlaybackSession()
             }
         }
         .onReceive(didMountPublisher) { _ in

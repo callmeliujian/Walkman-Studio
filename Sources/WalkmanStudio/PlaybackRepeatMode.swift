@@ -1,4 +1,4 @@
-enum PlaybackRepeatMode {
+enum PlaybackRepeatMode: String, Codable {
     case off
     case all
     case one

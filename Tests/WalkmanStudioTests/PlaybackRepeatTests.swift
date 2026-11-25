@@ -71,6 +71,120 @@ final class PlaybackRepeatTests: XCTestCase {
         XCTAssertEqual(player.currentTrack?.id, last.id)
     }
 
+    @MainActor
+    func testABRepeatPlaysToBMultipleTimesThenContinuesThroughTheQueue() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let first = try silentTrack(in: directory, name: "first")
+        let next = try silentTrack(in: directory, name: "next")
+        let suite = "ABRepeat." + UUID().uuidString
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let player = AudioPlayerService(defaults: defaults)
+        defer { player.stopAndClear() }
+
+        player.prepare(track: first, in: [first, next], startTime: 0.1)
+        player.advanceABRepeat()
+        player.seek(to: 0.4)
+        player.advanceABRepeat()
+        XCTAssertEqual(player.abRepeat, .looping(0.1..<0.4))
+        XCTAssertEqual(player.currentTime, 0.1)
+        XCTAssertFalse(player.isPlaying)
+        player.repeatMode = .one
+        player.highlightPreviewDuration = 0.05
+
+        let repeated = expectation(description: "AVPlayer reaches B twice before the file ends")
+        repeated.expectedFulfillmentCount = 2
+        let ends = NotificationCenter.default.publisher(for: .AVPlayerItemDidPlayToEndTime)
+            .compactMap { $0.object as? AVPlayerItem }
+            .filter { ($0.asset as? AVURLAsset)?.url.path == first.fullPath }
+            .prefix(2)
+            .sink { item in
+                XCTAssertEqual(item.forwardPlaybackEndTime.seconds, 0.4, accuracy: 0.001)
+                repeated.fulfill()
+            }
+        defer { ends.cancel() }
+        player.seek(to: 0.3999)
+        player.play()
+        await fulfillment(of: [repeated], timeout: 6)
+        player.pause()
+        XCTAssertEqual(player.currentTrack?.id, first.id)
+        XCTAssertEqual(player.abRepeat, .looping(0.1..<0.4))
+
+        player.advanceABRepeat()
+        XCTAssertEqual(player.abRepeat, .off)
+        XCTAssertFalse(player.isPlaying)
+        XCTAssertEqual(player.repeatMode, .one)
+        player.repeatMode = .off
+        player.highlightPreviewDuration = nil
+        let advanced = expectation(description: "Playback continues past B to the next file")
+        let tracks = player.$currentTrack.compactMap { $0 }.first(where: { $0.id == next.id })
+            .sink { _ in advanced.fulfill() }
+        defer { tracks.cancel() }
+        player.play()
+        await fulfillment(of: [advanced], timeout: 5)
+    }
+
+    @MainActor
+    func testABMarkersFollowManualSeeksAndTrackChanges() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let first = try silentTrack(in: directory, name: "first")
+        let next = try silentTrack(in: directory, name: "next")
+        let suite = "ABRepeat." + UUID().uuidString
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let player = AudioPlayerService(defaults: defaults)
+        defer { player.stopAndClear() }
+
+        player.advanceABRepeat()
+        XCTAssertEqual(player.abRepeat, .off)
+        player.prepare(track: first, in: [first, next], startTime: 0.2)
+        player.advanceABRepeat()
+        player.seek(to: 0.1)
+        player.advanceABRepeat()
+        XCTAssertEqual(player.abRepeat, .startMarked(0.2))
+        player.clearABRepeat()
+        XCTAssertEqual(player.abRepeat, .off)
+
+        player.advanceABRepeat()
+        player.seek(to: first.durationSeconds)
+        player.advanceABRepeat()
+        player.seek(to: 0.3)
+        XCTAssertEqual(player.abRepeat, .looping(0.1..<0.5))
+        player.seek(to: 0)
+        XCTAssertEqual(player.abRepeat, .off)
+        XCTAssertEqual(player.currentTime, 0)
+        player.advanceABRepeat()
+        let moving = expectation(description: "The playhead passes A")
+        let times = player.progress.$currentTime.first(where: { $0 >= 0.15 })
+            .sink { _ in moving.fulfill() }
+        defer { times.cancel() }
+        player.play()
+        await fulfillment(of: [moving], timeout: 5)
+        player.advanceABRepeat()
+        let range = try XCTUnwrap(player.abRepeat.range)
+        XCTAssertEqual(range.lowerBound, 0)
+        let looped = expectation(description: "Setting B during playback keeps the loop playing")
+        looped.expectedFulfillmentCount = 2
+        let ends = NotificationCenter.default.publisher(for: .AVPlayerItemDidPlayToEndTime)
+            .compactMap { $0.object as? AVPlayerItem }
+            .filter { ($0.asset as? AVURLAsset)?.url.path == first.fullPath }
+            .prefix(2)
+            .sink { _ in looped.fulfill() }
+        defer { ends.cancel() }
+        await fulfillment(of: [looped], timeout: 5)
+        XCTAssertTrue(player.isPlaying)
+        player.playNext()
+        XCTAssertEqual(player.currentTrack?.id, next.id)
+        XCTAssertEqual(player.abRepeat, .off)
+        player.advanceABRepeat()
+        player.stopAndClear()
+        XCTAssertEqual(player.abRepeat, .off)
+    }
+
     private func silentTrack(in directory: URL, name: String) throws -> Track {
         let url = directory.appendingPathComponent(name).appendingPathExtension("caf")
         let format = try XCTUnwrap(AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 1))

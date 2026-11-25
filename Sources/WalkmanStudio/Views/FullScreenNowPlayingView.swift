@@ -539,6 +539,7 @@ public struct FullScreenNowPlayingView: View {
                         set: { progress.currentTime = $0 }
                     ),
                     duration: progress.duration,
+                    abRepeat: player.abRepeat,
                     isHiRes: isHiRes,
                     isEnabled: player.currentTrack != nil,
                     onSeek: { target in
@@ -546,6 +547,9 @@ public struct FullScreenNowPlayingView: View {
                     }
                 )
                 .frame(width: artworkDimension)
+                .overlay(alignment: .bottom) {
+                    ABRepeatButton(player: player)
+                }
 
                 // Clean Apple-style Icon Transport Controls Row (Directly beneath scrubber)
                 HStack(spacing: artworkDimension < 260 ? 20 : (artworkDimension < 320 ? 26 : 34)) {

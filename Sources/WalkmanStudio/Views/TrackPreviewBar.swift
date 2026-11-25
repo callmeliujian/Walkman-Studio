@@ -142,6 +142,8 @@ public struct TrackPreviewBar: View {
                 action: { player.repeatMode = player.repeatMode.next }
             )
             .accessibilityLabel(player.repeatMode.helpText)
+
+            ABRepeatButton(player: player)
         }
         .fixedSize(horizontal: true, vertical: false)
     }
@@ -269,6 +271,7 @@ public struct TrackPreviewBar: View {
                 // Bottom row: Isolated high-frequency timeline scrubber
                 TrackScrubberRow(
                     isHiRes: isHiRes,
+                    abRepeat: player.abRepeat,
                     onSeek: { target in player.seek(to: target) },
                     onSeekingChanged: { editing in player.isSeeking = editing }
                 )
